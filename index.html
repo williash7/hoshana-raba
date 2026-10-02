@@ -113,6 +113,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:calc(2px*v
 .secs .nm{font-family:var(--serif);font-size:calc(17px*var(--k));flex:1}
 .secs .done .nm{color:var(--muted)}
 .secs .pp{font-size:calc(12.5px*var(--k));color:var(--muted)}
+.places .pp b{color:var(--willow);font-weight:600}
+.places .nm small{display:block;font-family:var(--ui);font-size:calc(12.5px*var(--k));color:var(--muted)}
 .secs .zh{font-size:calc(13px*var(--k));color:var(--gold);padding:calc(14px*var(--k)) calc(4px*var(--k)) calc(2px*var(--k));font-weight:600}
 .row{display:flex;align-items:center;justify-content:space-between;gap:calc(12px*var(--k));padding:calc(10px*var(--k)) 0;border-bottom:calc(1px*var(--k)) solid #2c3046}
 .row label{font-size:calc(15px*var(--k))}
@@ -180,6 +182,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:calc(2px*v
 <section class="sheet" id="sheet" aria-label="פרקים והגדרות">
   <div class="sheet-in">
     <div class="grab"></div>
+    <h2>איפה אני אוחז</h2>
+    <ul class="secs places" id="places"></ul>
     <h2>מעבר מהיר</h2>
     <ul class="secs" id="secs"></ul>
     <div class="row">
@@ -196,7 +200,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:calc(2px*v
     <div class="row"><label for="zoom">רוחב הדף<small>במסך רחב</small></label><input type="range" id="zoom" min="360" max="900" step="20"></div>
     <div class="row"><label>הצללת מה שכבר נאמר</label><div class="seg" id="dim"><button data-v="1">כן</button><button data-v="0">לא</button></div></div>
     <button class="reset" id="reset">התחל מההתחלה</button>
-    <p class="note">המיקום נשמר אוטומטית במכשיר. הקו הזהוב מסמן איפה אתה אוחז; מה שמעליו נחשב כנאמר. אם מסיימים את חומש דברים לפני חצות, הגלילה נעצרת עד חצות. בחצות מופיעה הודעה עם מעבר לתהילים.</p>
+    <p class="note">המיקום נשמר אוטומטית במכשיר. הקו הזהוב מסמן איפה אתה אוחז; מה שמעליו נחשב כנאמר. לכל חלק (חומש, תהילים, זהר) נשמר מקום נפרד. אם בחצות עוד לא סיימת את החומש, המקום בו נשמר; אחרי סיום התהילים תוצע חזרה אליו, ובסוף החומש – מעבר לזהר.</p>
   </div>
 </section>
 
@@ -231,7 +235,7 @@ function computeK(){
 computeK();
 /* ---------- state ---------- */
 const KEY='hoshana-raba-v2';
-let S={geoLon:null,geoLat:null,pos:0,mpp:2.0,loc:'afula',manual:'',theme:'auto',zoom:520,dim:1,auto:false,fs:23,dismissed:''};
+let S={geoLon:null,geoLat:null,pos:0,mpp:2.0,loc:'afula',manual:'',theme:'auto',zoom:520,dim:1,auto:false,fs:23,dismissed:'',mk:[null,null,null],fin:[false,false,false],askedBack:false};
 try{const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) S=Object.assign(S,s);}catch(e){}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 const $=id=>document.getElementById(id), root=document.documentElement;
@@ -345,13 +349,51 @@ function paceToChatzot(){ const left=DEV_END-S.pos, min=(getChatzot()-Date.now()
 function applyAutoPace(){ if(!S.auto) return; const p=paceToChatzot(); if(p==null){ S.auto=false; renderPace(); return; } setMpp(p,false); }
 function renderPace(){ $('pace').classList.toggle('on',!!S.auto); $('pace').setAttribute('aria-pressed',S.auto?'true':'false'); save(); }
 
-/* ---------- chatzot modal ---------- */
-function openModal(){ $('modal').classList.add('open'); try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){} }
-function closeModal(){ $('modal').classList.remove('open'); S.dismissed=String(getChatzot()); save(); }
-function goTehillim(){ closeModal(); closeSheet(); S.auto=false; renderPace(); scrollToPos(TEH_START+1.5); S.pos=TEH_START+1.5; update(); }
-$('mYes').onclick=()=>{ const wasPlaying=playing; goTehillim(); if(wasPlaying) setPlaying(true); };
-$('mNo').onclick=closeModal;
-$('banner').onclick=()=>{ if(afterChatzot() && S.pos<TEH_START) goTehillim(); };
+/* ---------- places per part + flow ---------- */
+function placeName(p){ const ph=phaseOf(p);
+  if(ph===0) return SEC[secIdx(p)].n+' · עמ׳ '+Math.min(95,blockAtPos(p)+1);
+  if(ph===1) return p<TEH_START?'תחילת תהילים':'מזמור '+gem(chapterAt(p));
+  return SEC[secIdx(p)].n; }
+function startOf(ph){ return [0.3,TEH_START+1.5,TEH_END+0.3][ph]; }
+function jumpTo(p){ closeSheet(); scrollToPos(p); S.pos=p; lastFlow=p; update(); save(); }
+function resumePart(ph){ const m=S.mk[ph]; jumpTo(m!=null && !S.fin[ph] ? m : startOf(ph)); }
+let mAct=null;
+function ask(o){ $('mh').textContent=o.title; $('mp').textContent=o.text; $('mYes').textContent=o.yes; $('mNo').textContent=o.no;
+  const was=playing; if(playing) setPlaying(false);
+  mAct={yes:()=>{ o.onYes&&o.onYes(); if(was||o.play) setPlaying(true); }, no:()=>{ o.onNo&&o.onNo(); if(was&&o.resumeOnNo) setPlaying(true); }};
+  $('modal').classList.add('open'); if(o.buzz){ try{navigator.vibrate&&navigator.vibrate([300,150,300]);}catch(e){} } }
+function closeModal(){ $('modal').classList.remove('open'); }
+$('mYes').onclick=()=>{ closeModal(); const a=mAct; mAct=null; a&&a.yes(); };
+$('mNo').onclick=()=>{ closeModal(); const a=mAct; mAct=null; a&&a.no(); };
+function goTehillim(){ S.auto=false; renderPace(); resumePart(1); }
+function askChatzot(){ const c=String(getChatzot());
+  ask({title:'הגיע חצות', buzz:true,
+    text: S.pos<DEV_END-2 ? 'זמן לעבור לתהילים. המקום שלך בחומש נשמר ('+placeName(S.pos)+'), ואחרי התהילים תוכל לחזור אליו.' : 'זמן לעבור לאמירת תהילים',
+    yes:'עבור לתהילים', no:'אשאר כאן בינתיים',
+    onYes:()=>{ S.dismissed=c; goTehillim(); }, onNo:()=>{ S.dismissed=c; save(); } }); }
+function askBackToChumash(){ S.askedBack=true; save();
+  if(S.mk[0]==null){ ask({title:'סיימת תהילים', text:'אם נשאר לך לסיים את חומש דברים, בחר בתפריט את הפרשה שבה הפסקת.',
+    yes:'בחירת פרשה', no:'המשך לזהר', resumeOnNo:true, onYes:()=>openSheet() }); return; }
+  ask({title:'סיימת תהילים', text:'נשאר לסיים את חומש דברים. לחזור למקום שהפסקת – '+placeName(S.mk[0])+'?',
+    yes:'חזרה לחומש', no:'המשך לזהר', resumeOnNo:true, onYes:()=>resumePart(0) }); }
+function askToZohar(){ ask({title:'סיימת את חומש דברים', text:'התהילים כבר נאמרו. ממשיכים לקטעי הזהר.', yes:'עבור לזהר', no:'אשאר כאן', onYes:()=>resumePart(2) }); }
+let lastFlow=null;
+function flow(){ const prev=lastFlow, cur=S.pos; lastFlow=cur; if(prev==null) return;
+  const ph=phaseOf(cur);
+  if(!(ph===1 && cur<TEH_START)) S.mk[ph]=cur;
+  const near=(end)=>prev>=end-120 && prev<end-1.5 && cur>=end-1.5;
+  if(near(DEV_END) && cur<TEH_START+5){ S.fin[0]=true;
+    if(S.fin[1] && afterChatzot()){ if(playing){ resumePart(2); toast('סיימת את החומש – ממשיכים לזהר'); } else askToZohar(); } }
+  if(near(TEH_END) && cur<TEH_END+60){ S.fin[1]=true; if(!S.fin[0] && !S.askedBack) askBackToChumash(); }
+  if(near(TOTAL)){ S.fin[2]=true; if(!S.fin[0]) askBackToChumash(); }
+}
+$('banner').onclick=()=>{ if(afterChatzot() && S.pos<TEH_START && !S.fin[1]) goTehillim(); };
+function renderPlaces(){ const ul=$('places'); ul.innerHTML='';
+  ['חומש דברים','תהילים','זהר'].forEach((n,ph)=>{ const m=S.mk[ph], cur=phaseOf(S.pos)===ph && !(ph===1&&S.pos<TEH_START);
+    const st=S.fin[ph]?'done':(cur?'now':''); const sub=S.fin[ph]?'<b>✓ הושלם</b>':(m!=null?placeName(m):'טרם התחלת');
+    const li=document.createElement('li'); li.className=st;
+    li.innerHTML='<button><span class="dot"></span><span class="nm">'+n+'<small>'+sub+'</small></span><span class="pp">'+(cur?'כאן עכשיו':(S.fin[ph]?'':(m!=null?'המשך ›':'התחל ›')))+'</span></button>';
+    li.querySelector('button').onclick=()=>resumePart(ph); ul.appendChild(li); }); }
 
 /* ---------- UI update ---------- */
 let curKey='';
@@ -370,8 +412,8 @@ function update(){
   $('gcd').textContent = toC>0 ? 'חצות בעוד '+hms(toC)+' ('+hm(c)+')' : 'הגיע חצות – מתחילים';
   // chatzot prompt
   const ban=$('banner');
-  if(toC<=0 && p<TEH_START){ ban.textContent='הגיע חצות – לחץ כאן לעבור לתהילים'; ban.classList.add('show');
-    if(S.dismissed!==String(c) && !$('modal').classList.contains('open')) openModal(); }
+  if(toC<=0 && p<TEH_START && !S.fin[1]){ ban.textContent='הגיע חצות – לחץ כאן לעבור לתהילים'; ban.classList.add('show');
+    if(S.dismissed!==String(c) && !$('modal').classList.contains('open')) askChatzot(); }
   else if(toC>0 && toC<15*6e4 && p<DEV_END){ ban.textContent='עוד '+Math.ceil(toC/6e4)+' דקות לחצות'; ban.classList.add('show'); }
   else ban.classList.remove('show');
   if(tickPh!==ph){ buildTicks(ph); tickPh=ph; }
@@ -383,6 +425,7 @@ function update(){
   else if(ph===1){ if(p<TEH_START){ name='תהילים'; pct='מתחילים בחצות'; leftTxt='150 מזמורים ('+durTxt((TEH_END-TEH_START)/wpm())+')'; }
     else { const ch=chapterAt(p); const bk=BOOKS.findIndex(b=>ch>=b[0]&&ch<=b[1]); name='תהילים · '+gem(ch); pct=BOOKS[bk][2]+' · '+Math.round(done*100)+'%';
       leftTxt = 'נשארו <b>'+(150-ch)+' מזמורים</b> ('+durTxt(leftW/wpm())+')'; } }
+  if(ph===1 && p>=TEH_START && !S.fin[0] && S.mk[0]!=null) pct+=' · החומש ממתין';
   else { pct=Math.round(done*100)+'%'; leftTxt = leftW<2 ? '<b>סיימת הכל</b>' : 'נשאר <b>'+durTxt(leftW/wpm())+'</b>'; }
   $('secName').textContent=name; $('pct').textContent=pct; $('fill').style.width=(done*100)+'%'; $('left').innerHTML=leftTxt;
   if(leftW>=2 && !(ph===1&&p<TEH_START)){ const fin=now+leftW/wpm()*6e4; const ok=ph!==0||fin<=c;
@@ -400,7 +443,7 @@ function renderSecs(){ const ul=$('secs'); ul.innerHTML=''; let lastPh=-1;
 }
 
 /* ---------- sheet + settings ---------- */
-function openSheet(){ renderSecs(); renderSettings(); $('sheet').classList.add('open'); $('veil').classList.add('open'); }
+function openSheet(){ renderPlaces(); renderSecs(); renderSettings(); $('sheet').classList.add('open'); $('veil').classList.add('open'); }
 function closeSheet(){ $('sheet').classList.remove('open'); $('veil').classList.remove('open'); }
 $('menu').onclick=openSheet; $('veil').onclick=closeSheet;
 $('chGo').onclick=()=>{ const n=parseInt($('chIn').value,10); if(!(n>=1&&n<=150)){ toast('יש להקליד מספר בין 1 ל־150'); return; } closeSheet(); scrollToPos(B[CH_BLOCK[n]].cum+0.3); };
@@ -425,7 +468,7 @@ segBind('dim',v=>{ S.dim=+v; $('shade').classList.toggle('hidden',!S.dim); });
 function relayout(fn){ const p=S.pos; fn(); measure(); scrollToPos(p); S.pos=p; save(); }
 $('zoom').oninput=e=>relayout(()=>{ S.zoom=+e.target.value; root.style.setProperty('--pw',(S.zoom*K)+'px'); });
 $('fs').oninput=e=>relayout(()=>{ S.fs=+e.target.value; root.style.setProperty('--fs',(S.fs*K)+'px'); });
-$('reset').onclick=()=>{ closeSheet(); setPlaying(false); S.pos=0; S.dismissed=''; save(); scrollToPos(0); update(); };
+$('reset').onclick=()=>{ closeSheet(); setPlaying(false); S.pos=0; S.dismissed=''; S.mk=[null,null,null]; S.fin=[false,false,false]; S.askedBack=false; lastFlow=null; save(); scrollToPos(0); update(); };
 function applyTheme(){ if(S.theme==='auto') root.removeAttribute('data-theme'); else root.setAttribute('data-theme',S.theme); }
 let toastT=null; function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600); }
 
@@ -445,7 +488,7 @@ addEventListener('keydown',e=>{ if(e.target.closest('input,select')) return;
 
 /* ---------- loop ---------- */
 let ready=false;
-addEventListener('scroll',()=>{ if(!ready) return; S.pos=posFromScroll(); },{passive:true});
+addEventListener('scroll',()=>{ if(!ready) return; S.pos=posFromScroll(); flow(); },{passive:true});
 setInterval(update,500);
 setInterval(applyAutoPace,20000);
 setInterval(save,3000);
@@ -456,7 +499,7 @@ addEventListener('resize',()=>{ if(ready) relayout(()=>{ computeK(); root.style.
 applyTheme();
 root.style.setProperty('--pw',(S.zoom*K)+'px'); root.style.setProperty('--fs',(S.fs*K)+'px');
 $('shade').classList.toggle('hidden',!S.dim); $('spd').textContent=S.mpp.toFixed(1); renderPace();
-requestAnimationFrame(()=>{ const p=S.pos; measure(); scrollToPos(p); S.pos=p; ready=true; update();
+requestAnimationFrame(()=>{ const p=S.pos; measure(); scrollToPos(p); S.pos=p; lastFlow=p; ready=true; update();
   if(p>3) toast('ממשיכים מאיפה שעצרת');
   const fix=()=>{ if(!playing) relayout(()=>{}); else measure(); };
   setTimeout(fix,300); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fix); });
