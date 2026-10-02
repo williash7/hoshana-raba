@@ -113,6 +113,9 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:calc(2px*v
 .secs .nm{font-family:var(--serif);font-size:calc(17px*var(--k));flex:1}
 .secs .done .nm{color:var(--muted)}
 .secs .pp{font-size:calc(12.5px*var(--k));color:var(--muted)}
+.dailylink{display:flex;align-items:center;gap:calc(10px*var(--k));text-decoration:none;color:var(--ink);background:var(--night2);border-radius:calc(14px*var(--k));padding:calc(12px*var(--k)) calc(16px*var(--k));margin:calc(4px*var(--k)) 0 calc(6px*var(--k));font-family:var(--serif);font-size:calc(19px*var(--k));font-weight:700}
+.dailylink small{flex:1;font-family:var(--ui);font-weight:400;font-size:calc(13px*var(--k));color:var(--muted)}
+.dailylink span{color:var(--gold);font-size:calc(22px*var(--k))}
 .places .pp b{color:var(--willow);font-weight:600}
 .places .nm small{display:block;font-family:var(--ui);font-size:calc(12.5px*var(--k));color:var(--muted)}
 .secs .zh{font-size:calc(13px*var(--k));color:var(--gold);padding:calc(14px*var(--k)) calc(4px*var(--k)) calc(2px*var(--k));font-weight:600}
@@ -182,6 +185,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:calc(2px*v
 <section class="sheet" id="sheet" aria-label="פרקים והגדרות">
   <div class="sheet-in">
     <div class="grab"></div>
+    <a class="dailylink" href="daily.html">תהילים יומי<small>לפי ימי החודש · </small><span>›</span></a>
     <h2>איפה אני אוחז</h2>
     <ul class="secs places" id="places"></ul>
     <h2>מעבר מהיר</h2>
@@ -305,7 +309,7 @@ function chatzotAfterDate(dt,lon){ const y=dt.getFullYear(),m=dt.getMonth(),d=dt
 function getChatzot(){ const now=new Date();
   if(S.manual){ const [h,mi]=S.manual.split(':').map(Number); const c=new Date(now); c.setHours(h,mi,0,0); if(c.getTime()<now.getTime()-10*36e5) c.setDate(c.getDate()+1); return c.getTime(); }
   const lon=(S.loc==='gps'&&S.geoLon!=null)?S.geoLon:(LOCS.find(l=>l[0]===S.loc)||LOCS[0])[2]; const y=new Date(now); y.setDate(y.getDate()-1);
-  const cy=chatzotAfterDate(y,lon); return now.getTime()<cy+10*36e5?cy:chatzotAfterDate(now,lon); }
+  const cy=chatzotAfterDate(y,lon); return now.getTime()<cy+7*36e5?cy:chatzotAfterDate(now,lon); }
 function curLoc(){ if(S.loc==='gps'&&S.geoLon!=null) return {lon:S.geoLon,lat:S.geoLat!=null?S.geoLat:32}; const l=LOCS.find(l=>l[0]===S.loc)||LOCS[0]; return {lon:l[2],lat:l[3]}; }
 // time (ms) in the morning when the sun is `dep` degrees below the horizon, on UTC date of `dayMs`
 function dawnUTC(dayMs,dep,lat,lon){ const D=new Date(dayMs), y=D.getUTCFullYear(), m=D.getUTCMonth(), d=D.getUTCDate();
@@ -443,7 +447,8 @@ function renderSecs(){ const ul=$('secs'); ul.innerHTML=''; let lastPh=-1;
 }
 
 /* ---------- sheet + settings ---------- */
-function openSheet(){ renderPlaces(); renderSecs(); renderSettings(); $('sheet').classList.add('open'); $('veil').classList.add('open'); }
+function dailyLabel(){ try{ const d=new Date(); const n=+new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric'}).format(d); return 'היום יום '+gem(n); }catch(e){ return ''; } }
+function openSheet(){ const dl=document.querySelector('.dailylink small'); if(dl) dl.textContent='לפי ימי החודש · '+dailyLabel(); renderPlaces(); renderSecs(); renderSettings(); $('sheet').classList.add('open'); $('veil').classList.add('open'); }
 function closeSheet(){ $('sheet').classList.remove('open'); $('veil').classList.remove('open'); }
 $('menu').onclick=openSheet; $('veil').onclick=closeSheet;
 $('chGo').onclick=()=>{ const n=parseInt($('chIn').value,10); if(!(n>=1&&n<=150)){ toast('יש להקליד מספר בין 1 ל־150'); return; } closeSheet(); scrollToPos(B[CH_BLOCK[n]].cum+0.3); };
