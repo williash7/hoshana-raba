@@ -98,6 +98,22 @@ button:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset
 .days button{border:0;background:var(--night2);border-radius:calc(10px*var(--k));padding:calc(8px*var(--k)) 0;font-family:var(--serif);font-size:calc(17px*var(--k))}
 .days button.cur{outline:calc(2px*var(--k)) solid var(--gold)}
 .days button.done{color:var(--willow)}
+.close{display:block;margin:-6px 0 6px auto!important;border:0;background:var(--night2);width:calc(36px*var(--k));height:calc(36px*var(--k));border-radius:50%;font-size:calc(16px*var(--k))}
+.hint{color:var(--muted);font-size:calc(13px*var(--k));margin:-2px auto calc(8px*var(--k));line-height:1.4}
+.tg label{display:flex;align-items:center;gap:calc(10px*var(--k));padding:calc(9px*var(--k)) calc(2px*var(--k));border-bottom:calc(1px*var(--k)) solid #2c3046;font-size:calc(16px*var(--k))}
+.tg input{width:calc(20px*var(--k));height:calc(20px*var(--k));accent-color:var(--gold)}
+.tg small,.ppl small{color:var(--gold);font-family:var(--serif);font-size:calc(16px*var(--k));margin-inline-start:auto}
+.ppl{list-style:none;padding:0;margin:0 auto}
+.ppl li{display:flex;align-items:center;gap:calc(10px*var(--k));padding:calc(9px*var(--k)) calc(2px*var(--k));border-bottom:calc(1px*var(--k)) solid #2c3046;font-size:calc(16px*var(--k))}
+.ppl li span{color:var(--muted);font-size:calc(13px*var(--k))}
+.ppl button{border:0;background:transparent;color:#e07a62;font-size:calc(18px*var(--k));padding:0 calc(6px*var(--k))}
+.add{background:var(--night2);border-radius:calc(14px*var(--k));padding:calc(10px*var(--k));margin-top:calc(10px*var(--k))}
+.add input,.add select{background:var(--night);color:var(--ink);border:calc(1px*var(--k)) solid #3a3f58;border-radius:calc(8px*var(--k));padding:calc(8px*var(--k));font:inherit;font-size:calc(15px*var(--k));min-width:0}
+.add>input{width:100%}
+.addrow{display:flex;gap:calc(6px*var(--k));margin-top:calc(6px*var(--k));align-items:center}
+.addrow input{flex:1}
+.addrow .prev{flex:1;color:var(--gold);font-size:calc(14px*var(--k))}
+.add button{border:0;background:var(--gold);color:#241c08;font-weight:700;border-radius:calc(8px*var(--k));padding:calc(8px*var(--k)) calc(18px*var(--k))}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH,calc(76px*var(--k))) + calc(18px*var(--k)));z-index:25;background:#2c3046;color:var(--ink);padding:calc(9px*var(--k)) calc(16px*var(--k));border-radius:calc(20px*var(--k));font-size:calc(14px*var(--k));opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 @media (max-width:380px){ .day .dt b{font-size:calc(19px*var(--k))} .ctl{padding:0 calc(9px*var(--k));font-size:calc(12px*var(--k))} }
@@ -140,8 +156,19 @@ button:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset
 </nav>
 <div class="veil" id="veil"></div>
 <section class="sheet" id="sheet" aria-label="תפריט">
-  <div class="grab"></div>
+  <div class="grab" id="grab"></div>
+  <button class="close" id="closeS" aria-label="סגור">✕</button>
   <a class="opt" href="hoshana.html"><span><b>סדר ליל הושענא רבה</b><small>חומש דברים, תהילים וזהר · מופיע בעיקר בערב הושענא רבה</small></span><i>›</i></a>
+  <h2>פרקים אישיים</h2>
+  <p class="hint">הפרק לפי יום ההולדת העברי – מספר השנים שמלאו ועוד אחת. נאמר אחרי התהילים היומי.</p>
+  <div class="tg"><label><input type="checkbox" id="tgRebbe"> הפרק של הרבי <small id="kRebbe"></small></label></div>
+  <div class="tg"><label><input type="checkbox" id="tgRebbetzin"> הפרק של הרבנית <small id="kRebbetzin"></small></label></div>
+  <ul class="ppl" id="ppl"></ul>
+  <div class="add">
+    <input id="pName" placeholder="שם (למשל: שלי, מירי)">
+    <div class="addrow"><select id="pDay"></select><select id="pMonth"></select><input id="pYear" placeholder="שנה: תש״נ / 5750" inputmode="text"></div>
+    <div class="addrow"><span id="pPrev" class="prev"></span><button id="pAdd">הוסף</button></div>
+  </div>
   <h2>ימי החודש</h2>
   <div class="days" id="days"></div>
 </section>
@@ -164,7 +191,7 @@ computeK();
 let M={}; try{ M=JSON.parse(localStorage.getItem('hoshana-raba-v2')||'{}')||{}; }catch(e){}
 if(M.theme && M.theme!=='auto') root.setAttribute('data-theme',M.theme);
 const KEY='tehillim-daily-v1';
-let D={day:null,date:'',pos:0,mpp:2.0,fs:M.fs||23,done:{}};
+let D={day:null,date:'',pos:0,mpp:2.0,fs:M.fs||23,done:{},people:[],rebbe:false,rebbetzin:false};
 try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) D=Object.assign(D,s); }catch(e){}
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(D)); }catch(e){} }
 
@@ -182,7 +209,25 @@ function hebInfo(){ const now=new Date(); let d=new Date(now); const night=now.g
   const month=new Intl.DateTimeFormat('he-u-ca-hebrew',{month:'long'}).format(d).replace(/^ב/,'');
   const nx=new Date(d); nx.setDate(nx.getDate()+1); const nday=+new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric'}).format(nx);
   const key=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'numeric',year:'numeric'}).format(d);
-  return {day,month,short:day===29&&nday===1,night,key}; }
+  const parts=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'long',year:'numeric'}).formatToParts(d);
+  const year=+parts.find(x=>x.type==='year').value, men=parts.find(x=>x.type==='month').value;
+  return {day,month,short:day===29&&nday===1,night,key,year,men}; }
+/* personal chapters (age in hebrew years + 1) */
+const MONTHS=[['tishri','תשרי'],['heshvan','חשון'],['kislev','כסלו'],['tevet','טבת'],['shevat','שבט'],['adar','אדר'],['adar1','אדר א׳'],['adar2','אדר ב׳'],['nisan','ניסן'],['iyar','אייר'],['sivan','סיון'],['tamuz','תמוז'],['av','אב'],['elul','אלול']];
+const ORD={tishri:1,heshvan:2,kislev:3,tevet:4,shevat:5,adar1:6,adar:7,adar2:7,nisan:8,iyar:9,sivan:10,tamuz:11,av:12,elul:13};
+const EN={Tishri:'tishri',Heshvan:'heshvan',Kislev:'kislev',Tevet:'tevet',Shevat:'shevat','Adar I':'adar1',Adar:'adar','Adar II':'adar2',Nisan:'nisan',Iyar:'iyar',Sivan:'sivan',Tamuz:'tamuz',Av:'av',Elul:'elul'};
+function gy(y){ let n=y%1000, s=''; while(n>=400){ s+='ת'; n-=400; } const r=gem(n); s+=r; return s.length>1?s.slice(0,-1)+'״'+s.slice(-1):s+'׳'; }
+function isLeap(y){ return ((7*y+1)%19)<7; }
+function kapitel(b){ // b={d,m,y}
+  const cy=H.year, cm=ORD[EN[H.men]]||1, cd=H.day;
+  let bm=ORD[b.m]; if(!isLeap(cy) && (b.m==='adar1'||b.m==='adar2')) bm=7;
+  const passed = cm>bm || (cm===bm && cd>=b.d);
+  return cy-b.y-(passed?0:1)+1; }
+const REBBE={id:'rebbe',name:'הרבי',d:11,m:'nisan',y:5662}, REBBETZIN={id:'rebbetzin',name:'הרבנית',d:25,m:'adar',y:5661};
+function people(){ const L=(D.people||[]).slice(); if(D.rebbe) L.push(REBBE); if(D.rebbetzin) L.push(REBBETZIN); return L; }
+function parseYear(s){ s=String(s||'').trim(); if(/^\d+$/.test(s)){ let n=+s; if(n<1000) n+=5000; return n; }
+  const V={א:1,ב:2,ג:3,ד:4,ה:5,ו:6,ז:7,ח:8,ט:9,י:10,כ:20,ך:20,ל:30,מ:40,ם:40,נ:50,ן:50,ס:60,ע:70,פ:80,ף:80,צ:90,ץ:90,ק:100,ר:200,ש:300,ת:400};
+  let n=0; for(const ch of s.replace(/[״"׳']/g,'')) n+=V[ch]||0; if(!n) return null; return n<1000?n+5000:n; }
 
 /* build the day's text */
 let H=hebInfo(), B=[], tops=[], hts=[], TOTAL=0, CHB=[];
@@ -200,6 +245,12 @@ function build(){
       let h='<span class="n">'+gem(c)+(c===119?' <small style="font-weight:500">('+gem(a+1)+'–'+gem(z)+')</small>':'')+'</span><p>';
       for(let i=a;i<z;i++){ w+=vs[i].split(' ').length; h+='<span class="v">'+gem(i+1)+'</span>'+vs[i]+' '; }
       el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length}); B.push({el,w}); } });
+  const P=people().map(x=>({x,k:kapitel(x)})).filter(o=>o.k>=1&&o.k<=150);
+  if(P.length){ const ph=document.createElement('div'); ph.className='t head'; ph.innerHTML='<h3>פרקים אישיים</h3><small>'+P.map(o=>o.x.name+' – '+gem(o.k)).join(' · ')+'</small>'; doc.appendChild(ph); B.push({el:ph,w:2});
+    P.forEach(o=>{ const c=o.k, vs=TEH[c-1]; const el=document.createElement('div'); el.className='t ch'; let w=0;
+      let h='<span class="n">'+gem(c)+' <small style="font-weight:500">('+o.x.name+')</small></span><p>';
+      vs.forEach((v,i)=>{ w+=v.split(' ').length; h+='<span class="v">'+gem(i+1)+'</span>'+v+' '; });
+      el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length,who:o.x.name}); B.push({el,w}); }); }
   const end=document.createElement('div'); end.className='t end';
   end.innerHTML='<b>סיום התהילים ליום '+gq(d)+'</b>'+(d<30?'<button id="nextDay">ליום '+gq(d+1)+' ›</button>':'');
   doc.appendChild(end); B.push({el:end,w:2});
@@ -247,12 +298,29 @@ $('faster').onclick=()=>setMpp(D.mpp-(D.mpp>3?0.5:0.1));
 const SIZES=[19,23,27,31]; $('font').onclick=()=>{ const p=D.pos; const i=(SIZES.indexOf(D.fs)+1)%SIZES.length; D.fs=SIZES[i<0?1:i]; root.style.setProperty('--fs',(D.fs*K)+'px'); measure(); scrollToPos(p); D.pos=p; save(); };
 $('prev').onclick=()=>setDay(D.day-1,true); $('next').onclick=()=>setDay(D.day+1,true);
 $('today').onclick=()=>setDay(today(),true);
-function openSheet(){ const g=$('days'); g.innerHTML='';
+function openSheet(){ renderPeople(); const g=$('days'); g.innerHTML='';
   for(let i=1;i<=30;i++){ const b=document.createElement('button'); b.textContent=gem(i); if(i===D.day) b.className='cur'; else if(D.done[H.key+':'+i]) b.className='done';
     b.onclick=()=>{ closeSheet(); setDay(i,true); }; g.appendChild(b); }
   $('sheet').classList.add('open'); $('veil').classList.add('open'); }
+function renderPeople(){
+  $('tgRebbe').checked=!!D.rebbe; $('tgRebbetzin').checked=!!D.rebbetzin;
+  $('kRebbe').textContent=gem(kapitel(REBBE)); $('kRebbetzin').textContent=gem(kapitel(REBBETZIN));
+  const ul=$('ppl'); ul.innerHTML='';
+  (D.people||[]).forEach((p,i)=>{ const li=document.createElement('li'); const k=kapitel(p);
+    li.innerHTML='<b></b><span>'+gem(p.d)+' '+MONTHS.find(m=>m[0]===p.m)[1]+' '+gy(p.y)+'</span><small>'+(k>=1&&k<=150?'פרק '+gem(k):'—')+'</small><button aria-label="מחק">✕</button>';
+    li.querySelector('b').textContent=p.name; li.querySelector('button').onclick=()=>{ D.people.splice(i,1); save(); renderPeople(); rebuild(); }; ul.appendChild(li); }); }
+function formPerson(){ const y=parseYear($('pYear').value); return {name:($('pName').value.trim()||'הפרק שלי'),d:+$('pDay').value,m:$('pMonth').value,y}; }
+function previewPerson(){ const p=formPerson(); $('pPrev').textContent = p.y ? 'פרק '+gem(kapitel(p)) : ''; }
+(function initForm(){ for(let i=1;i<=30;i++){ const o=document.createElement('option'); o.value=i; o.textContent=gem(i); $('pDay').appendChild(o); }
+  MONTHS.forEach(m=>{ const o=document.createElement('option'); o.value=m[0]; o.textContent=m[1]; $('pMonth').appendChild(o); });
+  ['pName','pDay','pMonth','pYear'].forEach(id=>$(id).addEventListener('input',previewPerson));
+  $('pAdd').onclick=()=>{ const p=formPerson(); if(!p.y||p.y<5600||p.y>H.year){ toast('יש להקליד שנה עברית, למשל תש״נ או 5750'); return; }
+    D.people=(D.people||[]).concat([p]); save(); $('pName').value=''; $('pYear').value=''; $('pPrev').textContent=''; renderPeople(); rebuild(); toast('נוסף: '+p.name+' – פרק '+gem(kapitel(p))); };
+  $('tgRebbe').onchange=e=>{ D.rebbe=e.target.checked; save(); rebuild(); };
+  $('tgRebbetzin').onchange=e=>{ D.rebbetzin=e.target.checked; save(); rebuild(); }; })();
+function rebuild(){ const p=D.pos; build(); measure(); scrollToPos(p); D.pos=p; update(); }
 function closeSheet(){ $('sheet').classList.remove('open'); $('veil').classList.remove('open'); }
-$('menu').onclick=openSheet; $('veil').onclick=closeSheet;
+$('menu').onclick=openSheet; $('veil').onclick=closeSheet; $('closeS').onclick=closeSheet; $('grab').onclick=closeSheet;
 function hrSeason(){ if(H.month!=='תשרי') return 0; const hr=new Date().getHours();
   if(H.day===20) return 1; if(H.day===21 && (H.night||hr<10)) return 2; return 0; }
 function renderSeason(){ const s=hrSeason(), b=$('hrban'); b.hidden=!s; if(s) $('hrT').textContent = s===1&&!H.night ? 'הערב: ליל הושענא רבה' : 'הלילה: ליל הושענא רבה'; placeBan(); }
@@ -261,7 +329,7 @@ function placeBan(){ const b=$('hrban'); b.style.top=$('top').offsetHeight+'px';
 /* status */
 let toastT; function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600); }
 function update(){ const p=D.pos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
-  let cur=CHB[0]; CHB.forEach(x=>{ if(B[x.i].cum<=p+0.5) cur=x; }); $('curCh').textContent='מזמור '+gem(cur.c);
+  let cur=CHB[0]; CHB.forEach(x=>{ if(B[x.i].cum<=p+0.5) cur=x; }); $('curCh').textContent='מזמור '+gem(cur.c)+(cur.who?' · '+cur.who:'');
   const left=Math.max(0,TOTAL-p), leftCh=CHB.filter(x=>B[x.i].cum>p+0.5).length;
   $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשארו <b>'+(leftCh+1)+' מזמורים</b> (כ־'+Math.max(1,Math.round(left/wpm()))+' דק׳)';
   $('pct').textContent=Math.round(done*100)+'%';
