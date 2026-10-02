@@ -1,6 +1,6 @@
 {
-  "name": "ליל הושענא רבה",
-  "short_name": "הושענא רבה",
+  "name": "תהילים יומי",
+  "short_name": "תהילים",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",
@@ -24,9 +24,9 @@
   ],
   "shortcuts": [
     {
-      "name": "תהילים יומי",
-      "short_name": "תהילים יומי",
-      "url": "./daily.html",
+      "name": "סדר ליל הושענא רבה",
+      "short_name": "הושענא רבה",
+      "url": "./hoshana.html",
       "icons": [
         {
           "src": "icon-192.png",
