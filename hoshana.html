@@ -185,7 +185,7 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:calc(2px*v
 <section class="sheet" id="sheet" aria-label="פרקים והגדרות">
   <div class="sheet-in">
     <div class="grab"></div>
-    <a class="dailylink" href="./">תהילים יומי<small>לפי ימי החודש · </small><span>›</span></a>
+    <a class="dailylink" href="./">מסך הבית<small>תהילים, חומש ותניא יומי</small><span>›</span></a>
     <h2>איפה אני אוחז</h2>
     <ul class="secs places" id="places"></ul>
     <h2>מעבר מהיר</h2>
@@ -448,7 +448,7 @@ function renderSecs(){ const ul=$('secs'); ul.innerHTML=''; let lastPh=-1;
 
 /* ---------- sheet + settings ---------- */
 function dailyLabel(){ try{ const d=new Date(); const n=+new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric'}).format(d); return 'היום יום '+gem(n); }catch(e){ return ''; } }
-function openSheet(){ const dl=document.querySelector('.dailylink small'); if(dl) dl.textContent='לפי ימי החודש · '+dailyLabel(); renderPlaces(); renderSecs(); renderSettings(); $('sheet').classList.add('open'); $('veil').classList.add('open'); }
+function openSheet(){  renderPlaces(); renderSecs(); renderSettings(); $('sheet').classList.add('open'); $('veil').classList.add('open'); }
 function closeSheet(){ $('sheet').classList.remove('open'); $('veil').classList.remove('open'); }
 $('menu').onclick=openSheet; $('veil').onclick=closeSheet;
 $('chGo').onclick=()=>{ const n=parseInt($('chIn').value,10); if(!(n>=1&&n<=150)){ toast('יש להקליד מספר בין 1 ל־150'); return; } closeSheet(); scrollToPos(B[CH_BLOCK[n]].cum+0.3); };

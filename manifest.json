@@ -1,6 +1,6 @@
 {
-  "name": "תהילים יומי",
-  "short_name": "תהילים",
+  "name": "לימוד יומי – חת״ת ותהילים",
+  "short_name": "לימוד יומי",
   "lang": "he",
   "dir": "rtl",
   "start_url": "./",
@@ -24,9 +24,28 @@
   ],
   "shortcuts": [
     {
-      "name": "סדר ליל הושענא רבה",
-      "short_name": "הושענא רבה",
-      "url": "./hoshana.html",
+      "name": "חומש עם רש״י",
+      "url": "./study.html?m=chumash",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "תהילים יומי",
+      "url": "./tehillim.html",
+      "icons": [
+        {
+          "src": "icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "תניא יומי",
+      "url": "./study.html?m=tanya",
       "icons": [
         {
           "src": "icon-192.png",
