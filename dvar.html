@@ -244,7 +244,7 @@ setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); show().then(()=>scrollToPos(p)); });
 
 window._dv=()=>({TODAYDAY,DAY,subj:V.subj,n:B.length,TOTAL,IDX});
-(async()=>{ try{ META=await DM.loadStored(); }catch(e){}
+(async()=>{ $('doc').innerHTML='<div class="empty"><h2>טוען את החוברת…</h2><div class="prog" id="prog"><i></i></div></div>'; try{ META=await DM.loadStored(f=>{ const i=document.querySelector('#prog i'); if(i) i.style.width=Math.round(f*100)+'%'; }); }catch(e){}
   if(!META){ emptyState(''); return; } IDX=META.index; afterLoad(false); })();
 </script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>

@@ -15,7 +15,8 @@ export const SUBJECTS = [
 export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת קודש'];
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
-const HEAD=56, FOOT=26;   // running header / footer heights in PDF points
+const HEAD=56, FOOT=26;
+const IDXV=2;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* ---------- IndexedDB ---------- */
 function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('limud',1); r.onupgradeneeded=()=>r.result.createObjectStore('files'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
@@ -66,12 +67,17 @@ async function buildIndex(doc, onProgress){
   });
   // week label from the chumash / first markers
   const lab=[]; for(const s of Object.values(index.subjects)) for(let d=0;d<7;d++){ const L=s.days[d]&&s.days[d].label; if(L&&!lab[d]) lab[d]=L; }
-  index.dayLabels=lab;
+  index.dayLabels=lab; index.v=IDXV;
   return index;
 }
 
 let DOC=null, META=null;
-export async function loadStored(){ if(META) return META; const m=await get('dm'); if(!m) return null; META=m; return m; }
+let REIDX=null;
+export async function loadStored(onProgress){ if(META) return META; const m=await get('dm'); if(!m) return null;
+  if(!m.index || m.index.v!==IDXV){ // booklet stored by an older version: rebuild its index once
+    REIDX=REIDX||(async()=>{ const d=await pdfjs.getDocument({data:m.data.slice(0)}).promise; m.index=await buildIndex(d,onProgress); await put('dm',m); DOC=d; return m; })();
+    await REIDX; }
+  META=m; return m; }
 async function doc(){ if(DOC) return DOC; const m=await loadStored(); if(!m) throw new Error('no booklet'); DOC=await pdfjs.getDocument({data:m.data.slice(0)}).promise; return DOC; }
 export async function importFile(buf,name,onProgress){
   const d=await pdfjs.getDocument({data:buf.slice(0)}).promise;
