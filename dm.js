@@ -16,7 +16,7 @@ export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמיש
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=2;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=3;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* ---------- IndexedDB ---------- */
 function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('limud',1); r.onupgradeneeded=()=>r.result.createObjectStore('files'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
@@ -31,7 +31,11 @@ async function buildIndex(doc, onProgress){
     const lines={}, litems={}; let words=0;
     tc.items.forEach(it=>{ const y=Math.round(vp.height-it.transform[5]); (lines[y]=lines[y]||[]).push(it.str); (litems[y]=litems[y]||[]).push(it); const s=it.str.replace(/[\u0591-\u05C7]/g,''); const m=s.match(/[\u05d0-\u05ea]{2,}|[A-Za-z\u00c0-\u02af\u2000-\u2fff]{2,}/g); if(m) words+=m.length; });
     const ys=Object.keys(lines).map(Number).sort((a,b)=>a-b);
-    let head='', top=''; ys.forEach(y=>{ const t=lines[y].join(' '); if(y<HEAD) head+=t+' '; if(y<120) top+=t+' '; });
+    let head='', top='', rh=''; ys.forEach(y=>{ const t=lines[y].join(' '); if(y<HEAD){ head+=t+' '; rh+=t+' '; } if(y<120) top+=t+' '; });
+    // running header title (without the page number) and the first large title on the page
+    rh=rh.replace(/[\u200e\u200f\u202a-\u202e]/g,' ').replace(/\s+/g,' ').trim(); { const tk=rh.split(' '); let k=0; while(k<3&&tk[k]&&/^[א-ת]{1,3}$/.test(tk[k])) k++; rh=tk.slice(k).join(' ').replace(/^[\/\s]+/,'').trim(); }
+    let big=''; for(const y of ys){ if(y<HEAD||y>260) continue; const its=litems[y]; const t=its.map(i=>i.str).join('').replace(/[\u0591-\u05C7]/g,'').trim(); const hgt=Math.max(...its.map(i=>i.height||0));
+      const heb=(t.match(/[א-ת]/g)||[]).length; if(hgt>=13 && heb>=3 && t.length<=40 && heb/t.replace(/\s/g,'').length>0.7){ big=t.replace(/â|ã/g,'').trim(); break; } }
     head=norm(head).replace(/^[א-ת]{1,4}(?=שיעור|מתוך|הלכה|מסכת|היום)/,''); top=norm(top);
     const marks=[];
     ys.forEach(y=>{ if(y<HEAD) return; const t=lines[y].join(''); if(!t.includes('â')) return; const n=norm(t);
@@ -44,7 +48,7 @@ async function buildIndex(doc, onProgress){
     for(let b=lo,run=0,st=0;b<=hi;b++){ if(bins[b]===0){ if(!run) st=b; run++; if(run>best){ best=run; gs=st*2; ge=(b+1)*2; } } else run=0; }
     const gut=best>=2?[gs,ge]:[vp.width/2-3,vp.width/2+3];
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,gut,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
   // segments per subject and day
@@ -68,6 +72,15 @@ async function buildIndex(doc, onProgress){
   // week label from the chumash / first markers
   const lab=[]; for(const s of Object.values(index.subjects)) for(let d=0;d<7;d++){ const L=s.days[d]&&s.days[d].label; if(L&&!lab[d]) lab[d]=L; }
   index.dayLabels=lab; index.v=IDXV;
+  // weekly (not daily) sections: group the remaining pages by their running header
+  const secs=[]; const key=s=>(s||'').replace(/^[\/\s]+/,'').split(/[\s\-–.\/]+/).filter(Boolean)[0]||'';
+  pages.forEach(x=>{ if(x.subj || x.p===1) return; const last=secs[secs.length-1]; const k=key(x.rh);
+    const nn=s=>norm(s||'').replace(/[^א-ת]/g,''); const startsNew = !!x.big && (!x.rh || nn(x.rh).startsWith(nn(x.big).slice(0,8)));
+    if(last && last.to===x.p-1 && !startsNew && ((k && (last.keys.has(k) || last.keys.size<2)) || (!k && !x.big))){
+      last.to=x.p; if(k) last.keys.add(k); if(!last.title && x.rh) last.title=x.rh; last.words+=x.words; return; }
+    secs.push({from:x.p,to:x.p,keys:new Set(k?[k]:[]),title:(x.big||x.rh||'').slice(0,60),words:x.words}); });
+  const tidy=t=>t.replace(/["״]/g,'״').replace(/\s*תלמוד בבלי המבואר.*$/,'').replace(/\s+/g,' ').trim().slice(0,48);
+  index.sections=secs.filter(s=>s.title).map(s=>({from:s.from,to:s.to,title:tidy(s.title),words:s.words}));
   return index;
 }
 
@@ -94,6 +107,8 @@ export function todayInfo(index, hebLabel){ const d=dayForLabel(index,hebLabel);
 export function dayForLabel(index, hebLabel){ const n=norm(hebLabel); const L=index.dayLabels||[]; for(let d=0;d<7;d++){ if(L[d] && norm(L[d]).includes(n)) return d; } return -1; }
 
 /* list of page slices for a subject/day: [{p, y0, y1, w, h, words}] (PDF units) */
+export function sectionSlices(index, i){ const s=(index.sections||[])[i]; if(!s) return []; const out=[];
+  for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; out.push({p,x0:0,x1:pg.w,y0:HEAD-14,y1:pg.h-FOOT+10,w:pg.w,h:pg.h,words:pg.words}); } return out; }
 export function slices(index, subj, day){
   const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return [];
   const out=[]; const P=index.pages;

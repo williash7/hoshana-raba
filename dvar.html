@@ -112,6 +112,13 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .empty ol{text-align:right;color:var(--textmuted);font-size:calc(14.5px*var(--k));line-height:1.7;padding-right:calc(20px*var(--k))}
 .prog{height:calc(6px*var(--k));background:var(--rule);border-radius:calc(3px*var(--k));overflow:hidden;margin-top:calc(14px*var(--k))}
 .prog i{display:block;height:100%;background:var(--willow);width:0}
+.secs{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) calc(16px*var(--k))}
+.secs h3{font-family:var(--serif);font-size:calc(22px*var(--k));margin:0;color:var(--text)}
+.secs p{color:var(--textmuted);font-size:calc(14px*var(--k));margin:calc(4px*var(--k)) 0 calc(12px*var(--k))}
+.secs button{display:block;width:100%;text-align:right;border:calc(1px*var(--k)) solid var(--rule);background:var(--paper);color:var(--text);border-radius:calc(12px*var(--k));padding:calc(11px*var(--k)) calc(14px*var(--k));margin-bottom:calc(8px*var(--k))}
+.secs button b{display:block;font-family:var(--serif);font-size:calc(18px*var(--k))}
+.secs button span{font-size:calc(13px*var(--k));color:var(--textmuted)}
+.backlist{display:block;margin:calc(8px*var(--k)) 0 calc(8px*var(--k)) auto;border:0;background:var(--night);color:var(--gold);border-radius:calc(12px*var(--k));padding:calc(8px*var(--k)) calc(14px*var(--k));font-size:calc(14px*var(--k))}
 .zoom{min-width:calc(52px*var(--k))}
 </style>
 </head>
@@ -182,20 +189,22 @@ function afterLoad(fresh){
   TODAYDAY=DM.dayForLabel(IDX,todayLbl);
   const L=IDX.dayLabels||[]; $('week').textContent=(L[0]&&L[6]?L[0].replace(/^יום ראשון\s*/,'')+' – '+L[6].replace(/^שבת קודש\s*/,''):(META.name||''));
   if(TODAYDAY<0){ toast('החוברת שטעונה אינה של השבוע הנוכחי'); } else DAY=TODAYDAY;
-  if(!IDX.subjects[V.subj]) V.subj=Object.keys(IDX.subjects)[0];
+  if(V.subj!=='more' && !IDX.subjects[V.subj]) V.subj=Object.keys(IDX.subjects)[0];
   tabs(); show(); if(fresh) toast('החוברת נטענה ✓'); }
 function tabs(){ const st=$('subjTabs'); st.innerHTML='';
   DM.SUBJECTS.filter(s=>IDX.subjects[s.id]).forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.className=s.id===V.subj?'on':''; b.onclick=()=>{ V.subj=s.id; save(); tabs(); show(); }; st.appendChild(b); });
-  const dt=$('dayTabs'); dt.innerHTML='';
+  if((IDX.sections||[]).length){ const b=document.createElement('button'); b.textContent='עוד בחוברת'; b.className=V.subj==='more'?'on':''; b.onclick=()=>{ V.subj='more'; V.sec=null; save(); tabs(); show(); }; st.appendChild(b); }
+  const dt=$('dayTabs'); dt.innerHTML=''; dt.style.display=V.subj==='more'?'none':'';
   DM.DAYNAMES.forEach((n,i)=>{ const b=document.createElement('button'); b.textContent=n; b.className=(i===DAY?'on':'')+(i===TODAYDAY?' today':''); b.onclick=()=>{ DAY=i; tabs(); show(); }; dt.appendChild(b); });
   const on=st.querySelector('.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'}); }
 
 /* ---------- reader ---------- */
 let B=[], tops=[], hts=[], TOTAL=1, ready=false, curPos=0, io=null;
-const key=()=>V.subj+':'+(IDX.dayLabels&&IDX.dayLabels[DAY]||DAY);
+const key=()=>V.subj==='more'?'sec:'+((IDX.sections[V.sec]||{}).title||V.sec):V.subj+':'+(IDX.dayLabels&&IDX.dayLabels[DAY]||DAY);
 function cssW(){ return Math.min(innerWidth, 900*K)*V.zoom; }
 async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
-  const sl=DM.slices(IDX,V.subj,DAY); const doc=$('doc'); doc.className='dm'; doc.innerHTML=''; B=[];
+  if(V.subj==='more' && V.sec==null){ showList(); return; }
+  const sl=V.subj==='more'?DM.sectionSlices(IDX,V.sec):DM.slices(IDX,V.subj,DAY); const doc=$('doc'); doc.className='dm'; doc.innerHTML=''; B=[];
   root.style.setProperty('--dw',cssW()+'px'); $('zoom').textContent='×'+V.zoom;
   if(!sl.length){ doc.innerHTML='<div class="t msg">אין שיעור '+DM.SUBJECTS.find(s=>s.id===V.subj).name+' ליום '+DM.DAYNAMES[DAY]+' בחוברת.</div>'; update(); return; }
   const w=cssW();
@@ -204,7 +213,13 @@ async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
   io=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); el._c=c; el.appendChild(c); DM.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
   B.forEach(b=>io.observe(b.el));
-  measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
+  if(V.subj==='more'){ const bk=document.createElement('button'); bk.className='backlist'; bk.textContent='‹ חזרה לרשימת התכנים'; bk.onclick=()=>{ V.sec=null; save(); show(); }; doc.insertBefore(bk,doc.firstChild); }
+  $('line').style.display=''; $('shade').style.display=''; measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
+function showList(){ const doc=$('doc'); doc.className=''; ready=false; B=[]; $('line').style.display='none'; $('shade').style.display='none';
+  let h='<div class="secs"><h3>עוד בחוברת השבוע</h3><p>תכנים שאינם מחולקים לפי ימים – לבחירה לפי הזמן שלך.</p>';
+  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"><b></b><span>עמ׳ '+gem(s.from)+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(lp?' · התחלת':'')+'</span></button>'; });
+  doc.innerHTML=h+'</div>'; doc.querySelectorAll('.secs button').forEach(b=>{ b.querySelector('b').textContent=IDX.sections[+b.dataset.i].title; b.onclick=()=>{ V.sec=+b.dataset.i; save(); show(); }; });
+  update(); }
 
 function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight);
   const t=$('top').offsetHeight, b=$('dock').offsetHeight; $('scroller').style.paddingTop=t+'px'; root.style.setProperty('--dockH',b+'px'); placeLine(); }
@@ -236,9 +251,9 @@ function update(){ $('spd').textContent=wpm;
   if(!ready){ $('fill').style.width='0%'; $('left').textContent=''; $('pct').textContent=''; $('cur').textContent=''; return; }
   const p=curPos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
   const left=Math.max(0,TOTAL-p);
-  $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':'');
+  if(V.subj==='more'){ $('cur').textContent=(IDX.sections[V.sec]||{}).title||''; $('hdate').textContent='עוד בחוברת'; } else { $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':''); }
   $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; $('pct').textContent=Math.round(done*100)+'%';
-  if(DAY===TODAYDAY) setProgress('dm-'+V.subj,isoDate(today),left<2?1:done); }
+  if(DAY===TODAYDAY && V.subj!=='more') setProgress('dm-'+V.subj,isoDate(today),left<2?1:done); }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); V.pos[key()]=curPos; update(); },{passive:true});
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); show().then(()=>scrollToPos(p)); });
