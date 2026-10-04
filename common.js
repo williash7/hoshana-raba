@@ -106,6 +106,11 @@ function tehWords(day,short){ if(!TW) return 0; const one=dd=>{ if(dd===25) retu
 function wcGet(k){ return (lsGet('wc-v1',{})[k])||0; }
 function wcSet(k,n){ const W=lsGet('wc-v1',{}); W[k]=n; const ks=Object.keys(W); if(ks.length>40) delete W[ks[0]]; lsSet('wc-v1',W); }
 const mins=w=>w/getWpm();
+/* pace when learning from the printed booklet (measured), and time learned this week */
+function printWpm(){ return lsGet('pace-print-v1',{}).wpm||getWpm(); }
+function learnPrintWpm(words,ms){ if(ms<60000||words<40) return; const w=words/(ms/60000); if(w<10||w>500) return; const old=lsGet('pace-print-v1',{}).wpm; lsSet('pace-print-v1',{wpm:Math.round(old?old*0.6+w*0.4:w)}); }
+function weekTime(){ const W=lsGet('time-v1',null); return W&&W.wk===wkId()?W.ms:0; }
+function addWeekTime(ms){ if(!(ms>0)) return; lsSet('time-v1',{wk:wkId(),ms:weekTime()+ms}); }
 function fmtMin(m){ m=Math.round(m); if(m<1) return 'פחות מדקה'; if(m<60) return m+' דק׳'; return Math.floor(m/60)+' שע׳'+(m%60?' ו־'+(m%60)+' דק׳':''); }
 
 /* parts for the continuous session: each returns {title, blocks:[{cls,html,w,mark}]} */

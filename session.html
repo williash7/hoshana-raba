@@ -268,7 +268,7 @@ function update(){ const lm=leftMs(); $('clock').textContent=mmss(lm); $('clockL
   $('pace').innerHTML=lw<3?(TOTAL-p<3?'':'<span class="fit">הגעת ליעד ✓</span>'):(need<=lm/6e4+0.05?'<span class="fit">מספיק בזמן</span>':'<span class="nofit">חסרות '+fmtMin(need-lm/6e4)+'</span>');
   $('spd').textContent=Math.round(wpm); }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); },{passive:true});
-setInterval(update,1000);
+setInterval(()=>{ update(); if(playing&&document.visibilityState==='visible') addWeekTime(1000); },1000);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); measure(); scrollToPos(p); });
 root.style.setProperty('--fs',(lsGet('study-chumash-v1',{}).fs||23)*K+'px'); root.style.setProperty('--pw',(600*K)+'px');
 $('fitBtn').classList.toggle('on',fit); $('spd').textContent=Math.round(wpm);

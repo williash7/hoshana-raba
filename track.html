@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="he" dir="rtl" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#181b2b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>לימוד מהחוברת</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --k:1;
+  --night:#181b2b; --night2:#22263a; --ink:#ecebe4; --muted:#9aa0b8;
+  --willow:#86a86a; --gold:#d9ad55; --line:#2c3046;
+  --ui:"Assistant","Segoe UI",Arial,sans-serif;
+  --serif:"Frank Ruhl Libre","David","Times New Roman",serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--night);font-family:var(--ui);color:var(--ink);-webkit-tap-highlight-color:transparent}
+button,a{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset:calc(2px*var(--k))}
+.top{position:sticky;top:0;z-index:5;background:var(--night);padding:calc(env(safe-area-inset-top,0px) + calc(12px*var(--k))) calc(16px*var(--k)) calc(12px*var(--k));border-bottom:calc(1px*var(--k)) solid var(--line)}
+.top-in{max-width:calc(620px*var(--k));margin:0 auto;display:flex;align-items:center;gap:calc(14px*var(--k))}
+.top h1{font-family:var(--serif);font-size:calc(19px*var(--k));margin:0;color:var(--gold);font-weight:700}
+.top .sub{font-size:calc(13px*var(--k));color:var(--muted)}
+.clock{margin-inline-start:auto;text-align:left}
+.clock b{display:block;font-family:var(--serif);font-size:calc(34px*var(--k));line-height:1;font-variant-numeric:tabular-nums;direction:ltr;text-align:left}
+.clock span{font-size:calc(12.5px*var(--k));color:var(--muted);white-space:nowrap}
+.clock.over b{color:#e8a08f}
+.bar{max-width:calc(620px*var(--k));margin:calc(10px*var(--k)) auto 0;height:calc(6px*var(--k));background:#34384f;border-radius:calc(3px*var(--k));overflow:hidden}
+.bar i{display:block;height:100%;background:var(--willow);width:0}
+main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) calc(16px*var(--k)) calc(120px*var(--k))}
+.it{border:calc(1px*var(--k)) solid var(--line);border-radius:calc(16px*var(--k));padding:calc(12px*var(--k)) calc(14px*var(--k));margin-bottom:calc(10px*var(--k));background:var(--night2)}
+.it .hd{display:flex;align-items:center;gap:calc(10px*var(--k))}
+.it .n{width:calc(28px*var(--k));height:calc(28px*var(--k));border-radius:50%;background:var(--night);color:var(--gold);display:grid;place-items:center;font-family:var(--serif);font-weight:700;flex:none;font-size:calc(15px*var(--k))}
+.it h2{font-family:var(--serif);font-size:calc(19px*var(--k));margin:0;font-weight:700;flex:1;min-width:0}
+.it h2 em{font-style:normal;font-family:var(--ui);font-weight:400;font-size:calc(13px*var(--k));color:var(--muted)}
+.it .t{font-variant-numeric:tabular-nums;color:var(--muted);font-size:calc(14px*var(--k));white-space:nowrap}
+.it .where{margin:calc(8px*var(--k)) 0 0;font-size:calc(15px*var(--k));line-height:1.55}
+.it .where b{color:var(--gold);font-weight:600}
+.it .est{font-size:calc(13px*var(--k));color:var(--muted);margin-top:calc(4px*var(--k))}
+.it.cur{border-color:var(--gold);background:#262a40}
+.it.cur .n{background:var(--gold);color:#241c08}
+.it.cur .t{color:var(--gold);font-size:calc(20px*var(--k));font-weight:700}
+.it.done{opacity:.75}
+.it.done .n{background:var(--willow);color:#fff}
+.it.part .n{background:#6b5a2e;color:#fff}
+.acts{display:flex;flex-wrap:wrap;gap:calc(8px*var(--k));margin-top:calc(12px*var(--k))}
+.acts button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night);border-radius:calc(14px*var(--k));padding:calc(10px*var(--k)) calc(14px*var(--k));font-size:calc(15px*var(--k))}
+.acts .ok{background:var(--willow);border-color:var(--willow);color:#fff;font-weight:700;flex:1}
+.pages{display:flex;flex-wrap:wrap;gap:calc(6px*var(--k));margin-top:calc(10px*var(--k))}
+.pages p{width:100%;margin:0 0 calc(2px*var(--k));font-size:calc(14px*var(--k));color:var(--muted)}
+.pages button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night);border-radius:calc(12px*var(--k));padding:calc(7px*var(--k)) calc(11px*var(--k));font-size:calc(14px*var(--k))}
+.pages button.goal{border-color:var(--gold);color:var(--gold)}
+.dock{position:fixed;bottom:0;left:0;right:0;z-index:6;background:var(--night);border-top:calc(1px*var(--k)) solid var(--line);padding:calc(10px*var(--k)) calc(16px*var(--k)) calc(env(safe-area-inset-bottom,0px) + calc(10px*var(--k)))}
+.dock-in{max-width:calc(620px*var(--k));margin:0 auto;display:flex;gap:calc(10px*var(--k));align-items:center}
+.play{flex:1;border:0;background:var(--gold);color:#241c08;font-weight:700;font-size:calc(18px*var(--k));border-radius:calc(14px*var(--k));padding:calc(13px*var(--k))}
+.play.run{background:var(--night2);color:var(--ink);border:calc(1.5px*var(--k)) solid #4a4f6b}
+.home{width:calc(50px*var(--k));height:calc(50px*var(--k));border-radius:50%;border:calc(1.5px*var(--k)) solid #4a4f6b;display:grid;place-items:center;flex:none}
+.sum{border:calc(1px*var(--k)) solid var(--willow);border-radius:calc(16px*var(--k));padding:calc(14px*var(--k));margin-top:calc(6px*var(--k));line-height:1.6;font-size:calc(15px*var(--k))}
+.sum h3{font-family:var(--serif);margin:0 0 calc(4px*var(--k));color:var(--willow);font-size:calc(20px*var(--k))}
+.msg{text-align:center;color:var(--muted);padding:calc(40px*var(--k)) 0}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div><h1>לימוד מהחוברת</h1><div class="sub" id="sub"></div></div>
+    <div class="clock" id="clockBox"><b id="clock">--:--</b><span id="clockLbl"></span></div>
+  </div>
+  <div class="bar"><i id="fill"></i></div>
+</header>
+<main id="list"><div class="msg">טוען…</div></main>
+<nav class="dock"><div class="dock-in">
+  <button class="play" id="play">התחל ▶</button>
+  <a class="home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
+</div></nav>
+<script src="common.js"></script>
+<script type="module">
+const $=id=>document.getElementById(id);
+computeK();
+TW={"cw": [57, 77, 63, 68, 98, 74, 124, 66, 150, 147, 62, 72, 48, 64, 44, 78, 116, 345, 113, 62, 92, 224, 50, 81, 133, 73, 126, 80, 81, 87, 200, 99, 137, 139, 203, 81, 259, 144, 108, 168, 104, 114, 46, 173, 139, 87, 64, 100, 144, 149, 137, 82, 67, 58, 175, 107, 94, 85, 134, 102, 60, 96, 81, 74, 101, 131, 49, 295, 251, 43, 174, 140, 171, 174, 77, 78, 141, 473, 115, 124, 111, 51, 109, 101, 83, 128, 47, 131, 341, 125, 99, 100, 41, 146, 77, 95, 84, 67, 77, 36, 70, 183, 141, 233, 256, 288, 253, 85, 201, 55, 68, 72, 51, 47, 118, 109, 12, 178, 946, 42, 46, 57, 35, 54, 43, 45, 49, 43, 50, 47, 27, 109, 29, 20, 144, 159, 68, 62, 160, 104, 81, 68, 102, 120, 126, 74, 126, 87, 57, 34], "v119": [5, 5, 5, 5, 5, 4, 6, 4, 5, 4, 6, 5, 4, 5, 4, 5, 5, 4, 6, 5, 5, 7, 8, 4, 5, 5, 4, 5, 5, 4, 4, 5, 6, 5, 5, 4, 6, 5, 7, 5, 5, 5, 7, 5, 5, 6, 4, 6, 5, 6, 6, 5, 5, 5, 6, 5, 5, 5, 5, 5, 6, 7, 6, 6, 5, 7, 7, 4, 8, 6, 5, 5, 6, 6, 6, 5, 5, 7, 5, 6, 5, 6, 6, 6, 6, 5, 6, 5, 5, 6, 6, 6, 6, 5, 6, 7, 5, 6, 6, 5, 7, 4, 5, 6, 4, 5, 5, 6, 6, 7, 6, 6, 4, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 4, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 6, 5, 4, 5, 6, 4, 5, 5, 6, 5, 5, 6, 5, 5, 6, 5, 6, 7, 6, 5, 6, 6, 5, 6, 6, 5, 5, 6, 6, 5, 6, 6, 5, 5, 4, 9]};
+const Q=new URLSearchParams(location.search);
+const BUDGET=Math.max(1,+(Q.get('min')||30));
+const today=new Date(); today.setHours(12,0,0,0);
+const WD=today.getDay(), T=tehToday();
+const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return x; };
+const dayTag=d=>d===WD?'היום':'מיום '+WEEKDAYS[d];
+const DMN={chumash:'חומש',tanya:'תניא',hayomyom:'היום יום',rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד',sm:'ספר המצוות',halacha:'הלכה יומית',mishna:'משנה'};
+const COL={R:'עמודה ימנית',L:'עמודה שמאלית'};
+const UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.split('~'); return {id,plan:w?+w:null}; });
+
+/* ---------- state (kept across reloads / screen lock) ---------- */
+const SIG=isoDate(today)+'|'+(Q.get('u')||'')+'|'+BUDGET;
+let S=lsGet('track-v1',null);
+if(!S||S.sig!==SIG) S={sig:SIG, cur:0, since:null, items:UNITS.map(u=>({id:u.id,plan:u.plan,f0:wkFrac(u.id),f:null,ms:0,st:''}))};
+const save=()=>lsSet('track-v1',S);
+const runMs=()=>S.since?Date.now()-S.since:0;
+const itemMs=i=>S.items[i].ms+(i===S.cur?runMs():0);
+const totalMs=()=>S.items.reduce((a,_,i)=>a+itemMs(i),0);
+function stopRun(){ if(!S.since) return; const d=Date.now()-S.since; S.items[S.cur].ms+=d; addWeekTime(d); S.since=null; }
+function startRun(){ if(!S.since) S.since=Date.now(); }
+
+/* ---------- where each unit is in the printed booklet ---------- */
+let DM=null, IDX=null, IDAY=-1; const INFO={};
+const pn=s=>'עמ׳ '+gem(s.p)+(s.col?' ('+COL[s.col]+')':'');
+function fromSlices(sl,base){ const W=sl.reduce((a,b)=>a+b.words,0)||1; let acc=0;
+  const stops=sl.map(s=>{ acc+=s.words; return {lab:gem(s.p)+(s.col?(s.col==='R'?' ימין':' שמאל'):''), f:acc/W}; });
+  return Object.assign(base,{sl,W,stops,where:'<b>'+pn(sl[0])+'</b>'+(sl.length>1?' עד <b>'+pn(sl[sl.length-1])+'</b>':'')}); }
+const atFrac=(I,f)=>{ if(!I.sl) return null; for(let i=0;i<I.stops.length;i++) if(I.stops[i].f>f+0.001) return I.sl[i]; return I.sl[I.sl.length-1]; };
+function info(id){ const a=id.split(':');
+  const dmDay=(subj,d)=>{ const D=IDX&&IDX.subjects[subj]&&IDX.subjects[subj].days[d]; return D&&D.label?'מתחיל בכותרת „'+D.label.replace(/\s+/g,' ')+'”':''; };
+  if(a[0]==='teh'){ let t=T; for(let d=0;d<=WD;d++){ const x=tehFor(dateOf(d)); if(x.day===+a[1]){ t=x; var dd=d; } }
+    return {name:'תהילים',tag:dd!=null?dayTag(dd):'',where:'מתוך ספר התהילים שלך: <b>מזמורים '+t.range+'</b> (יום '+gq(+a[1])+' לחודש)',W:tehWords(+a[1],t.short)||800}; }
+  const subj=a[0]==='chu'?'chumash':a[0]==='tan'?'tanya':a[0]==='dm'?a[1]:null;
+  if(a[0]==='sec'){ const i=IDX?(IDX.sections||[]).findIndex(x=>x.from===+a[1]):-1; if(i<0) return {name:'מהחוברת',where:'',W:1000};
+    return fromSlices(DM.sectionSlices(IDX,i),{name:IDX.sections[i].title,tag:'מהחוברת'}); }
+  const d=a[0]==='dm'?(a[2]!=null?+a[2]:IDAY):+a[1];
+  const base={name:DMN[subj]||subj,tag:a[2]!=null||a[0]!=='dm'?dayTag(d):''};
+  if(IDX&&IDAY>=0){ const sl=DM.slices(IDX,subj,d); if(sl.length){ const r=fromSlices(sl,base); const lab=dmDay(subj,d); if(lab) r.where+='<br><span style="color:var(--muted);font-size:.9em">'+lab+'</span>'; return r; } }
+  return Object.assign(base,{where:'<span style="color:var(--muted)">טען את חוברת השבוע כדי לראות באיזה עמוד</span>',W:a[0]==='chu'?900:a[0]==='tan'?700:1500}); }
+
+/* ---------- render ---------- */
+let pick=-1;
+function render(){ const box=$('list'); box.innerHTML='';
+  S.items.forEach((it,i)=>{ const I=INFO[it.id]; const d=document.createElement('div');
+    const done=it.st==='done', part=it.st==='part', cur=i===S.cur&&!done&&!part;
+    d.className='it'+(cur?' cur':'')+(done?' done':'')+(part?' part':'');
+    let est='', goalF=null;
+    const left=I.W*(1-it.f0);
+    if(it.plan){ goalF=Math.min(1,it.f0+it.plan/I.W); est='מתוכנן: כ־'+fmtMin(it.plan/printWpm())+' (חלק)'; const g=atFrac(I,goalF-0.001); if(g) est+=' – עד בערך '+pn(g); }
+    else est='משוער: כ־'+fmtMin(left/printWpm());
+    let where=I.where||''; if(it.f0>0&&!done){ const s=atFrac(I,it.f0); where+=s?'<br>המשך מ־<b>'+pn(s)+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
+    const tm=itemMs(i);
+    d.innerHTML='<div class="hd"><div class="n">'+(done?'✓':part?'½':gem(i+1))+'</div><h2>'+I.name+(I.tag?' <em>· '+I.tag+'</em>':'')+'</h2><div class="t">'+(tm||cur?mmss(tm):'')+'</div></div>'+
+      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב־'+Math.round((it.f||0)*100)+'%')+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
+    if(cur){ const ac=document.createElement('div'); ac.className='acts';
+      ac.innerHTML='<button class="ok">✓ סיימתי</button><button class="st">עצרתי באמצע…</button><button class="sk">דלג</button>'; d.appendChild(ac);
+      ac.querySelector('.ok').onclick=()=>finish(i,1);
+      ac.querySelector('.st').onclick=()=>{ pick=pick===i?-1:i; render(); };
+      ac.querySelector('.sk').onclick=()=>{ const r=!!S.since; stopRun(); S.cur=next(i); pick=-1; if(r) startRun(); save(); render(); };
+      if(pick===i){ const pg=document.createElement('div'); pg.className='pages';
+        if(I.stops){ pg.innerHTML='<p>עד איפה הגעת? (סוף העמוד / העמודה)</p>';
+          I.stops.forEach(s=>{ if(s.f<=it.f0+0.001||s.f>=0.999) return; const b=document.createElement('button'); b.textContent=s.lab; if(goalF&&Math.abs(s.f-goalF)<0.08) b.className='goal'; b.onclick=()=>finish(i,s.f); pg.appendChild(b); }); }
+        else { pg.innerHTML='<p>כמה מהחלק הספקת?</p>'; [0.25,0.5,0.75].forEach(f=>{ if(f<=it.f0) return; const b=document.createElement('button'); b.textContent=Math.round(f*100)+'%'; b.onclick=()=>finish(i,f); pg.appendChild(b); }); }
+        d.appendChild(pg); } }
+    else if(!done&&!part){ d.onclick=()=>{ const r=!!S.since; stopRun(); S.cur=i; pick=-1; if(r) startRun(); save(); render(); }; d.style.cursor='pointer'; }
+    box.appendChild(d); });
+  if(S.items.every(it=>it.st)){ const tot=totalMs(), dn=S.items.filter(it=>it.st==='done').length; const s=document.createElement('div'); s.className='sum';
+    s.innerHTML='<h3>סיום ✓</h3>למדת <b>'+fmtMin(tot/6e4)+'</b> · '+(dn===1?'חלק אחד הושלם':dn+' חלקים הושלמו')+(S.items.length>dn?(S.items.length-dn===1?', חלק אחד יימשך':', '+(S.items.length-dn)+' יימשכו')+' בפעם הבאה':'')+'.<br>זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b><br><span style="color:var(--muted);font-size:.9em">קצב הלימוד שלך מהחוברת: כ־'+printWpm()+' מילים לדקה – התוכניות הבאות יחושבו לפיו.</span>';
+    box.appendChild(s); }
+  tick(); }
+const next=i=>{ for(let k=1;k<=S.items.length;k++){ const j=(i+k)%S.items.length; if(!S.items[j].st) return j; } return i; };
+function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; stopRun();
+  it.f=Math.max(it.f0,f); it.st=f>=0.999?'done':'part'; wkSet(it.id,it.f,true);
+  learnPrintWpm((it.f-it.f0)*I.W, it.ms);
+  if(it.id==='chu:'+WD) setProgress('chumash',isoDate(today),it.f); if(it.id==='tan:'+WD) setProgress('tanya',isoDate(today),it.f); if(it.id==='teh:'+T.day) setProgress('tehillim',T.key,it.f);
+  pick=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
+const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); const h=Math.floor(s/3600); return (neg?'-':'')+(h?h+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0'); };
+function tick(){ const tot=totalMs(), left=BUDGET*6e4-tot;
+  $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);
+  $('clockLbl').textContent=left>=0?'נותרו מתוך '+fmtMin(BUDGET):'עבר הזמן שתכננת';
+  $('fill').style.width=Math.min(100,tot/(BUDGET*6e4)*100)+'%';
+  const allDone=S.items.every(it=>it.st);
+  $('play').textContent=allDone?'חזרה למסך הבית':S.since?'⏸ השהה':(tot?'המשך ▶':'התחל ▶'); $('play').classList.toggle('run',!!S.since);
+  const ce=document.querySelector('.it.cur .t'); if(ce) ce.textContent=mmss(itemMs(S.cur));
+  $('sub').textContent='זמן שלמדת עכשיו: '+fmtMin(tot/6e4); }
+$('play').onclick=()=>{ if(S.items.every(it=>it.st)){ location.href='./'; return; } if(S.since) stopRun(); else startRun(); save(); tick(); };
+setInterval(tick,1000);
+addEventListener('pagehide',save); document.addEventListener('visibilitychange',()=>{ save(); tick(); });
+
+/* ---------- load ---------- */
+(async()=>{
+  try{ DM=await import('./dm.js'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=DM.dayForLabel(IDX,hebOf(today).label); } }catch(e){}
+  S.items.forEach(it=>{ INFO[it.id]=info(it.id); });
+  if(!S.items.length){ $('list').innerHTML='<div class="msg">אין מה ללמוד בתוכנית. <a href="./" style="color:var(--gold)">חזרה למסך הבית</a></div>'; return; }
+  render(); })();
+</script>
+<script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>
