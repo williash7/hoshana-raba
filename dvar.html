@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="he" dir="rtl" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="google" content="notranslate">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#181b2b">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>דבר מלכות</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Assistant:wght@400;600;700&family=Noto+Rashi+Hebrew:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --k:1;
+  --night:#181b2b; --night2:#22263a; --ink:#ecebe4; --muted:#9aa0b8;
+  --willow:#86a86a; --gold:#d9ad55;
+  --paper:#efe6d1; --pagebg:#e4dbc4; --text:#1f1a12; --textmuted:#8a7a5a; --rule:#c9b98f; --rashi:#3b3326;
+  --ui:"Assistant","Segoe UI",Arial,sans-serif;
+  --serif:"Frank Ruhl Libre","David","Times New Roman",serif;
+  --rashiF:"Noto Rashi Hebrew","Frank Ruhl Libre",serif;
+  --fs:calc(23px*var(--k)); --pw:calc(600px*var(--k));
+}
+:root[data-theme="dark"]{ --pagebg:#0f0e0b; --paper:#16140f; --text:#e6dcc6; --textmuted:#a39370; --rule:#4a4130; --rashi:#cfc3a8; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --pagebg:#0f0e0b; --paper:#16140f; --text:#e6dcc6; --textmuted:#a39370; --rule:#4a4130; --rashi:#cfc3a8; } }
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--pagebg);font-family:var(--ui);color:var(--ink);-webkit-tap-highlight-color:transparent}
+button,a{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset:calc(2px*var(--k))}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:20;background:var(--night);padding:calc(env(safe-area-inset-top,calc(0px*var(--k))) + calc(8px*var(--k))) calc(14px*var(--k)) 0;box-shadow:0 calc(1px*var(--k)) 0 #0006}
+.row1{display:flex;align-items:center;justify-content:space-between;gap:calc(10px*var(--k));max-width:calc(760px*var(--k));margin:0 auto}
+.day{display:flex;align-items:center;gap:calc(6px*var(--k));min-width:0}
+.day .arrow{width:calc(36px*var(--k));height:calc(36px*var(--k));border-radius:50%;border:0;background:var(--night2);font-size:calc(18px*var(--k));line-height:1;flex:none}
+.day .arrow:disabled{opacity:.3}
+.day .dt{text-align:center;min-width:0}
+.day .dt b{display:block;font-family:var(--serif);font-size:calc(21px*var(--k));color:var(--gold);white-space:nowrap}
+.day .dt span{display:block;font-size:calc(12.5px*var(--k));color:var(--muted);white-space:nowrap}
+.where{text-align:left;min-width:0}
+.where .sec{font-family:var(--serif);font-weight:700;font-size:calc(16px*var(--k));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(150px*var(--k))}
+.where .pct{font-size:calc(12.5px*var(--k));color:var(--muted);white-space:nowrap}
+.today{border:calc(1px*var(--k)) solid #4a4f6b;background:transparent;border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(12.5px*var(--k));margin-top:calc(3px*var(--k))}
+.bar{position:relative;height:calc(6px*var(--k));margin:calc(8px*var(--k)) auto 0;max-width:calc(760px*var(--k));background:#34384f;border-radius:calc(3px*var(--k))}
+.bar .fill{position:absolute;top:0;bottom:0;right:0;background:var(--willow);border-radius:calc(3px*var(--k))}
+.eta{max-width:calc(760px*var(--k));margin:0 auto;padding:calc(5px*var(--k)) 0 calc(7px*var(--k));font-size:calc(12.5px*var(--k));color:var(--muted);display:flex;justify-content:space-between;gap:calc(8px*var(--k))}
+.eta b{color:var(--ink);font-weight:600}
+
+#scroller{padding-bottom:calc(var(--dockH,calc(76px*var(--k))) + 55vh)}
+#doc{margin:0 auto;width:min(100%, var(--pw))}
+.t{background:var(--paper);color:var(--text);font-family:var(--serif);padding:0 calc(20px*var(--k))}
+.t.head{padding-top:calc(26px*var(--k));padding-bottom:calc(8px*var(--k));text-align:center}
+.t.head h3{font-size:calc(var(--fs) * 1.2);margin:0;font-weight:700}
+.t.head small{display:block;font-family:var(--ui);font-size:calc(13px*var(--k));color:var(--textmuted);margin-top:calc(2px*var(--k))}
+.t.ps{padding-top:calc(10px*var(--k));padding-bottom:calc(4px*var(--k))}
+.t.ps p{margin:0;font-size:var(--fs);line-height:1.8;text-align:justify;font-weight:500}
+.t.ps .v{font-family:var(--ui);font-size:.55em;color:var(--textmuted);font-weight:700;margin-left:calc(4px*var(--k));vertical-align:.25em}
+.t.ps .ch{display:block;text-align:center;font-weight:700;font-size:calc(var(--fs) * .8);color:var(--textmuted);margin:calc(6px*var(--k)) 0 calc(4px*var(--k))}
+.rashi{margin:calc(6px*var(--k)) 0 calc(4px*var(--k));padding:calc(6px*var(--k)) calc(10px*var(--k)) calc(6px*var(--k)) 0;border-right:calc(2px*var(--k)) solid var(--rule);font-family:var(--rashiF);font-size:calc(var(--fs) * .68);line-height:1.75;color:var(--rashi);text-align:justify}
+.rashi div+div{margin-top:calc(4px*var(--k))}
+.rashi b{font-weight:600;color:var(--text)}
+:root.norashi .rashi{display:none}
+.t.par{padding-top:calc(6px*var(--k));padding-bottom:calc(6px*var(--k))}
+.t.par p{margin:0;font-size:var(--fs);line-height:1.85;text-align:justify;font-weight:500}
+.t.msg{padding:calc(40px*var(--k)) calc(22px*var(--k));text-align:center;font-family:var(--ui);color:var(--textmuted);font-size:calc(15px*var(--k));line-height:1.6}
+.dbg{direction:ltr;font-size:calc(11px*var(--k));color:#a05a4a;margin-top:calc(10px*var(--k));word-break:break-all}
+.t.msg button{margin-top:calc(12px*var(--k));border:0;background:var(--night);color:var(--gold);font-weight:700;border-radius:calc(12px*var(--k));padding:calc(10px*var(--k)) calc(18px*var(--k));font-size:calc(15px*var(--k))}
+.t.end{padding:calc(30px*var(--k)) calc(20px*var(--k)) calc(34px*var(--k));text-align:center;font-family:var(--ui);color:var(--textmuted);font-size:calc(14px*var(--k));border-top:calc(1px*var(--k)) solid var(--rule)}
+.t.end b{display:block;font-family:var(--serif);font-size:calc(22px*var(--k));color:var(--text);margin-bottom:calc(4px*var(--k))}
+.t.end a{display:inline-block;margin-top:calc(14px*var(--k));text-decoration:none;background:var(--night);color:var(--gold);font-weight:700;border-radius:calc(12px*var(--k));padding:calc(10px*var(--k)) calc(18px*var(--k));font-size:calc(15px*var(--k))}
+.src{font-family:var(--ui);font-size:calc(12px*var(--k));color:var(--textmuted);text-align:center;padding:calc(10px*var(--k)) 0 0}
+
+.shade{position:fixed;left:0;right:0;z-index:5;pointer-events:none;background:linear-gradient(to bottom, rgba(24,27,43,0), rgba(24,27,43,.18))}
+.line{position:fixed;left:0;right:0;z-index:6;height:0;pointer-events:none}
+.line::before{content:"";position:absolute;left:0;right:0;top:-1px;border-top:calc(2px*var(--k)) solid var(--gold);opacity:.85}
+.line .tab{position:absolute;right:0;top:-12px;background:var(--gold);color:#241c08;font-size:calc(12px*var(--k));font-weight:700;padding:calc(2px*var(--k)) calc(9px*var(--k)) calc(2px*var(--k)) calc(8px*var(--k));border-radius:0 0 0 calc(10px*var(--k))}
+
+.dock{position:fixed;bottom:0;left:0;right:0;z-index:20;background:var(--night);padding:calc(8px*var(--k)) calc(12px*var(--k)) calc(env(safe-area-inset-bottom,calc(0px*var(--k))) + calc(8px*var(--k)));box-shadow:0 -1px 0 #0006}
+.dock-in{max-width:calc(760px*var(--k));margin:0 auto;display:flex;align-items:center;gap:calc(10px*var(--k))}
+.play{width:calc(56px*var(--k));height:calc(56px*var(--k));border-radius:50%;border:0;background:var(--gold);color:#241c08;display:grid;place-items:center;flex:none}
+.play svg{width:calc(24px*var(--k));height:calc(24px*var(--k))}
+.speed{display:flex;align-items:center;background:var(--night2);border-radius:calc(28px*var(--k));padding:calc(4px*var(--k));flex:1;min-width:0;justify-content:space-between}
+.speed button{width:calc(50px*var(--k));height:calc(44px*var(--k));border:0;border-radius:calc(22px*var(--k));background:transparent;font-size:calc(14px*var(--k));font-weight:600}
+.speed .val{text-align:center;line-height:1.1}
+.speed .val b{font-size:calc(19px*var(--k));font-variant-numeric:tabular-nums}
+.speed .val span{display:block;white-space:nowrap;font-size:calc(11.5px*var(--k));color:var(--muted)}
+.ctl{height:calc(48px*var(--k));min-width:calc(48px*var(--k));border-radius:calc(24px*var(--k));border:calc(1.5px*var(--k)) solid #4a4f6b;background:transparent;padding:0 calc(10px*var(--k));font-size:calc(15px*var(--k));font-weight:600;flex:none;display:grid;place-items:center;text-decoration:none}
+.today.pill.on{border-color:var(--gold);color:var(--gold)}
+.ctl.on{border-color:var(--gold);color:var(--gold)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH,calc(76px*var(--k))) + calc(18px*var(--k)));z-index:25;background:#2c3046;color:var(--ink);padding:calc(9px*var(--k)) calc(16px*var(--k));border-radius:calc(20px*var(--k));font-size:calc(14px*var(--k));opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+@media (max-width:380px){ .day .dt b{font-size:calc(18px*var(--k))} .ctl{min-width:calc(42px*var(--k));padding:0 calc(7px*var(--k))} .speed button{width:calc(42px*var(--k))} }
+.tabs{display:flex;gap:calc(6px*var(--k));overflow-x:auto;max-width:calc(760px*var(--k));margin:calc(6px*var(--k)) auto 0;padding-bottom:calc(2px*var(--k));scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);border-radius:calc(14px*var(--k));padding:calc(5px*var(--k)) calc(11px*var(--k));font-size:calc(13.5px*var(--k));white-space:nowrap}
+.tabs button.on{background:var(--gold);color:#241c08;border-color:var(--gold)}
+.tabs button.today{border-color:var(--gold)}
+#wrap{overflow-x:auto;direction:rtl}
+#doc.dm{width:var(--dw);margin:0 auto}
+.sl{position:relative;background:#fff;margin:0 0 calc(6px*var(--k))}
+.sl canvas{display:block;width:100%;height:100%}
+.sl .pn{position:absolute;left:calc(6px*var(--k));top:calc(4px*var(--k));font-size:calc(11px*var(--k));color:#9a8a6a;font-family:var(--ui)}
+:root[data-theme="dark"] .sl canvas{filter:invert(.88) hue-rotate(180deg)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .sl canvas{filter:invert(.88) hue-rotate(180deg)} }
+.empty{max-width:calc(560px*var(--k));margin:0 auto;padding:calc(30px*var(--k)) calc(20px*var(--k));text-align:center;font-family:var(--ui);color:var(--text)}
+.empty h2{font-family:var(--serif);font-size:calc(26px*var(--k));margin:0 0 calc(8px*var(--k))}
+.empty p{color:var(--textmuted);font-size:calc(15px*var(--k));line-height:1.55}
+.empty .btn{display:block;width:100%;margin-top:calc(12px*var(--k));border:0;border-radius:calc(14px*var(--k));padding:calc(14px*var(--k));font-size:calc(17px*var(--k));font-weight:700;text-decoration:none;text-align:center}
+.empty .b1{background:var(--night);color:var(--gold)}
+.empty .b2{background:var(--gold);color:#241c08}
+.empty .b3{background:transparent;border:calc(1px*var(--k)) solid var(--rule)!important;color:var(--textmuted)}
+.empty ol{text-align:right;color:var(--textmuted);font-size:calc(14.5px*var(--k));line-height:1.7;padding-right:calc(20px*var(--k))}
+.prog{height:calc(6px*var(--k));background:var(--rule);border-radius:calc(3px*var(--k));overflow:hidden;margin-top:calc(14px*var(--k))}
+.prog i{display:block;height:100%;background:var(--willow);width:0}
+.zoom{min-width:calc(52px*var(--k))}
+</style>
+</head>
+<body>
+<header class="top" id="top">
+  <div class="row1">
+    <div style="min-width:0"><div style="font-family:var(--serif);font-size:calc(20px*var(--k));font-weight:700;color:var(--gold)">דבר מלכות</div><div style="font-size:calc(12.5px*var(--k));color:var(--muted)" id="week"></div></div>
+    <div class="where"><div class="sec" id="cur"></div><div class="pct" id="hdate"></div></div>
+  </div>
+  <div class="tabs" id="subjTabs"></div>
+  <div class="tabs" id="dayTabs"></div>
+  <div class="bar"><div class="fill" id="fill"></div></div>
+  <div class="eta"><span id="left"></span><span id="pct"></span></div>
+</header>
+<div class="shade" id="shade"></div>
+<div class="line" id="line"><span class="tab">כאן</span></div>
+<main id="scroller"><div id="wrap"><div id="doc"></div></div></main>
+<nav class="dock" id="dock">
+  <div class="dock-in">
+    <button class="play" id="play" aria-label="הפעל גלילה"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
+    <div class="speed">
+      <button id="slower">לאט</button>
+      <div class="val"><b id="spd">85</b><span>מילים לדק׳</span></div>
+      <button id="faster">מהר</button>
+    </div>
+    <button class="ctl zoom" id="zoom">×1.6</button>
+    <button class="ctl" id="more" aria-label="החלפת חוברת">⋯</button>
+    <a class="ctl" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
+  </div>
+</nav>
+<input type="file" id="file" accept="application/pdf,.pdf" hidden>
+<div class="toast" id="toast"></div>
+<script>window.onerror=function(m,src,l){ var d=document.getElementById('doc'); if(d) d.innerHTML='<div class="t msg">שגיאה בטעינת הדף<div class="dbg">'+String(m).replace(/[<>&]/g,'')+' ('+String(src||'').split('/').pop()+':'+l+')</div></div>'; };</script>
+<script src="common.js"></script>
+<script type="module">
+import * as DM from './dm.js';
+const $=id=>document.getElementById(id), root=document.documentElement;
+computeK(); applyTheme();
+const HOME=lsGet('home-v1',{});
+const URLS={il:'https://dvarmalchus.com/Download/89B74D85-0F4D-4CDB-8A92-CDCBC9093387.pdf', dia:'https://dvarmalchus.com/Download/94F5A87D-F7BB-4F96-8253-47B5FB3A5F47.pdf'};
+const dlUrl=HOME.diaspora?URLS.dia:URLS.il;
+const Q=new URLSearchParams(location.search);
+let V=Object.assign({subj:'chumash',zoom:1.6,pos:{}},lsGet('dm-view-v1',{}));
+if(Q.get('s')) V.subj=Q.get('s');
+const today=new Date(); today.setHours(12,0,0,0);
+const todayLbl=hebOf(today).label;
+let META=null, IDX=null, DAY=today.getDay(), TODAYDAY=-1;
+let wpm=getWpm();
+function save(){ lsSet('dm-view-v1',V); }
+
+/* ---------- empty state / loading ---------- */
+function emptyState(msg){ ready=false; $('doc').className=''; $('doc').innerHTML='<div class="empty"><h2>חוברת דבר מלכות</h2>'+(msg?'<p style="color:#c0705e">'+msg+'</p>':'')+
+  '<p>כדי ללמוד מהחוברת לפי הימים, טוענים פעם בשבוע את קובץ החוברת. הקובץ נשמר רק בטלפון שלך.</p>'+
+  '<ol><li>לחץ "הורדת החוברת" – הקובץ יורד לטלפון.</li><li>חזור לכאן ולחץ "בחירת הקובץ שהורד".</li></ol>'+
+  '<a class="btn b1" href="'+dlUrl+'" target="_blank" rel="noopener">⬇ הורדת החוברת מאתר דבר מלכות</a>'+
+  '<button class="btn b2" id="pick">בחירת הקובץ שהורד</button>'+
+  '<button class="btn b3" id="auto">ניסיון טעינה ישירה מהאתר</button><div class="prog" id="prog" hidden><i></i></div></div>';
+  $('pick').onclick=()=>$('file').click(); $('auto').onclick=autoLoad; $('subjTabs').innerHTML=''; $('dayTabs').innerHTML=''; $('week').textContent=''; update(); }
+async function ingest(buf,name){ const pr=$('prog'); if(pr){ pr.hidden=false; }
+  try{ META=await DM.importFile(buf,name,f=>{ const i=document.querySelector('#prog i'); if(i) i.style.width=Math.round(f*100)+'%'; }); IDX=META.index; afterLoad(true); }
+  catch(e){ emptyState('לא הצלחתי לקרוא את הקובץ: '+String(e.message||e).replace(/[<>&]/g,'')); } }
+$('file').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('doc').innerHTML='<div class="empty"><h2>מעבד את החוברת…</h2><p>זה לוקח כחצי דקה בפעם הראשונה בכל שבוע.</p><div class="prog" id="prog"><i></i></div></div>'; ingest(await f.arrayBuffer(), f.name); };
+async function autoLoad(){ try{ toast('מנסה להוריד…'); const buf=await DM.tryDownload(dlUrl); $('doc').innerHTML='<div class="empty"><h2>מעבד את החוברת…</h2><div class="prog" id="prog"><i></i></div></div>'; ingest(buf,'dvar-malchus.pdf'); }
+  catch(e){ toast('האתר לא מאפשר טעינה ישירה – השתמש בהורדה ובחירת הקובץ'); } }
+$('more').onclick=()=>{ if(confirm('לטעון חוברת חדשה במקום הנוכחית?')) emptyState(''); };
+
+function afterLoad(fresh){
+  TODAYDAY=DM.dayForLabel(IDX,todayLbl);
+  const L=IDX.dayLabels||[]; $('week').textContent=(L[0]&&L[6]?L[0].replace(/^יום ראשון\s*/,'')+' – '+L[6].replace(/^שבת קודש\s*/,''):(META.name||''));
+  if(TODAYDAY<0){ toast('החוברת שטעונה אינה של השבוע הנוכחי'); } else DAY=TODAYDAY;
+  if(!IDX.subjects[V.subj]) V.subj=Object.keys(IDX.subjects)[0];
+  tabs(); show(); if(fresh) toast('החוברת נטענה ✓'); }
+function tabs(){ const st=$('subjTabs'); st.innerHTML='';
+  DM.SUBJECTS.filter(s=>IDX.subjects[s.id]).forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.className=s.id===V.subj?'on':''; b.onclick=()=>{ V.subj=s.id; save(); tabs(); show(); }; st.appendChild(b); });
+  const dt=$('dayTabs'); dt.innerHTML='';
+  DM.DAYNAMES.forEach((n,i)=>{ const b=document.createElement('button'); b.textContent=n; b.className=(i===DAY?'on':'')+(i===TODAYDAY?' today':''); b.onclick=()=>{ DAY=i; tabs(); show(); }; dt.appendChild(b); });
+  const on=st.querySelector('.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'}); }
+
+/* ---------- reader ---------- */
+let B=[], tops=[], hts=[], TOTAL=1, ready=false, curPos=0, io=null;
+const key=()=>V.subj+':'+(IDX.dayLabels&&IDX.dayLabels[DAY]||DAY);
+function cssW(){ return Math.min(innerWidth, 900*K)*V.zoom; }
+async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
+  const sl=DM.slices(IDX,V.subj,DAY); const doc=$('doc'); doc.className='dm'; doc.innerHTML=''; B=[];
+  root.style.setProperty('--dw',cssW()+'px'); $('zoom').textContent='×'+V.zoom;
+  if(!sl.length){ doc.innerHTML='<div class="t msg">אין שיעור '+DM.SUBJECTS.find(s=>s.id===V.subj).name+' ליום '+DM.DAYNAMES[DAY]+' בחוברת.</div>'; update(); return; }
+  const w=cssW();
+  sl.forEach(s=>{ const el=document.createElement('div'); el.className='sl'; el.style.height=((s.y1-s.y0)*w/s.w)+'px'; el.innerHTML='<span class="pn">'+gem(s.p)+'</span>'; el._sl=s; doc.appendChild(el); B.push({el,w:Math.max(1,s.words)}); });
+  let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
+  io=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); el._c=c; el.appendChild(c); DM.renderSlice(el._sl,cssW(),c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
+  B.forEach(b=>io.observe(b.el));
+  measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
+
+function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight);
+  const t=$('top').offsetHeight, b=$('dock').offsetHeight; $('scroller').style.paddingTop=t+'px'; root.style.setProperty('--dockH',b+'px'); placeLine(); }
+function lineY(){ const t=$('top').offsetHeight,b=$('dock').offsetHeight; return t+(innerHeight-t-b)*0.28; }
+function placeLine(){ const y=lineY(),t=$('top').offsetHeight; $('line').style.top=y+'px'; $('shade').style.top=t+'px'; $('shade').style.height=Math.max(0,y-t)+'px'; }
+function idxY(y){ let lo=0,hi=B.length-1; while(lo<hi){const m=(lo+hi+1)>>1; if(tops[m]<=y) lo=m; else hi=m-1;} return lo; }
+function idxP(p){ let lo=0,hi=B.length-1; while(lo<hi){const m=(lo+hi+1)>>1; if(B[m].cum<=p) lo=m; else hi=m-1;} return lo; }
+function posFromScroll(){ if(!B.length) return 0; const y=scrollY+lineY(), i=idxY(y), f=Math.max(0,Math.min(1,(y-tops[i])/(hts[i]||1))); return Math.min(TOTAL,B[i].cum+f*B[i].w); }
+function scrollToPos(p){ if(!B.length) return; p=Math.max(0,Math.min(TOTAL-0.01,p)); const i=idxP(p); scrollTo(0,Math.max(0,tops[i]+(p-B[i].cum)/B[i].w*hts[i]-lineY())); curPos=p; }
+
+let playing=false,last=0,accY=null,touching=false,wake=null;
+function frame(t){ if(!playing) return; const dt=last?Math.min(0.1,(t-last)/1000):0; last=t;
+  if(accY===null||Math.abs(scrollY-accY)>4) accY=scrollY;
+  if(!touching){ const i=idxP(curPos); accY+=hts[i]/B[i].w*wpm/60*dt; scrollTo(0,accY); }
+  if(curPos>=TOTAL-2 || accY>=document.documentElement.scrollHeight-innerHeight-2){ setPlaying(false); return; }
+  requestAnimationFrame(frame); }
+async function setPlaying(v){ playing=v; last=0; accY=null;
+  $('playIco').innerHTML=v?'<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" fill="currentColor"/>':'<path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/>';
+  if(v){ requestAnimationFrame(frame); try{ if('wakeLock' in navigator) wake=await navigator.wakeLock.request('screen'); }catch(e){} } else { try{wake&&wake.release();}catch(e){} wake=null; } }
+addEventListener('touchstart',e=>{ if(!e.target.closest('.dock,.top')) touching=true; },{passive:true});
+addEventListener('touchend',()=>{touching=false;accY=null;},{passive:true});
+$('play').onclick=()=>{ if(!ready) return; setPlaying(!playing); };
+function nudge(f){ wpm=Math.max(20,Math.min(400,Math.round(wpm*f))); setWpm(wpm); $('spd').textContent=wpm; update(); }
+$('slower').onclick=()=>nudge(1/1.1); $('faster').onclick=()=>nudge(1.1);
+const ZOOMS=[1,1.3,1.6,2]; $('zoom').onclick=()=>{ if(!IDX) return; const p=curPos; V.zoom=ZOOMS[(ZOOMS.indexOf(V.zoom)+1)%ZOOMS.length]||1.6; save(); show().then(()=>scrollToPos(p)); };
+
+let toastT; function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2800); }
+function update(){ $('spd').textContent=wpm;
+  if(!ready){ $('fill').style.width='0%'; $('left').textContent=''; $('pct').textContent=''; $('cur').textContent=''; return; }
+  const p=curPos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
+  const left=Math.max(0,TOTAL-p);
+  $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':'');
+  $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; $('pct').textContent=Math.round(done*100)+'%';
+  if(DAY===TODAYDAY) setProgress('dm-'+V.subj,isoDate(today),left<2?1:done); }
+addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); V.pos[key()]=curPos; update(); },{passive:true});
+setInterval(save,3000); addEventListener('pagehide',save);
+addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); show().then(()=>scrollToPos(p)); });
+
+window._dv=()=>({TODAYDAY,DAY,subj:V.subj,n:B.length,TOTAL,IDX});
+(async()=>{ try{ META=await DM.loadStored(); }catch(e){}
+  if(!META){ emptyState(''); return; } IDX=META.index; afterLoad(false); })();
+</script>
+<script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
+</body>
+</html>

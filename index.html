@@ -117,6 +117,9 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
     <h3>מה ייכנס למערכת</h3>
     <p class="hint">סמן את השיעורים שתרצה, וסדר אותם בחיצים.</p>
     <div id="mods"></div>
+    <h3>שיעורים מתוך דבר מלכות</h3>
+    <p class="hint">יופיעו בלימוד ברצף כשחוברת השבוע טעונה.</p>
+    <div id="dmMods"></div>
     <h3>פרשת השבוע לפי</h3>
     <div class="row"><span>מנהג המקום</span><div class="seg" id="dia"><button data-v="0">ארץ ישראל</button><button data-v="1">חוץ לארץ</button></div></div>
   </div>
@@ -131,9 +134,11 @@ const MODS={
   tehillim:{name:'תהילים יומי', href:'tehillim.html'},
   chumash:{name:'חומש עם רש״י', href:'study.html?m=chumash'},
   tanya:{name:'תניא יומי', href:'study.html?m=tanya'},
+  dvar:{name:'דבר מלכות', href:'dvar.html'},
   hoshana:{name:'סדר ליל הושענא רבה', href:'hoshana.html', opt:1}
 };
-let H=Object.assign({order:['chumash','tehillim','tanya','hoshana'], on:{tehillim:1,chumash:1,tanya:1,hoshana:0}, diaspora:0},lsGet('home-v1',{}));
+let H=Object.assign({order:['chumash','tehillim','tanya','dvar','hoshana'], on:{tehillim:1,chumash:1,tanya:1,dvar:1,hoshana:0}, diaspora:0, dm:['rambam3']},lsGet('home-v1',{}));
+if(H.on.dvar==null) H.on.dvar=1; if(!H.dm) H.dm=['rambam3'];
 Object.keys(MODS).forEach(k=>{ if(!H.order.includes(k)) H.order.push(k); });
 function save(){ lsSet('home-v1',H); }
 const T=tehToday(), today=new Date(); today.setHours(12,0,0,0);
@@ -144,9 +149,11 @@ function info(k){
   if(k==='tehillim'){ const pct=getProgress('tehillim',T.key); return {what:'יום '+gq(T.day)+' לחודש · מזמורים '+T.range, pct}; }
   if(k==='chumash'){ const c=chumashFor(today,!!H.diaspora); return {what:c?'פרשת '+c.he+' · '+c.aliyahName:'—', pct:getProgress('chumash',isoDate(today))}; }
   if(k==='tanya'){ return {what:tanyaText, pct:getProgress('tanya',isoDate(today))}; }
+  if(k==='dvar'){ if(!DMI) return {what:DMSTATE||'טען את חוברת השבוע', pct:null}; const n=Object.keys(DMI.subjects).length; return {what:'יום '+['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת קודש'][DMI.day]+' · '+n+' שיעורים בחוברת', pct:null}; }
   if(k==='hoshana'){ return {what:'חומש דברים, תהילים וזהר – עם ספירה לחצות', pct:null}; }
 }
 let tanyaText=hebOf(today).label;
+let DMI=null, DMSTATE='';
 function render(){
   $('hdate').textContent=(T.night?'ליל ':'')+hs.label+' '+gq(hs.year%1000);
   $('gdate').textContent='יום '+WEEKDAYS[today.getDay()]+' · '+today.toLocaleDateString('he-IL',{day:'numeric',month:'long'});
@@ -172,7 +179,12 @@ function renderPanel(){ const box=$('mods'); box.innerHTML='';
     d.innerHTML='<input type="checkbox"'+(H.on[k]?' checked':'')+'><span>'+m.name+(m.opt?'<small>מופיע תמיד בערב הושענא רבה</small>':'')+'</span><div class="ord"><button'+(i===0?' disabled':'')+' aria-label="למעלה">▲</button><button'+(i===H.order.length-1?' disabled':'')+' aria-label="למטה">▼</button></div>';
     d.querySelector('input').onchange=e=>{ H.on[k]=e.target.checked?1:0; save(); render(); };
     const [u,dn]=d.querySelectorAll('.ord button'); u.onclick=()=>mv(i,-1); dn.onclick=()=>mv(i,1); box.appendChild(d); });
+  renderDmPanel();
   $('dia').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',+b.dataset.v===(H.diaspora?1:0)); b.onclick=()=>{ H.diaspora=+b.dataset.v; save(); render(); }; }); }
+const DMS=[['chumash','חומש'],['tanya','תניא'],['hayomyom','היום יום'],['rambam3','רמב״ם – ג׳ פרקים'],['rambam1','רמב״ם – פרק אחד'],['sm','ספר המצוות'],['halacha','הלכה יומית ברמב״ם'],['mishna','משנה']];
+function renderDmPanel(){ const box=$('dmMods'); box.innerHTML='';
+  DMS.forEach(([id,n])=>{ const d=document.createElement('label'); d.className='mod'; d.innerHTML='<input type="checkbox"'+(H.dm.includes(id)?' checked':'')+'><span>'+n+'</span>';
+    d.querySelector('input').onchange=e=>{ H.dm=H.dm.filter(x=>x!==id); if(e.target.checked) H.dm.push(id); save(); renderFlow(); }; box.appendChild(d); }); }
 function mv(i,d){ const j=i+d; if(j<0||j>=H.order.length) return; [H.order[i],H.order[j]]=[H.order[j],H.order[i]]; save(); render(); }
 $('editBtn').onclick=()=>{ const p=$('panel'); p.hidden=!p.hidden; $('editBtn').textContent=p.hidden?'✎ התאמת מסך הבית':'סיום התאמה'; if(!p.hidden) p.scrollIntoView({behavior:'smooth',block:'start'}); };
 /* ---------- continuous flow planner ---------- */
@@ -180,15 +192,16 @@ const FP=['tehillim','chumash','tanya'];
 let F=Object.assign({sel:null,min:10},lsGet('flow-v1',{}));
 const DEFW={chumash:900,tanya:700};
 function partKey(k){ return k==='tehillim'?T.key:isoDate(today); }
-function wordsFor(k){ if(k==='tehillim') return tehWords(T.day,T.short); return wcGet(k+':'+partKey(k)); }
-function renderFlow(){ const avail=FP.filter(k=>H.on[k]);
+function partName(k){ return k.startsWith('dm-')?'דבר מלכות · '+DMI.subjects[k.slice(3)].name:MODS[k].name; }
+function wordsFor(k){ if(k.startsWith('dm-')) return DMI.subjects[k.slice(3)].words; if(k==='tehillim') return tehWords(T.day,T.short); return wcGet(k+':'+partKey(k)); }
+function renderFlow(){ const avail=FP.filter(k=>H.on[k]).concat(DMI?H.dm.filter(id=>DMI.subjects[id]).map(id=>'dm-'+id):[]);
   if(!avail.length){ $('flow').hidden=true; return; } $('flow').hidden=false;
   if(!F.sel) F.sel={}; const box=$('flowParts'); box.innerHTML=''; let total=0, unknown=false;
   avail.forEach(k=>{ const pct=getProgress(k,partKey(k)); const done=pct>=1; if(F.sel[k]==null) F.sel[k]=!done;
     let w=wordsFor(k); const est=!w; if(est){ w=DEFW[k]||600; } const rem=w*(1-Math.min(1,pct));
     if(F.sel[k]&&!done){ total+=rem; if(est) unknown=true; }
     const d=document.createElement('label'); d.className='fp'+(done?' done':'');
-    d.innerHTML='<input type="checkbox"'+(F.sel[k]&&!done?' checked':'')+(done?' disabled':'')+'><span>'+MODS[k].name+'</span><small>'+(done?'נאמר היום ✓':(est?'כ־':'')+fmtMin(mins(rem))+(pct>0?' (נשאר)':''))+'</small>';
+    d.innerHTML='<input type="checkbox"'+(F.sel[k]&&!done?' checked':'')+(done?' disabled':'')+'><span>'+partName(k)+'</span><small>'+(done?'נאמר היום ✓':(est?'כ־':'')+fmtMin(mins(rem))+(pct>0?' (נשאר)':''))+'</small>';
     d.querySelector('input').onchange=e=>{ F.sel[k]=e.target.checked; lsSet('flow-v1',F); renderFlow(); }; box.appendChild(d); });
   const tb=$('times'); tb.innerHTML='<b>יש לי:</b>';
   [5,10,15,20,30].forEach(m=>{ const b=document.createElement('button'); b.textContent=m+' דק׳'; b.className=F.min===m?'on':''; b.onclick=()=>{ F.min=m; lsSet('flow-v1',F); renderFlow(); }; tb.appendChild(b); });
@@ -202,6 +215,9 @@ function renderFlow(){ const avail=FP.filter(k=>H.on[k]);
     (unknown?'<br><small style="color:var(--muted)">ההערכה לחומש/תניא תדויק אחרי הטעינה הראשונה</small>':'');
   $('startFlow').onclick=()=>{ location.href='session.html?parts='+sel.join(',')+'&min='+F.min; }; }
 render(); renderFlow();
+// Dvar Malchus booklet stored on this device
+import('./dm.js').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTATE='טען את חוברת השבוע'; render(); return; }
+  DMI=DM.todayInfo(m.index, hebOf(today).label); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; render(); renderFlow(); }).catch(()=>{});
 // count words of today's Chumash / Tanya in the background for accurate estimates
 ['chumash','tanya'].forEach(k=>{ if(H.on[k] && !wcGet(k+':'+partKey(k))){ (k==='chumash'?partChumash(today,!!H.diaspora,true):partTanya(today)).then(r=>{ wcSet(k+':'+partKey(k), r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }).catch(()=>{}); } });
 if(H.on.tanya){ sefCalendar(today).then(cal=>{ const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(it){ tanyaText=(it.heRef||it.ref).replace(/^תניא,?\s*/,''); render(); } }).catch(()=>{}); }
