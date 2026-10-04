@@ -227,7 +227,17 @@ function catalog(){ const out=[], days=[WD].concat([...Array(WD).keys()]);
   if(ok){ days.forEach(d=>H.dm.filter(s=>!RAMBAM.includes(s)&&!['chumash','tanya','hayomyom'].includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d,g:2,d,name:DMNAME[s],w}); }));
     if(H.dm.includes('hayomyom')){ const w=dmW('hayomyom',DMX.day); if(w) out.push({id:'dm:hayomyom',g:2,name:'היום יום',w}); }
     (DMX.index.sections||[]).forEach(s=>out.push({id:'sec:'+s.from,g:SKIPSEC.test(s.title)||s.words<150?4:3,name:s.title,w:s.words,sec:1})); }
-  out.forEach(u=>{ u.f=wkFrac(u.id); u.rem=Math.max(1,u.w*(1-u.f)); }); return out; }
+  out.forEach(u=>{ u.f=wkFrac(u.id); u.rem=Math.max(1,u.w*(1-u.f));
+    // printed booklet: estimate by measured time per line / verse / halacha
+    if(PR()&&ok){ const sl=slOf(u.id); if(sl&&sl.length){ const U=DMX.DM.unitPoints(DMX.index,sl); const n=U.pts.filter(p=>p.f>=u.f-0.0005).length;
+      u.rem=Math.max(1,estMinPrint(U.W*(1-u.f),U.kind,n)*pace()); u.est=false; } } });
+  return out; }
+function paceTxt(){ const P=unitPace(); const t=Object.keys(UNITNAME).filter(k=>P[k]).map(k=>UNITNAME[k]+' '+(P[k]>=60?Math.floor(P[k]/60)+':'+String(P[k]%60).padStart(2,'0')+' דק׳':P[k]+' שנ׳')).join(' · ');
+  return t?'<br><small style="color:var(--muted)">לפי הקצב שנמדד: '+t+'</small>':'<br><small style="color:var(--muted)">הערכה כללית – תתעדכן לפי הקצב שלך אחרי הלימוד הראשון</small>'; }
+function slOf(id){ const a=id.split(':'), I=DMX.index, DM=DMX.DM;
+  if(a[0]==='chu') return DM.slices(I,'chumash',+a[1]); if(a[0]==='tan') return DM.slices(I,'tanya',+a[1]);
+  if(a[0]==='dm') return DM.slices(I,a[1],a[2]!=null?+a[2]:DMX.day);
+  if(a[0]==='sec'){ const i=(I.sections||[]).findIndex(x=>x.from===+a[1]); return i<0?null:DM.sectionSlices(I,i); } return null; }
 function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
   const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
@@ -255,9 +265,9 @@ function renderFlow(){
   $('startFlow').disabled=!sel.length;
   const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
   $('flowSum').innerHTML=!sel.length?(open.some(u=>u.g<=1)?'הורדת את כל השיעורים מהתוכנית.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
-    'התוכנית: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(P.min)+' (בקצב '+pace()+' מילים לדקה'+(PR()?' – נמדד מהחוברת':'')+')'+(sel.some(s=>s.u.est)?' – הערכה':'')+
+    'התוכנית: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(P.min)+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
     (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':'');
-  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~'+Math.round(s.w):'')).join(',')+'&min='+P.min; };
+  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+P.min; };
   // weekly status
   const core=all.filter(u=>u.g<=1), cd=core.filter(u=>u.f>=1).length, missed=core.filter(u=>u.g===1&&u.f<1);
   let wk='<div>חת״ת'+(DMX&&DMX.day>=0&&H.dm.some(s=>RAMBAM.includes(s))?' ורמב״ם':'')+' השבוע: נלמדו <b>'+cd+'</b> מתוך '+core.length+'</div><div class="track"><i style="width:'+(core.length?cd/core.length*100:0)+'%"></i></div>';

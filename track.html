@@ -92,12 +92,12 @@ const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return
 const dayTag=d=>d===WD?'היום':'מיום '+WEEKDAYS[d];
 const DMN={chumash:'חומש',tanya:'תניא',hayomyom:'היום יום',rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד',sm:'ספר המצוות',halacha:'הלכה יומית',mishna:'משנה'};
 const COL={R:'עמודה ימנית',L:'עמודה שמאלית'};
-const UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.split('~'); return {id,plan:w?+w:null}; });
+const UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.split('~'); return {id,end:w&&w[0]==='e'?+w.slice(1):null,plan:w&&w[0]!=='e'?+w:null}; });
 
 /* ---------- state (kept across reloads / screen lock) ---------- */
 const SIG=isoDate(today)+'|'+(Q.get('u')||'')+'|'+BUDGET;
 let S=lsGet('track-v1',null);
-if(!S||S.sig!==SIG) S={sig:SIG, cur:0, since:null, items:UNITS.map(u=>({id:u.id,plan:u.plan,f0:wkFrac(u.id),f:null,ms:0,st:''}))};
+if(!S||S.sig!==SIG) S={sig:SIG, cur:0, since:null, items:UNITS.map(u=>({id:u.id,plan:u.plan,end:u.end,f0:wkFrac(u.id),f:null,ms:0,st:''}))};
 const save=()=>lsSet('track-v1',S);
 const runMs=()=>S.since?Date.now()-S.since:0;
 const itemMs=i=>S.items[i].ms+(i===S.cur?runMs():0);
@@ -108,18 +108,21 @@ function startRun(){ if(!S.since) S.since=Date.now(); }
 /* ---------- where each unit is in the printed booklet ---------- */
 let DM=null, IDX=null, IDAY=-1; const INFO={};
 const pn=s=>'עמ׳ '+gem(s.p)+(s.col?' ('+COL[s.col]+')':'');
-function fromSlices(sl,base){ const W=sl.reduce((a,b)=>a+b.words,0)||1; let acc=0;
-  const stops=sl.map(s=>{ const a=acc/W; acc+=s.words; return {lab:gem(s.p)+(s.col?(s.col==='R'?' ימין':' שמאל'):''), a, f:acc/W, lines:DM.sliceLines(IDX,s)}; });
-  const r=Object.assign(base,{sl,W,stops}); const st=posAt(r,0), en=posAt(r,0.9999,true);
+const plab=s=>gem(s.p)+(s.col?(s.col==='R'?' ימין':' שמאל'):'');
+function ptText(I,pt){ const s=I.sl[pt.si]; if(pt.kind==='l') return pn(s)+' שורה '+pt.label; if(pt.kind==='p') return pn(s)+', פסוק '+pt.label; return pn(s)+', '+(pt.perek?'פרק '+pt.perek+' ':'')+'הלכה '+pt.label; }
+function fromSlices(sl,base){ const U=DM.unitPoints(IDX,sl); const r=Object.assign(base,{sl,W:U.W,segs:U.segs,kind:U.kind,pts:U.pts});
+  const st=resumeAt(r,0), en=r.pts.length?ptText(r,r.pts[r.pts.length-1]):pn(sl[sl.length-1]);
   r.where='<b>'+st+'</b>'+(st!==en?' עד <b>'+en+'</b>':''); return r; }
-// position text (page, column, printed line) for a fraction of the unit
-function posAt(I,f,end){ if(!I.sl) return null; let i=I.stops.findIndex(s=>s.f>f+0.0001); if(i<0) i=I.stops.length-1;
-  const s=I.stops[i], L=s.lines, q=Math.max(0,Math.min(0.9999,(f-s.a)/Math.max(1e-6,s.f-s.a)));
-  const line=L.length?L[end?L.length-1:Math.min(L.length-1,Math.floor(q*L.length))]:null;
-  return pn(I.sl[i])+(line!=null?' שורה '+line:''); }
+// position text for a fraction of the unit: the reading unit that contains it, or the page / column
+function posAt(I,f){ if(!I.sl) return null; if(I.pts&&I.pts.length){ let k=-1; I.pts.forEach((p,j)=>{ if(p.f<=f+0.0005) k=j; }); if(k>=0) return ptText(I,I.pts[k]); }
+  let i=I.segs.findIndex(s=>s.b>f+0.0001); if(i<0) i=I.segs.length-1; return pn(I.sl[i]); }
+// where to resume: the first unit at or after the fraction
+function resumeAt(I,f){ if(I.pts&&I.pts.length){ const p=I.pts.find(p=>p.f>=f-0.002); if(p) return ptText(I,p); } return posAt(I,f); }
+const unitsIn=(I,a,b)=>I.pts?I.pts.filter(p=>p.f>=a-0.0005&&p.f<b-0.0005).length:0;
+function estimate(I,a,b){ return estMinPrint(I.W*(b-a), I.kind, unitsIn(I,a,b)); }
 function info(id){ const a=id.split(':');
   const dmDay=(subj,d)=>{ const D=IDX&&IDX.subjects[subj]&&IDX.subjects[subj].days[d]; return D&&D.label?'מתחיל בכותרת „'+D.label.replace(/\s+/g,' ')+'”':''; };
-  if(a[0]==='teh'){ let t=T; for(let d=0;d<=WD;d++){ const x=tehFor(dateOf(d)); if(x.day===+a[1]){ t=x; var dd=d; } }
+  if(a[0]==='teh'){ let t=T, dd=null; for(let d=0;d<=WD;d++){ const x=tehFor(dateOf(d)); if(x.day===+a[1]){ t=x; dd=d; } }
     return {name:'תהילים',tag:dd!=null?dayTag(dd):'',where:'מתוך ספר התהילים שלך: <b>מזמורים '+t.range+'</b> (יום '+gq(+a[1])+' לחודש)',W:tehWords(+a[1],t.short)||800}; }
   const subj=a[0]==='chu'?'chumash':a[0]==='tan'?'tanya':a[0]==='dm'?a[1]:null;
   if(a[0]==='sec'){ const i=IDX?(IDX.sections||[]).findIndex(x=>x.from===+a[1]):-1; if(i<0) return {name:'מהחוברת',where:'',W:1000};
@@ -128,6 +131,7 @@ function info(id){ const a=id.split(':');
   const base={name:DMN[subj]||subj,tag:a[2]!=null||a[0]!=='dm'?dayTag(d):''};
   if(IDX&&IDAY>=0){ const sl=DM.slices(IDX,subj,d); if(sl.length){ const r=fromSlices(sl,base); const lab=dmDay(subj,d); if(lab) r.where+='<br><span style="color:var(--muted);font-size:.9em">'+lab+'</span>'; return r; } }
   return Object.assign(base,{where:'<span style="color:var(--muted)">טען את חוברת השבוע כדי לראות באיזה עמוד</span>',W:a[0]==='chu'?900:a[0]==='tan'?700:1500}); }
+const goalOf=(it,I)=>it.end!=null?it.end:it.plan?Math.min(1,it.f0+it.plan/I.W):null;
 
 /* ---------- render ---------- */
 let pick=-1, pickSl=-1;
@@ -135,39 +139,51 @@ function render(){ const box=$('list'); box.innerHTML='';
   S.items.forEach((it,i)=>{ const I=INFO[it.id]; const d=document.createElement('div');
     const done=it.st==='done', part=it.st==='part', cur=i===S.cur&&!done&&!part;
     d.className='it'+(cur?' cur':'')+(done?' done':'')+(part?' part':'');
-    let est='', goalF=null;
-    const left=I.W*(1-it.f0);
-    if(it.plan){ goalF=Math.min(1,it.f0+it.plan/I.W); est='מתוכנן: כ־'+fmtMin(it.plan/printWpm())+' (חלק)'; const g=posAt(I,goalF-0.001); if(g) est+=' – עד בערך '+g; }
-    else est='משוער: כ־'+fmtMin(left/printWpm());
-    let where=I.where||''; if(it.f0>0&&!done){ const s=posAt(I,it.f0); where+=s?'<br>המשך מ־<b>'+s+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
+    const goalF=goalOf(it,I); let est;
+    const nU=unitsIn(I,it.f0,goalF||1), uTxt=I.kind&&nU?' · '+nU+' '+(nU===1?UNITNAME[I.kind]:UNITPL[I.kind]):'';
+    if(goalF){ est='מתוכנן: כ־'+fmtMin(estimate(I,it.f0,goalF))+' (חלק)'+uTxt; const g=posAt(I,goalF-0.001); if(g) est+=' – עד בערך '+g; }
+    else est='משוער: כ־'+fmtMin(estimate(I,it.f0,1))+uTxt;
+    let where=I.where||''; if(it.f0>0&&!done){ const s=I.sl?resumeAt(I,it.f0):null; where+=s?'<br>המשך מ־<b>'+s+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
     const tm=itemMs(i);
     d.innerHTML='<div class="hd"><div class="n">'+(done?'✓':part?'½':gem(i+1))+'</div><h2>'+I.name+(I.tag?' <em>· '+I.tag+'</em>':'')+'</h2><div class="t">'+(tm||cur?mmss(tm):'')+'</div></div>'+
-      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב'+(posAt(I,Math.max(0,(it.f||0)-0.0005))||'־'+Math.round((it.f||0)*100)+'%'))+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
+      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב'+(I.sl?posAt(I,Math.max(0,(it.f||0)-0.001)):'־'+Math.round((it.f||0)*100)+'%'))+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
     if(cur){ const ac=document.createElement('div'); ac.className='acts';
       ac.innerHTML='<button class="ok">✓ סיימתי</button><button class="st">עצרתי באמצע…</button><button class="sk">דלג</button>'; d.appendChild(ac);
       ac.querySelector('.ok').onclick=()=>finish(i,1);
       ac.querySelector('.st').onclick=()=>{ pick=pick===i?-1:i; pickSl=-1; render(); };
       ac.querySelector('.sk').onclick=()=>{ const r=!!S.since; stopRun(); S.cur=next(i); pick=-1; if(r) startRun(); save(); render(); };
-      if(pick===i){ const pg=document.createElement('div'); pg.className='pages';
-        if(I.stops){ pg.innerHTML='<p>'+(I.stops.some(x=>x.lines.length)?'באיזה עמוד עצרת? אחר כך תבחר שורה':'עד איפה הגעת? (סוף העמוד / העמודה)')+'</p>';
-          I.stops.forEach((st,k)=>{ if(st.f<=it.f0+0.001) return; if(st.f>=0.999&&!st.lines.length) return; const b=document.createElement('button'); b.textContent=st.lab+(st.lines.length?' ›':''); if(goalF&&goalF>st.a&&goalF<=st.f+0.001) b.className='goal'; if(pickSl===k) b.style.borderColor='var(--ink)';
-            b.onclick=()=>{ if(st.lines.length){ pickSl=pickSl===k?-1:k; render(); } else finish(i,st.f); }; pg.appendChild(b); });
-          const st=I.stops[pickSl]; if(st&&st.lines.length){ const p2=document.createElement('p'); p2.textContent='עמ׳ '+st.lab+' – עד איזו שורה קראת?'; pg.appendChild(p2);
-            st.lines.forEach((n,j)=>{ const f=st.a+(st.f-st.a)*(j+1)/st.lines.length; if(f<=it.f0+0.001) return; const b=document.createElement('button'); b.textContent=n; b.style.minWidth='calc(42px*var(--k))'; b.onclick=()=>finish(i,f); pg.appendChild(b); }); } }
-        else { pg.innerHTML='<p>כמה מהחלק הספקת?</p>'; [0.25,0.5,0.75].forEach(f=>{ if(f<=it.f0) return; const b=document.createElement('button'); b.textContent=Math.round(f*100)+'%'; b.onclick=()=>finish(i,f); pg.appendChild(b); }); }
-        d.appendChild(pg); } }
+      if(pick===i) d.appendChild(picker(i,it,I,goalF)); }
     else if(!done&&!part){ d.onclick=()=>{ const r=!!S.since; stopRun(); S.cur=i; pick=-1; if(r) startRun(); save(); render(); }; d.style.cursor='pointer'; }
     box.appendChild(d); });
   if(S.items.every(it=>it.st)){ const tot=totalMs(), dn=S.items.filter(it=>it.st==='done').length; const s=document.createElement('div'); s.className='sum';
-    s.innerHTML='<h3>סיום ✓</h3>למדת <b>'+fmtMin(tot/6e4)+'</b> · '+(dn===1?'חלק אחד הושלם':dn+' חלקים הושלמו')+(S.items.length>dn?(S.items.length-dn===1?', חלק אחד יימשך':', '+(S.items.length-dn)+' יימשכו')+' בפעם הבאה':'')+'.<br>זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b><br><span style="color:var(--muted);font-size:.9em">קצב הלימוד שלך מהחוברת: כ־'+printWpm()+' מילים לדקה – התוכניות הבאות יחושבו לפיו.</span>';
+    const P=unitPace(); const pc=Object.keys(UNITNAME).filter(k=>P[k]).map(k=>UNITNAME[k]+' – '+(P[k]>=60?Math.floor(P[k]/60)+':'+String(P[k]%60).padStart(2,'0')+' דק׳':P[k]+' שנ׳')).join(' · ');
+    s.innerHTML='<h3>סיום ✓</h3>למדת <b>'+fmtMin(tot/6e4)+'</b> · '+[dn?(dn===1?'חלק אחד הושלם':dn+' חלקים הושלמו'):'', S.items.length>dn?(S.items.length-dn===1?'חלק אחד יימשך':(S.items.length-dn)+' חלקים יימשכו')+' בפעם הבאה מהמקום שעצרת':''].filter(Boolean).join(', ')+'.<br>זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b>'+
+      (pc?'<br><span style="color:var(--muted);font-size:.9em">הקצב שלך בממוצע: '+pc+'. התוכניות הבאות יחושבו לפי זה.</span>':'');
     box.appendChild(s); }
   tick(); }
+// "where did you stop?" – first the page, then the line / verse / halacha on it
+function picker(i,it,I,goalF){ const pg=document.createElement('div'); pg.className='pages';
+  const btn=(txt,fn,cls)=>{ const b=document.createElement('button'); b.textContent=txt; if(cls) b.className=cls; b.onclick=fn; pg.appendChild(b); return b; };
+  const note=t=>{ const p=document.createElement('p'); p.textContent=t; pg.appendChild(p); };
+  if(!I.sl){ note('כמה מהחלק הספקת?'); [0.25,0.5,0.75].forEach(f=>{ if(f>it.f0) btn(Math.round(f*100)+'%',()=>finish(i,f)); }); return pg; }
+  note('באיזה עמוד עצרת?');
+  I.segs.forEach((sg,k)=>{ if(sg.b<=it.f0+0.001) return; const b=btn(plab(I.sl[k])+' ›',()=>{ pickSl=pickSl===k?-1:k; render(); }, goalF&&goalF>sg.a&&goalF<=sg.b+0.001?'goal':''); if(pickSl===k) b.style.borderColor='var(--ink)'; });
+  const sg=I.segs[pickSl]; if(!sg) return pg;
+  const pts=(I.pts||[]).map((p,j)=>({p,j})).filter(x=>x.p.si===pickSl);
+  const endOf=j=>j+1<I.pts.length?I.pts[j+1].f:1;
+  if(pts.length){ note('עמ׳ '+plab(I.sl[pickSl])+' – עד איזה'+(I.kind==='h'?'ו הלכה':I.kind==='p'?' פסוק':'ו שורה')+' למדת (כולל)?');
+    let lastPerek=null;
+    pts.forEach(({p,j})=>{ const f=endOf(j); if(f<=it.f0+0.001) return;
+      if(I.kind==='h'&&p.perek&&p.perek!==lastPerek){ lastPerek=p.perek; note('פרק '+p.perek); }
+      const b=btn(I.kind==='p'?'פסוק '+p.label:p.label,()=>finish(i,f)); b.style.minWidth='calc(42px*var(--k))'; }); }
+  else { note('עמ׳ '+plab(I.sl[pickSl])+' – כמה מהעמוד?'); [[0.25,'רבע'],[0.5,'חצי'],[0.75,'שלושה רבעים'],[1,'כולו']].forEach(([x,t])=>{ const f=sg.a+(sg.b-sg.a)*x; if(f>it.f0+0.001) btn(t,()=>finish(i,f)); }); }
+  return pg; }
 const next=i=>{ for(let k=1;k<=S.items.length;k++){ const j=(i+k)%S.items.length; if(!S.items[j].st) return j; } return i; };
 function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; stopRun();
   it.f=Math.max(it.f0,f); it.st=f>=0.999?'done':'part'; wkSet(it.id,it.f,true);
-  learnPrintWpm((it.f-it.f0)*I.W, it.ms);
+  if(I.kind) learnUnitPace(I.kind, unitsIn(I,it.f0,it.f>=0.999?1.01:it.f), it.ms); else learnPrintWpm((it.f-it.f0)*I.W, it.ms);
   if(it.id==='chu:'+WD) setProgress('chumash',isoDate(today),it.f); if(it.id==='tan:'+WD) setProgress('tanya',isoDate(today),it.f); if(it.id==='teh:'+T.day) setProgress('tehillim',T.key,it.f);
-  pick=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
+  pick=-1; pickSl=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
 const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); const h=Math.floor(s/3600); return (neg?'-':'')+(h?h+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0'); };
 function tick(){ const tot=totalMs(), left=BUDGET*6e4-tot;
   $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);

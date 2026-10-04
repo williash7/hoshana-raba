@@ -16,7 +16,16 @@ export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמיש
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=4;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=5;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+
+/* legacy Hebrew fonts: letters stored as cp1255 bytes shown as Latin-1 or Mac-Roman characters */
+const MACR='ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…\xa0ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ\uf8ffÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ';
+function decHeb(str){ let o=''; for(const ch of str){ const c=ch.charCodeAt(0); let b=-1;
+  if(c>=0xE0&&c<=0xFA) b=c; else { const i=MACR.indexOf(ch); if(i>=0) b=0x80+i; }
+  o+= b>=0xE0&&b<=0xFA ? String.fromCharCode(b-0xE0+0x5D0) : ch; } return o; }
+const GV={'א':1,'ב':2,'ג':3,'ד':4,'ה':5,'ו':6,'ז':7,'ח':8,'ט':9,'י':10,'כ':20,'ך':20,'ל':30,'מ':40,'ם':40,'נ':50,'ן':50,'ס':60,'ע':70,'פ':80,'ף':80,'צ':90,'ץ':90,'ק':100,'ר':200,'ש':300,'ת':400};
+const numLab=t=>[...t].filter(c=>GV[c]).sort((a,b)=>GV[b]-GV[a]).join('');
+const numVal=t=>[...t].reduce((a,c)=>a+(GV[c]||0),0);
 
 /* ---------- IndexedDB ---------- */
 function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('limud',1); r.onupgradeneeded=()=>r.result.createObjectStore('files'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
@@ -51,12 +60,22 @@ async function buildIndex(doc, onProgress){
     let ln=[]; tc.items.forEach(it=>{ const t=it.str.trim(); if(!/^\d{1,3}$/.test(t)) return; const x0=it.transform[4], x1=x0+(it.width||0), y=Math.round(vp.height-it.transform[5]);
       if(y<HEAD||y>vp.height-FOOT) return; if(x0<75) ln.push([y,+t,'L']); else if(x1>vp.width-75) ln.push([y,+t,'R']); });
     ln=['R','L'].flatMap(sd=>{ const a=ln.filter(l=>l[2]===sd).sort((p,q)=>p[0]-q[0]); let inc=0; for(let i=1;i<a.length;i++) if(a[i][1]>a[i-1][1]) inc++; return a.length>=4&&inc>=a.length*0.7?a:[]; });
+    // landmarks for the printed booklet: verse (p), halacha (h) and chapter (k) markers: [y, kind, label, side]
+    const lm=[]; const mid=(gut[0]+gut[1])/2; const side=it=>it.transform[4]>=gut[1]-4?'R':(it.transform[4]+(it.width||0)/2>mid+40?'R':'L');
+    const bigL={};
+    tc.items.forEach(it=>{ const h=it.height||Math.abs(it.transform[3]); const y=Math.round(vp.height-it.transform[5]); if(y<HEAD||y>vp.height-FOOT) return;
+      const t=decHeb(it.str);
+      if(h>=12.5){ const m=t.match(/\(([א-ת]{1,3})\)|\)([א-ת]{1,3})\(/); if(m&&h<17&&!/[ךםןףץ]/.test(m[1]||m[2])) lm.push([y,'p',numLab(m[1]||m[2]),side(it)]); }
+      if(h>=19.5){ const m=t.trim().match(/^\.?([א-ת]{1,3})\.?$/); if(m&&t.includes('.')) lm.push([y,'h',numLab(m[1]),side(it)]); }
+      if(h>=17.5&&h<19.5){ (bigL[y]=bigL[y]||[]).push(it); } });
+    Object.entries(bigL).forEach(([y,its])=>{ const t=decHeb(its.map(i=>i.str).join('')).replace(/\s/g,''); if(t.length<=9 && /קר|רק/.test(t)){ const lab=numLab(t.replace(/[פרק]/g,'')); if(lab&&lab.length<=2) lm.push([+y,'k',lab,side(its[0])]); } });
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,ln,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
+    { const keep=subj==='chumash'?['p']:/^(rambam|sm|halacha)/.test(subj||'')?['h','k']:[]; for(let i=lm.length-1;i>=0;i--) if(!keep.includes(lm[i][1])) lm.splice(i,1); }
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,ln,lm,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
   // segments per subject and day
-  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,ex:x.ex,ln:x.ln.length?x.ln:undefined})), subjects:{}};
+  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,ex:x.ex,ln:x.ln.length?x.ln:undefined,lm:x.lm.length?x.lm:undefined})), subjects:{}};
   SUBJECTS.forEach(S=>{
     const ps=pages.filter(x=>x.subj===S.id); if(!ps.length) return;
     const first=ps[0].p, last=ps[ps.length-1].p;
@@ -132,6 +151,19 @@ export function slices(index, subj, day){
 /* printed line numbers inside a slice, in reading order */
 export function sliceLines(index, sl){ const pg=index.pages[sl.p-1]; if(!pg||!pg.ln) return [];
   return pg.ln.filter(l=>l[0]>=sl.y0-4 && l[0]<=sl.y1+4 && (!sl.col || l[2]===sl.col)).map(l=>l[1]).sort((a,b)=>a-b); }
+/* landmarks inside a slice (verse / halacha / chapter), with their position (0..1) inside the slice */
+export function sliceMarks(index, sl){ const pg=index.pages[sl.p-1]; if(!pg||!pg.lm) return [];
+  const a=pg.lm.filter(l=>l[0]>=sl.y0-4 && l[0]<=sl.y1+2 && (!sl.col || l[3]===sl.col));
+  const two=!sl.col && a.some(l=>l[3]==='R'&&l[1]!=='p') && a.some(l=>l[3]==='L'&&l[1]!=='p');
+  const H=Math.max(1,sl.y1-sl.y0);
+  return a.map(l=>({kind:l[1],label:l[2],q:two?(l[3]==='R'?0:0.5)+0.5*(l[0]-sl.y0)/H:(l[0]-sl.y0)/H})).sort((x,y)=>x.q-y.q); }
+/* reading units of a portion (printed lines, verses or halachos) with their position as a fraction of the portion */
+export function unitPoints(index, sl){ const W=sl.reduce((a,b)=>a+b.words,0)||1; let acc=0, perek=null; const pts=[], segs=[];
+  sl.forEach((s,si)=>{ const a=acc/W; acc+=s.words; const b=acc/W; segs.push({a,b}); const L=sliceLines(index,s);
+    if(L.length) L.forEach((n,j)=>pts.push({kind:'l',label:String(n),f:a+(b-a)*j/L.length,si}));
+    else sliceMarks(index,s).forEach(m=>{ if(m.kind==='k'){ perek=m.label; return; } pts.push({kind:m.kind,label:m.label,perek:m.kind==='h'?perek:null,f:a+(b-a)*m.q,si}); }); });
+  const cnt={}; pts.forEach(p=>cnt[p.kind]=(cnt[p.kind]||0)+1); const kind=Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0]||null;
+  return {W, segs, kind, pts:kind?pts.filter(p=>p.kind===kind):[]}; }
 /* render one slice into a canvas of the given css width */
 /* css size of a slice: full-width slices use the page zoom, single columns fill the screen */
 export function sliceBox(sl, pageCss, screenW){ const full=(sl.x1-sl.x0)>sl.w*0.8; const pc=full?pageCss:Math.max(pageCss, screenW*0.97*sl.w/(sl.x1-sl.x0));

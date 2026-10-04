@@ -152,7 +152,7 @@ const WD=today.getDay(), T=tehToday();
 const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return x; };
 const DSHORT=['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש״ק'];
 // units: "id" or "id~plannedWords" (a partial item)
-let UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.split('~'); return {id,plan:w?+w:null}; });
+let UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.split('~'); return {id,end:w&&w[0]==='e'?+w.slice(1):null,plan:w&&w[0]!=='e'?+w:null}; });
 if(!UNITS.length) UNITS=(Q.get('parts')||'chumash,tanya').split(',').filter(Boolean).map(p=>({id:p==='chumash'?'chu:'+WD:p==='tanya'?'tan:'+WD:p==='tehillim'?'teh:'+T.day:p.startsWith('dm-')?'dm:'+p.slice(3)+':'+WD:p,plan:null}));
 function uName(id){ const a=id.split(':'); const tag=d=>+d===WD?'':' ('+DSHORT[+d]+')';
   if(a[0]==='chu') return 'חומש'+tag(a[1]); if(a[0]==='tan') return 'תניא'+tag(a[1]);
@@ -206,7 +206,7 @@ async function load(){
     // skip what was already learned this week
     const f0=wkFrac(p); let S=0, k=0; while(k<r.blocks.length-1 && S+Math.max(1,r.blocks[k].w)<=f0*W){ S+=Math.max(1,r.blocks[k].w); k++; }
     add('part',(r.title||NAMES[p])+(S>0?' <small style="font-family:var(--ui);font-size:.65em;color:var(--muted)">· המשך</small>':''),1,NAMES[p],p);
-    let got=0;
+    let got=0; if(u.end!=null) u.plan=Math.max(1,u.end*W-S);
     r.blocks.slice(k).forEach(b=>{ add(b.cls,b.html,b.w,b.mark,p); got+=Math.max(1,b.w);
       if(b.sl){ const el=B[B.length-1].el; el._sl=b.sl; const bx=DMmod.sliceBox(b.sl,dmW(),Math.min(innerWidth,600*K)); b.sl._pc=bx.pageCss; el.innerHTML='<div class="dmx"><div style="width:'+bx.w+'px;height:'+bx.h+'px;margin-left:auto"></div></div>'; dmIO.observe(el); }
       if(u.plan && goalAt==null && got>=u.plan){ goalAt=B.length; add('goal','<b>כאן מסתיים הזמן שתכננת</b>אפשר לעצור כאן – בפעם הבאה תמשיך מכאן. או להמשיך הלאה.',1,'יעד',p); } });
