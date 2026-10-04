@@ -217,7 +217,7 @@ async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   $('line').style.display=''; $('shade').style.display=''; measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
 function showList(){ const doc=$('doc'); doc.className=''; ready=false; B=[]; $('line').style.display='none'; $('shade').style.display='none';
   let h='<div class="secs"><h3>עוד בחוברת השבוע</h3><p>תכנים שאינם מחולקים לפי ימים – לבחירה לפי הזמן שלך.</p>';
-  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"><b></b><span>עמ׳ '+gem(s.from)+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(lp?' · התחלת':'')+'</span></button>'; });
+  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"><b></b><span>עמ׳ '+gem(s.from)+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(wkFrac('sec:'+s.from)>=1?' · ✓ נלמד':(lp||wkFrac('sec:'+s.from))?' · התחלת':'')+'</span></button>'; });
   doc.innerHTML=h+'</div>'; doc.querySelectorAll('.secs button').forEach(b=>{ b.querySelector('b').textContent=IDX.sections[+b.dataset.i].title; b.onclick=()=>{ V.sec=+b.dataset.i; save(); show(); }; });
   update(); }
 
@@ -253,7 +253,8 @@ function update(){ $('spd').textContent=wpm;
   const left=Math.max(0,TOTAL-p);
   if(V.subj==='more'){ $('cur').textContent=(IDX.sections[V.sec]||{}).title||''; $('hdate').textContent='עוד בחוברת'; } else { $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':''); }
   $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; $('pct').textContent=Math.round(done*100)+'%';
-  if(DAY===TODAYDAY && V.subj!=='more') setProgress('dm-'+V.subj,isoDate(today),left<2?1:done); }
+  if(DAY===TODAYDAY && V.subj!=='more') setProgress('dm-'+V.subj,isoDate(today),left<2?1:done);
+  if(TODAYDAY>=0){ const sc=IDX.sections&&IDX.sections[V.sec]; const id=V.subj==='more'?(sc?'sec:'+sc.from:null):V.subj==='hayomyom'?'dm:hayomyom':(DAY<=TODAYDAY?'dm:'+V.subj+':'+DAY:null); if(id) wkSet(id,left<2?1:done); } }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); V.pos[key()]=curPos; update(); },{passive:true});
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); show().then(()=>scrollToPos(p)); });

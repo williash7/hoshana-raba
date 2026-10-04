@@ -367,6 +367,7 @@ function update(){ const p=D.pos, done=Math.min(1,p/TOTAL); $('fill').style.widt
   $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשארו <b>'+(leftCh+1)+' מזמורים</b> (כ־'+Math.max(1,Math.round(left/wpm()))+' דק׳)';
   $('pct').textContent=Math.round(done*100)+'%';
   if(D.day===today()){ try{ const P=JSON.parse(localStorage.getItem('progress-v1')||'{}'); P.tehillim={key:H.key+':'+D.day,pct:left<3?1:Math.round(done*100)/100}; localStorage.setItem('progress-v1',JSON.stringify(P)); }catch(e){} }
+  try{ const n=new Date(); n.setHours(12,0,0,0); n.setDate(n.getDate()-n.getDay()); const wk=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); let W=JSON.parse(localStorage.getItem('week-v1')||'null'); if(!W||W.wk!==wk) W={wk,u:{}}; const f=left<3?1:Math.round(done*1000)/1000, id='teh:'+D.day; if(f>(W.u[id]||0)){ W.u[id]=f; localStorage.setItem('week-v1',JSON.stringify(W)); } }catch(e){}
   if(left<3 && !D.done[H.key+':'+D.day]){ D.done[H.key+':'+D.day]=1; save(); } }
 let ready=false;
 addEventListener('scroll',()=>{ if(!ready) return; D.pos=posFromScroll(); update(); },{passive:true});

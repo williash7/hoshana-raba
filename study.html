@@ -230,7 +230,8 @@ function update(){ if(!ready){ $('fill').style.width='0%'; $('left').textContent
   const left=Math.max(0,TOTAL-p);
   $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשאר כ־<b>'+Math.max(1,Math.round(left/wpm()))+' דק׳</b>';
   $('pct').textContent=Math.round(done*100)+'%';
-  if(off===0) setProgress(MOD,dkey(),left<3?1:done); }
+  if(off===0) setProgress(MOD,dkey(),left<3?1:done);
+  if(off<=0 && -off<=new Date().getDay()) wkSet((MOD==='chumash'?'chu:':'tan:')+dayDate().getDay(), left<3?1:done); }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); D.pos[dkey()]=curPos; update(); },{passive:true});
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); root.style.setProperty('--fs',(D.fs*K)+'px'); root.style.setProperty('--pw',(600*K)+'px'); measure(); scrollToPos(p); });

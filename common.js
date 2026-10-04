@@ -79,12 +79,22 @@ function getProgress(mod,key){ const p=lsGet('progress-v1',{})[mod]; return p&&p
 
 /* daily Tehillim (by the Hebrew date, switching at sunset) */
 const TDIV=[[1,1],[10,1],[18,1],[23,1],[29,1],[35,1],[39,1],[44,1],[49,1],[55,1],[60,1],[66,1],[69,1],[72,1],[77,1],[79,1],[83,1],[88,1],[90,1],[97,1],[104,1],[106,1],[108,1],[113,1],[119,1],[119,97],[120,1],[135,1],[140,1],[145,1],[151,1]];
-function tehToday(){ const now=new Date(), d=new Date(now); const night=now.getTime()>sunsetMs(now); if(night) d.setDate(d.getDate()+1); d.setHours(12,0,0,0);
+function tehFor(date){ const d=new Date(date); d.setHours(12,0,0,0);
   const day=+new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric'}).format(d);
-  const key=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'numeric',year:'numeric'}).format(d);
   const nx=new Date(d); nx.setDate(nx.getDate()+1); const short=day===29 && +new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric'}).format(nx)===1;
   const rng=dd=>{ const a=TDIV[dd-1], b=TDIV[dd]; if(dd===25) return 'קיט א–צו'; if(dd===26) return 'קיט צז–קעו'; return gem(a[0])+'–'+gem(b[0]-1); };
-  return {day, short, key:key+':'+day, night, heb:hebOf(d), range:rng(day)+(short?', '+rng(30):'')}; }
+  return {day, short, date:d, heb:hebOf(d), range:rng(day)+(short?', '+rng(30):'')}; }
+function tehToday(){ const now=new Date(), d=new Date(now); const night=now.getTime()>sunsetMs(now); if(night) d.setDate(d.getDate()+1); d.setHours(12,0,0,0);
+  const t=tehFor(d); const key=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'numeric',year:'numeric'}).format(d);
+  return Object.assign(t,{key:key+':'+t.day, night}); }
+
+/* weekly tracker: how much of each unit was learned this week (resets every Sunday).
+   ids: chu:<weekday> tan:<weekday> teh:<hebrew day of month> dm:<subject>:<weekday> dm:hayomyom sec:<first page> */
+function wkId(){ const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-d.getDay()); return isoDate(d); }
+function wkAll(){ const W=lsGet('week-v1',null); return W&&W.wk===wkId()?W.u:{}; }
+function wkFrac(id){ return wkAll()[id]||0; }
+function wkSet(id,f,force){ const u=wkAll(); f=Math.max(0,Math.min(1,f||0)); if(f>=0.98) f=1; f=Math.round(f*1000)/1000;
+  if(!force && f<=(u[id]||0)) return; if(f) u[id]=f; else delete u[id]; lsSet('week-v1',{wk:wkId(),u}); }
 
 /* reading pace shared by all readers (words per minute) */
 function getWpm(){ return lsGet('pace-v1',{wpm:85}).wpm||85; }

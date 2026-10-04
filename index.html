@@ -89,6 +89,17 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .seg button{border:0;background:transparent;padding:calc(7px*var(--k)) calc(12px*var(--k));border-radius:calc(8px*var(--k));font-size:calc(14px*var(--k))}
 .seg button.on{background:var(--night);color:var(--gold)}
 .row{display:flex;align-items:center;justify-content:space-between;gap:calc(10px*var(--k));padding:calc(10px*var(--k)) 0;font-size:calc(15px*var(--k))}
+.fp .mk{border:calc(1px*var(--k)) solid #3a3f58;background:transparent;color:var(--muted);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(9px*var(--k));font-size:calc(12.5px*var(--k));flex:none}
+.fp span em{font-style:normal;color:var(--muted);font-size:calc(13px*var(--k))}
+.fp.part small{color:var(--gold)}
+.week{margin-top:calc(14px*var(--k));font-size:calc(13.5px*var(--k));color:var(--muted);line-height:1.6}
+.week button{border:0;background:transparent;color:var(--gold);text-decoration:underline;padding:0;font-size:calc(13.5px*var(--k))}
+.week .track{height:calc(5px*var(--k));background:#34384f;border-radius:calc(3px*var(--k));overflow:hidden;margin:calc(4px*var(--k)) 0}
+.week .track i{display:block;height:100%;background:var(--willow)}
+.more{margin-top:calc(10px*var(--k));border-top:calc(1px*var(--k)) solid #2c3046;padding-top:calc(8px*var(--k))}
+.more summary{cursor:pointer;color:var(--gold);font-size:calc(14.5px*var(--k));padding:calc(4px*var(--k)) 0}
+.more .fp button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(13px*var(--k));flex:none}
+.flow a{color:var(--gold)}
 footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));padding:0 calc(16px*var(--k)) calc(30px*var(--k))}
 @media (max-width:360px){ .hero h1{font-size:calc(27px*var(--k))} }
 </style>
@@ -104,12 +115,15 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
 </header>
 <main>
   <section class="flow" id="flow">
-    <h3>לימוד ברצף</h3>
-    <p class="hint">בחר מה לומר עכשיו וכמה זמן יש לך – האפליקציה תחשב ותגלול הכל ברצף.</p>
-    <div id="flowParts"></div>
+    <h3>תוכנית לימוד</h3>
+    <p class="hint">כמה זמן יש לך עכשיו? קודם חת״ת ורמב״ם – של היום ומה שהוחסר השבוע – ואם נשאר זמן, משאר החוברת.</p>
     <div class="times" id="times"></div>
+    <div id="plan"></div>
     <div class="flowSum" id="flowSum"></div>
-    <button class="startBtn" id="startFlow">התחל רצף ▶</button>
+    <button class="startBtn" id="startFlow">התחל ▶</button>
+    <div class="week" id="week"></div>
+    <details class="more" id="addBox"><summary>הוספת משהו אחר לתוכנית</summary><div id="addList"></div></details>
+    <details class="more" id="doneBox"><summary id="doneSum">נלמד השבוע</summary><div id="doneList"></div></details>
   </section>
   <div id="cards"></div>
   <button class="edit" id="editBtn">✎ התאמת מסך הבית</button>
@@ -187,39 +201,78 @@ function renderDmPanel(){ const box=$('dmMods'); box.innerHTML='';
     d.querySelector('input').onchange=e=>{ H.dm=H.dm.filter(x=>x!==id); if(e.target.checked) H.dm.push(id); save(); renderFlow(); }; box.appendChild(d); }); }
 function mv(i,d){ const j=i+d; if(j<0||j>=H.order.length) return; [H.order[i],H.order[j]]=[H.order[j],H.order[i]]; save(); render(); }
 $('editBtn').onclick=()=>{ const p=$('panel'); p.hidden=!p.hidden; $('editBtn').textContent=p.hidden?'✎ התאמת מסך הבית':'סיום התאמה'; if(!p.hidden) p.scrollIntoView({behavior:'smooth',block:'start'}); };
-/* ---------- continuous flow planner ---------- */
-const FP=['tehillim','chumash','tanya'];
-let F=Object.assign({sel:null,min:10},lsGet('flow-v1',{}));
-const DEFW={chumash:900,tanya:700};
-function partKey(k){ return k==='tehillim'?T.key:isoDate(today); }
-function partName(k){ return k.startsWith('dm-')?'דבר מלכות · '+DMI.subjects[k.slice(3)].name:MODS[k].name; }
-function wordsFor(k){ if(k.startsWith('dm-')) return DMI.subjects[k.slice(3)].words; if(k==='tehillim') return tehWords(T.day,T.short); return wcGet(k+':'+partKey(k)); }
-function renderFlow(){ const avail=FP.filter(k=>H.on[k]).concat(DMI?H.dm.filter(id=>DMI.subjects[id]).map(id=>'dm-'+id):[]);
-  if(!avail.length){ $('flow').hidden=true; return; } $('flow').hidden=false;
-  if(!F.sel) F.sel={}; const box=$('flowParts'); box.innerHTML=''; let total=0, unknown=false;
-  avail.forEach(k=>{ const pct=getProgress(k,partKey(k)); const done=pct>=1; if(F.sel[k]==null) F.sel[k]=!done;
-    let w=wordsFor(k); const est=!w; if(est){ w=DEFW[k]||600; } const rem=w*(1-Math.min(1,pct));
-    if(F.sel[k]&&!done){ total+=rem; if(est) unknown=true; }
-    const d=document.createElement('label'); d.className='fp'+(done?' done':'');
-    d.innerHTML='<input type="checkbox"'+(F.sel[k]&&!done?' checked':'')+(done?' disabled':'')+'><span>'+partName(k)+'</span><small>'+(done?'נאמר היום ✓':(est?'כ־':'')+fmtMin(mins(rem))+(pct>0?' (נשאר)':''))+'</small>';
-    d.querySelector('input').onchange=e=>{ F.sel[k]=e.target.checked; lsSet('flow-v1',F); renderFlow(); }; box.appendChild(d); });
-  const tb=$('times'); tb.innerHTML='<b>יש לי:</b>';
-  [5,10,15,20,30].forEach(m=>{ const b=document.createElement('button'); b.textContent=m+' דק׳'; b.className=F.min===m?'on':''; b.onclick=()=>{ F.min=m; lsSet('flow-v1',F); renderFlow(); }; tb.appendChild(b); });
-  const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=240; inp.placeholder='אחר'; inp.inputMode='numeric'; if(![5,10,15,20,30].includes(F.min)) inp.value=F.min;
-  inp.onchange=()=>{ const v=+inp.value; if(v>0){ F.min=v; lsSet('flow-v1',F); renderFlow(); } }; tb.appendChild(inp);
-  const need=mins(total), wpmNeed=total/F.min, sel=avail.filter(k=>F.sel[k]&&getProgress(k,partKey(k))<1);
+/* ---------- study planner ---------- */
+let P=Object.assign({min:30,day:'',skip:[],pin:[]},lsGet('plan-v1',{}));
+if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; }
+const savePlan=()=>lsSet('plan-v1',P);
+let DMX=null;   // {DM, index, day} when this week's booklet is stored
+const WD=today.getDay();
+const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return x; };
+const dayTag=d=>d===WD?'היום':'מיום '+WEEKDAYS[d];
+const RAMBAM=['rambam3','rambam1','sm'];
+const DMNAME=Object.fromEntries(DMS);
+const SKIPSEC=/מפתח|הנחת תפילין|לוח|זמני|מזמורי תהלים|קריאה בציבור/;
+function catalog(){ const out=[], days=[WD].concat([...Array(WD).keys()]);
+  const ok=DMX&&DMX.day>=0, dmW=(s,d)=>DMX.DM.slices(DMX.index,s,d).reduce((a,b)=>a+b.words,0);
+  days.forEach(d=>{ const g=d===WD?0:1, dt=dateOf(d), iso=isoDate(dt);
+    if(H.on.chumash){ const w=wcGet('chumash:'+iso); out.push({id:'chu:'+d,g,d,name:'חומש',w:w||900,est:!w}); }
+    if(H.on.tehillim){ const t=tehFor(dt); out.push({id:'teh:'+t.day,g,d,name:'תהילים',w:tehWords(t.day,t.short)||800}); }
+    if(H.on.tanya){ const w=wcGet('tanya:'+iso); out.push({id:'tan:'+d,g,d,name:'תניא',w:w||700,est:!w}); }
+    if(ok) H.dm.filter(s=>RAMBAM.includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d,g,d,name:DMNAME[s],w}); }); });
+  if(ok){ days.forEach(d=>H.dm.filter(s=>!RAMBAM.includes(s)&&!['chumash','tanya','hayomyom'].includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d,g:2,d,name:DMNAME[s],w}); }));
+    if(H.dm.includes('hayomyom')){ const w=dmW('hayomyom',DMX.day); if(w) out.push({id:'dm:hayomyom',g:2,name:'היום יום',w}); }
+    (DMX.index.sections||[]).forEach(s=>out.push({id:'sec:'+s.from,g:SKIPSEC.test(s.title)||s.words<150?4:3,name:s.title,w:s.words,sec:1})); }
+  out.forEach(u=>{ u.f=wkFrac(u.id); u.rem=Math.max(1,u.w*(1-u.f)); }); return out; }
+function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
+  const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
+  const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
+  const rest=open.filter(u=>(u.g===2||u.g===3)&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
+  const wpm=getWpm(), budget=P.min*wpm; let acc=0; const sel=[];
+  for(const u of pri.concat(pins,rest)){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
+    else { const left=budget-acc; if(left>=3*wpm) sel.push({u,w:left,partial:true}); break; } }
+  return {sel,all,open}; }
+const label=u=>u.name+(u.d!=null?' <em>· '+dayTag(u.d)+'</em>':u.sec?' <em>· מהחוברת</em>':'');
+function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.createElement('label'); d.className='fp'+(cls?' '+cls:'');
+  d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
+  if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
+function renderFlow(){
+  const tb=$('times'); tb.innerHTML='<b>יש לי:</b>'; const TM=[10,15,20,30,45,60];
+  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=P.min===m?'on':''; b.onclick=()=>{ P.min=m; savePlan(); renderFlow(); }; tb.appendChild(b); });
+  const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=300; inp.placeholder='אחר'; inp.inputMode='numeric'; if(!TM.includes(P.min)) inp.value=P.min;
+  inp.onchange=()=>{ const v=+inp.value; if(v>0){ P.min=v; savePlan(); renderFlow(); } }; tb.appendChild(inp);
+  const {sel,all,open}=plan(); const box=$('plan'); box.innerHTML='';
+  sel.forEach(s=>{ const u=s.u;
+    row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mins(s.w))+' מתוך '+fmtMin(mins(u.rem)):(u.est?'כ־':'')+fmtMin(mins(s.w))+(u.f>0?' · המשך':''),
+      '✓ למדתי',()=>{ wkSet(u.id,1,true); renderFlow(); }, true, ()=>{ if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
+  const tot=sel.reduce((a,s)=>a+s.w,0);
   $('startFlow').disabled=!sel.length;
-  $('flowSum').innerHTML=!sel.length?'כל מה שנבחר כבר נאמר היום ✓':
-    'בקצב הרגיל שלך ('+getWpm()+' מילים לדקה) זה ייקח '+(unknown?'בערך ':'')+'<b>'+fmtMin(need)+'</b>.<br>'+
-    (need<=F.min?'<span class="ok">✓ מספיק ב־'+F.min+' דק׳</span>':'<span class="bad">כדי לסיים ב־'+F.min+' דק׳ צריך לקרוא כ־'+Math.round(wpmNeed)+' מילים לדקה</span>')+
-    (unknown?'<br><small style="color:var(--muted)">ההערכה לחומש/תניא תדויק אחרי הטעינה הראשונה</small>':'');
-  $('startFlow').onclick=()=>{ location.href='session.html?parts='+sel.join(',')+'&min='+F.min; }; }
+  const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
+  $('flowSum').innerHTML=!sel.length?(open.some(u=>u.g<=1)?'הורדת את כל השיעורים מהתוכנית.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
+    'התוכנית: <b>'+fmtMin(mins(tot))+'</b> מתוך '+fmtMin(P.min)+' (בקצב '+getWpm()+' מילים לדקה)'+(sel.some(s=>s.u.est)?' – הערכה':'')+
+    (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':'');
+  $('startFlow').onclick=()=>{ location.href='session.html?u='+sel.map(s=>s.u.id+(s.partial?'~'+Math.round(s.w):'')).join(',')+'&min='+P.min; };
+  // weekly status
+  const core=all.filter(u=>u.g<=1), cd=core.filter(u=>u.f>=1).length, missed=core.filter(u=>u.g===1&&u.f<1);
+  let wk='<div>חת״ת'+(DMX&&DMX.day>=0&&H.dm.some(s=>RAMBAM.includes(s))?' ורמב״ם':'')+' השבוע: נלמדו <b>'+cd+'</b> מתוך '+core.length+'</div><div class="track"><i style="width:'+(core.length?cd/core.length*100:0)+'%"></i></div>';
+  if(missed.length) wk+='<div>'+missed.length+' שיעורים מימים קודמים עדיין פתוחים. <button id="allDone">כבר למדתי אותם</button></div>';
+  if(!(DMX&&DMX.day>=0)) wk+='<div>כדי לכלול רמב״ם ושאר החוברת – <a href="dvar.html">טען את חוברת השבוע</a></div>';
+  $('week').innerHTML=wk;
+  if($('allDone')) $('allDone').onclick=()=>{ if(confirm('לסמן את כל '+missed.length+' השיעורים מהימים הקודמים כנלמדו?')){ missed.forEach(u=>wkSet(u.id,1,true)); renderFlow(); } };
+  // add list
+  const al=$('addList'); al.innerHTML=''; const inSel=new Set(sel.map(s=>s.u.id));
+  open.filter(u=>!inSel.has(u.id)).forEach(u=>row(al,label(u),'כ־'+fmtMin(mins(u.rem))+(u.f>0?' · המשך':''),'+ הוסף',()=>{ P.skip=P.skip.filter(x=>x!==u.id); if(!P.pin.includes(u.id)) P.pin.push(u.id); savePlan(); renderFlow(); }));
+  if(!al.children.length) al.innerHTML='<div class="hint">אין עוד מה להוסיף.</div>';
+  const dn=all.filter(u=>u.f>=1), dl=$('doneList'); dl.innerHTML=''; $('doneSum').textContent='נלמד השבוע ('+dn.length+')';
+  dn.forEach(u=>row(dl,label(u),'✓','בטל',()=>{ wkSet(u.id,0,true); renderFlow(); }));
+  $('doneBox').hidden=!dn.length; }
 render(); renderFlow();
 // Dvar Malchus booklet stored on this device
 import('./dm.js').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTATE='טען את חוברת השבוע'; render(); return; }
-  DMI=DM.todayInfo(m.index, hebOf(today).label); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; render(); renderFlow(); }).catch(()=>{});
+  DMI=DM.todayInfo(m.index, hebOf(today).label); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; DMX={DM,index:m.index,day:DM.dayForLabel(m.index,hebOf(today).label)}; render(); renderFlow(); }).catch(()=>{});
 // count words of today's Chumash / Tanya in the background for accurate estimates
-['chumash','tanya'].forEach(k=>{ if(H.on[k] && !wcGet(k+':'+partKey(k))){ (k==='chumash'?partChumash(today,!!H.diaspora,true):partTanya(today)).then(r=>{ wcSet(k+':'+partKey(k), r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }).catch(()=>{}); } });
+(async()=>{ for(let d=WD;d>=0;d--){ const dt=dateOf(d), iso=isoDate(dt); for(const k of ['chumash','tanya']){ const id=(k==='chumash'?'chu:':'tan:')+d;
+  if(!H.on[k] || wcGet(k+':'+iso) || wkFrac(id)>=1) continue;
+  try{ const r=await (k==='chumash'?partChumash(dt,!!H.diaspora,true):partTanya(dt)); wcSet(k+':'+iso, r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }catch(e){} } } })();
 if(H.on.tanya){ sefCalendar(today).then(cal=>{ const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(it){ tanyaText=(it.heRef||it.ref).replace(/^תניא,?\s*/,''); render(); } }).catch(()=>{}); }
 addEventListener('pageshow',e=>{ if(e.persisted) render(); });
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ render(); renderFlow(); } });
