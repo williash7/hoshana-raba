@@ -1,5 +1,5 @@
-const CACHE='limud-v2';
-const CORE=['./','./index.html','./tehillim.html','./hoshana.html','./study.html','./common.js','./manifest.json','./icon-192.png','./icon-512.png'];
+const CACHE='limud-v3';
+const CORE=['./','./index.html','./tehillim.html','./hoshana.html','./study.html','./session.html','./common.js','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())); });
 self.addEventListener('activate',e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 const netFirst=req=>fetch(req).then(r=>{ if(r.ok){ const c=r.clone(); caches.open(CACHE).then(ca=>ca.put(req,c)); } return r; }).catch(()=>caches.match(req,{ignoreSearch:false}).then(r=>r||caches.match(req,{ignoreSearch:true})));

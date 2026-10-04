@@ -84,4 +84,34 @@ function tehToday(){ const now=new Date(), d=new Date(now); const night=now.getT
   const key=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'numeric',year:'numeric'}).format(d);
   const nx=new Date(d); nx.setDate(nx.getDate()+1); const short=day===29 && +new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric'}).format(nx)===1;
   const rng=dd=>{ const a=TDIV[dd-1], b=TDIV[dd]; if(dd===25) return 'קיט א–צו'; if(dd===26) return 'קיט צז–קעו'; return gem(a[0])+'–'+gem(b[0]-1); };
-  return {day, key:key+':'+day, night, heb:hebOf(d), range:rng(day)+(short?', '+rng(30):'')}; }
+  return {day, short, key:key+':'+day, night, heb:hebOf(d), range:rng(day)+(short?', '+rng(30):'')}; }
+
+/* reading pace shared by all readers (words per minute) */
+function getWpm(){ return lsGet('pace-v1',{wpm:85}).wpm||85; }
+function setWpm(w){ lsSet('pace-v1',{wpm:Math.max(20,Math.min(400,Math.round(w)))}); }
+/* word counts: tehillim from the embedded table, others cached after loading */
+let TW=null;
+function tehWords(day,short){ if(!TW) return 0; const one=dd=>{ if(dd===25) return TW.v119.slice(0,96).reduce((a,b)=>a+b,0); if(dd===26) return TW.v119.slice(96).reduce((a,b)=>a+b,0);
+  const a=TDIV[dd-1][0], b=TDIV[dd][0]; let s=0; for(let c=a;c<b;c++) s+=TW.cw[c-1]; return s; }; return one(day)+(short?one(30):0); }
+function wcGet(k){ return (lsGet('wc-v1',{})[k])||0; }
+function wcSet(k,n){ const W=lsGet('wc-v1',{}); W[k]=n; const ks=Object.keys(W); if(ks.length>40) delete W[ks[0]]; lsSet('wc-v1',W); }
+const mins=w=>w/getWpm();
+function fmtMin(m){ m=Math.round(m); if(m<1) return 'פחות מדקה'; if(m<60) return m+' דק׳'; return Math.floor(m/60)+' שע׳'+(m%60?' ו־'+(m%60)+' דק׳':''); }
+
+/* parts for the continuous session: each returns {title, blocks:[{cls,html,w,mark}]} */
+const wordsOf=s=>String(s).replace(/<[^>]+>/g,' ').split(/\s+/).filter(Boolean).length;
+async function partChumash(date,diaspora,rashi){ const c=chumashFor(date,diaspora); if(!c) throw new Error('no chumash');
+  const data=await Promise.all(c.refs.map(r=>Promise.all([sefText(r.ref,"hebrew|Tanach with Ta'amei Hamikra"), rashi?sefText('Rashi on '+r.ref,'hebrew').catch(()=>null):null])));
+  const blocks=[];
+  c.refs.forEach((r,ri)=>{ const [txt,ra]=data[ri]; const rv={}; if(ra) toVerses(ra).forEach(x=>{ rv[x.ch+':'+x.v]=flat(x.val); });
+    blocks.push({cls:'head',html:'<h3>חומש – פרשת '+r.parsha+' – '+c.aliyahName+'</h3><small>'+(txt.heRef||r.ref)+'</small>',w:2,mark:'פרשת '+r.parsha});
+    let lastCh=null;
+    toVerses(txt).forEach(x=>{ const v=clean(flat(x.val).join(' ')); const com=(rv[x.ch+':'+x.v]||[]).map(clean).filter(Boolean);
+      let h=''; if(x.ch!==lastCh){ h+='<span class="ch">פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
+      h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>'; if(com.length) h+='<div class="rashi">'+com.map(s=>'<div>'+s+'</div>').join('')+'</div>';
+      blocks.push({cls:'ps',html:h,w:wordsOf(v)+wordsOf(com.join(' ')),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); });
+  return {title:'חומש · '+c.he+' · '+c.aliyahName, blocks}; }
+async function partTanya(date){ const cal=await sefCalendar(date); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(!it) throw new Error('no tanya');
+  const txt=await sefText(it.ref,'hebrew'); const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+(txt.heRef||it.heRef||it.ref)+'</small>',w:2,mark:'תניא'}];
+  flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach(p=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:'תניא'}));
+  return {title:'תניא · '+hebOf(date).label, blocks}; }
