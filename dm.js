@@ -16,7 +16,7 @@ export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמיש
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=3;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=4;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* ---------- IndexedDB ---------- */
 function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('limud',1); r.onupgradeneeded=()=>r.result.createObjectStore('files'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
@@ -47,12 +47,16 @@ async function buildIndex(doc, onProgress){
     let gs=-1, ge=-1, best=0; const lo=Math.floor(vp.width*0.38/2), hi=Math.ceil(vp.width*0.62/2);
     for(let b=lo,run=0,st=0;b<=hi;b++){ if(bins[b]===0){ if(!run) st=b; run++; if(run>best){ best=run; gs=st*2; ge=(b+1)*2; } } else run=0; }
     const gut=best>=2?[gs,ge]:[vp.width/2-3,vp.width/2+3];
+    // printed line numbers in the outer margins (sichos, maamarim…): [y, number, side]
+    let ln=[]; tc.items.forEach(it=>{ const t=it.str.trim(); if(!/^\d{1,3}$/.test(t)) return; const x0=it.transform[4], x1=x0+(it.width||0), y=Math.round(vp.height-it.transform[5]);
+      if(y<HEAD||y>vp.height-FOOT) return; if(x0<75) ln.push([y,+t,'L']); else if(x1>vp.width-75) ln.push([y,+t,'R']); });
+    ln=['R','L'].flatMap(sd=>{ const a=ln.filter(l=>l[2]===sd).sort((p,q)=>p[0]-q[0]); let inc=0; for(let i=1;i<a.length;i++) if(a[i][1]>a[i-1][1]) inc++; return a.length>=4&&inc>=a.length*0.7?a:[]; });
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,ln,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
   // segments per subject and day
-  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,ex:x.ex})), subjects:{}};
+  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,ex:x.ex,ln:x.ln.length?x.ln:undefined})), subjects:{}};
   SUBJECTS.forEach(S=>{
     const ps=pages.filter(x=>x.subj===S.id); if(!ps.length) return;
     const first=ps[0].p, last=ps[ps.length-1].p;
@@ -125,6 +129,9 @@ export function slices(index, subj, day){
     else { if(ok(Rr)) push(gut[1]-3,ex[1],Rr,'R'); if(ok(Lr)) push(ex[0],gut[0]+3,Lr,'L'); } }
   return out; }
 
+/* printed line numbers inside a slice, in reading order */
+export function sliceLines(index, sl){ const pg=index.pages[sl.p-1]; if(!pg||!pg.ln) return [];
+  return pg.ln.filter(l=>l[0]>=sl.y0-4 && l[0]<=sl.y1+4 && (!sl.col || l[2]===sl.col)).map(l=>l[1]).sort((a,b)=>a-b); }
 /* render one slice into a canvas of the given css width */
 /* css size of a slice: full-width slices use the page zoom, single columns fill the screen */
 export function sliceBox(sl, pageCss, screenW){ const full=(sl.x1-sl.x0)>sl.w*0.8; const pc=full?pageCss:Math.max(pageCss, screenW*0.97*sl.w/(sl.x1-sl.x0));

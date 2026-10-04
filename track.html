@@ -109,9 +109,14 @@ function startRun(){ if(!S.since) S.since=Date.now(); }
 let DM=null, IDX=null, IDAY=-1; const INFO={};
 const pn=s=>'עמ׳ '+gem(s.p)+(s.col?' ('+COL[s.col]+')':'');
 function fromSlices(sl,base){ const W=sl.reduce((a,b)=>a+b.words,0)||1; let acc=0;
-  const stops=sl.map(s=>{ acc+=s.words; return {lab:gem(s.p)+(s.col?(s.col==='R'?' ימין':' שמאל'):''), f:acc/W}; });
-  return Object.assign(base,{sl,W,stops,where:'<b>'+pn(sl[0])+'</b>'+(sl.length>1?' עד <b>'+pn(sl[sl.length-1])+'</b>':'')}); }
-const atFrac=(I,f)=>{ if(!I.sl) return null; for(let i=0;i<I.stops.length;i++) if(I.stops[i].f>f+0.001) return I.sl[i]; return I.sl[I.sl.length-1]; };
+  const stops=sl.map(s=>{ const a=acc/W; acc+=s.words; return {lab:gem(s.p)+(s.col?(s.col==='R'?' ימין':' שמאל'):''), a, f:acc/W, lines:DM.sliceLines(IDX,s)}; });
+  const r=Object.assign(base,{sl,W,stops}); const st=posAt(r,0), en=posAt(r,0.9999,true);
+  r.where='<b>'+st+'</b>'+(st!==en?' עד <b>'+en+'</b>':''); return r; }
+// position text (page, column, printed line) for a fraction of the unit
+function posAt(I,f,end){ if(!I.sl) return null; let i=I.stops.findIndex(s=>s.f>f+0.0001); if(i<0) i=I.stops.length-1;
+  const s=I.stops[i], L=s.lines, q=Math.max(0,Math.min(0.9999,(f-s.a)/Math.max(1e-6,s.f-s.a)));
+  const line=L.length?L[end?L.length-1:Math.min(L.length-1,Math.floor(q*L.length))]:null;
+  return pn(I.sl[i])+(line!=null?' שורה '+line:''); }
 function info(id){ const a=id.split(':');
   const dmDay=(subj,d)=>{ const D=IDX&&IDX.subjects[subj]&&IDX.subjects[subj].days[d]; return D&&D.label?'מתחיל בכותרת „'+D.label.replace(/\s+/g,' ')+'”':''; };
   if(a[0]==='teh'){ let t=T; for(let d=0;d<=WD;d++){ const x=tehFor(dateOf(d)); if(x.day===+a[1]){ t=x; var dd=d; } }
@@ -125,27 +130,30 @@ function info(id){ const a=id.split(':');
   return Object.assign(base,{where:'<span style="color:var(--muted)">טען את חוברת השבוע כדי לראות באיזה עמוד</span>',W:a[0]==='chu'?900:a[0]==='tan'?700:1500}); }
 
 /* ---------- render ---------- */
-let pick=-1;
+let pick=-1, pickSl=-1;
 function render(){ const box=$('list'); box.innerHTML='';
   S.items.forEach((it,i)=>{ const I=INFO[it.id]; const d=document.createElement('div');
     const done=it.st==='done', part=it.st==='part', cur=i===S.cur&&!done&&!part;
     d.className='it'+(cur?' cur':'')+(done?' done':'')+(part?' part':'');
     let est='', goalF=null;
     const left=I.W*(1-it.f0);
-    if(it.plan){ goalF=Math.min(1,it.f0+it.plan/I.W); est='מתוכנן: כ־'+fmtMin(it.plan/printWpm())+' (חלק)'; const g=atFrac(I,goalF-0.001); if(g) est+=' – עד בערך '+pn(g); }
+    if(it.plan){ goalF=Math.min(1,it.f0+it.plan/I.W); est='מתוכנן: כ־'+fmtMin(it.plan/printWpm())+' (חלק)'; const g=posAt(I,goalF-0.001); if(g) est+=' – עד בערך '+g; }
     else est='משוער: כ־'+fmtMin(left/printWpm());
-    let where=I.where||''; if(it.f0>0&&!done){ const s=atFrac(I,it.f0); where+=s?'<br>המשך מ־<b>'+pn(s)+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
+    let where=I.where||''; if(it.f0>0&&!done){ const s=posAt(I,it.f0); where+=s?'<br>המשך מ־<b>'+s+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
     const tm=itemMs(i);
     d.innerHTML='<div class="hd"><div class="n">'+(done?'✓':part?'½':gem(i+1))+'</div><h2>'+I.name+(I.tag?' <em>· '+I.tag+'</em>':'')+'</h2><div class="t">'+(tm||cur?mmss(tm):'')+'</div></div>'+
-      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב־'+Math.round((it.f||0)*100)+'%')+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
+      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב'+(posAt(I,Math.max(0,(it.f||0)-0.0005))||'־'+Math.round((it.f||0)*100)+'%'))+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
     if(cur){ const ac=document.createElement('div'); ac.className='acts';
       ac.innerHTML='<button class="ok">✓ סיימתי</button><button class="st">עצרתי באמצע…</button><button class="sk">דלג</button>'; d.appendChild(ac);
       ac.querySelector('.ok').onclick=()=>finish(i,1);
-      ac.querySelector('.st').onclick=()=>{ pick=pick===i?-1:i; render(); };
+      ac.querySelector('.st').onclick=()=>{ pick=pick===i?-1:i; pickSl=-1; render(); };
       ac.querySelector('.sk').onclick=()=>{ const r=!!S.since; stopRun(); S.cur=next(i); pick=-1; if(r) startRun(); save(); render(); };
       if(pick===i){ const pg=document.createElement('div'); pg.className='pages';
-        if(I.stops){ pg.innerHTML='<p>עד איפה הגעת? (סוף העמוד / העמודה)</p>';
-          I.stops.forEach(s=>{ if(s.f<=it.f0+0.001||s.f>=0.999) return; const b=document.createElement('button'); b.textContent=s.lab; if(goalF&&Math.abs(s.f-goalF)<0.08) b.className='goal'; b.onclick=()=>finish(i,s.f); pg.appendChild(b); }); }
+        if(I.stops){ pg.innerHTML='<p>'+(I.stops.some(x=>x.lines.length)?'באיזה עמוד עצרת? אחר כך תבחר שורה':'עד איפה הגעת? (סוף העמוד / העמודה)')+'</p>';
+          I.stops.forEach((st,k)=>{ if(st.f<=it.f0+0.001) return; if(st.f>=0.999&&!st.lines.length) return; const b=document.createElement('button'); b.textContent=st.lab+(st.lines.length?' ›':''); if(goalF&&goalF>st.a&&goalF<=st.f+0.001) b.className='goal'; if(pickSl===k) b.style.borderColor='var(--ink)';
+            b.onclick=()=>{ if(st.lines.length){ pickSl=pickSl===k?-1:k; render(); } else finish(i,st.f); }; pg.appendChild(b); });
+          const st=I.stops[pickSl]; if(st&&st.lines.length){ const p2=document.createElement('p'); p2.textContent='עמ׳ '+st.lab+' – עד איזו שורה קראת?'; pg.appendChild(p2);
+            st.lines.forEach((n,j)=>{ const f=st.a+(st.f-st.a)*(j+1)/st.lines.length; if(f<=it.f0+0.001) return; const b=document.createElement('button'); b.textContent=n; b.style.minWidth='calc(42px*var(--k))'; b.onclick=()=>finish(i,f); pg.appendChild(b); }); } }
         else { pg.innerHTML='<p>כמה מהחלק הספקת?</p>'; [0.25,0.5,0.75].forEach(f=>{ if(f<=it.f0) return; const b=document.createElement('button'); b.textContent=Math.round(f*100)+'%'; b.onclick=()=>finish(i,f); pg.appendChild(b); }); }
         d.appendChild(pg); } }
     else if(!done&&!part){ d.onclick=()=>{ const r=!!S.since; stopRun(); S.cur=i; pick=-1; if(r) startRun(); save(); render(); }; d.style.cursor='pointer'; }
