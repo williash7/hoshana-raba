@@ -169,7 +169,7 @@ async function partDvar(id){ DMmod=DMmod||await import('./dm.js'); const m=await
   const d=DMmod.dayForLabel(m.index,hebOf(today).label); if(d<0) throw new Error('החוברת הטעונה אינה של השבוע');
   const sl=DMmod.slices(m.index,id,d); return {title:NAMES['dm-'+id], blocks:sl.map(x=>({cls:'dmsl',html:'',w:x.words,mark:NAMES['dm-'+id],sl:x}))}; }
 function dmW(){ return Math.min(innerWidth,900*K)*(DMV.zoom||1.6); }
-const dmIO=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); c.style.width='100%'; el._c=c; el.firstChild.firstChild.appendChild(c); DMmod.renderSlice(el._sl,dmW(),c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
+const dmIO=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); c.style.width='100%'; el._c=c; el.firstChild.firstChild.appendChild(c); DMmod.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
 /* build */
 let B=[], tops=[], hts=[], TOTAL=1, PB=[], ready=false, curPos=0;
 function add(cls,html,w,mark,part){ const el=document.createElement('div'); el.className='t '+cls; el.innerHTML=html; $('doc').appendChild(el); B.push({el,w:Math.max(1,w),mark,part}); }
@@ -180,7 +180,7 @@ async function load(){
   res.forEach(({p,r,err})=>{ const start=B.length;
     add('part',NAMES[p],1,NAMES[p],p);
     if(err){ add('msg','לא הצלחתי לטעון את ה'+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div>',1,NAMES[p],p); }
-    else r.blocks.forEach(b=>{ add(b.cls,b.html,b.w,b.mark,p); if(b.sl){ const el=B[B.length-1].el; el._sl=b.sl; el.innerHTML='<div class="dmx"><div style="width:'+dmW()+'px;height:'+((b.sl.y1-b.sl.y0)*dmW()/b.sl.w)+'px"></div></div>'; dmIO.observe(el); } });
+    else r.blocks.forEach(b=>{ add(b.cls,b.html,b.w,b.mark,p); if(b.sl){ const el=B[B.length-1].el; el._sl=b.sl; const bx=DMmod.sliceBox(b.sl,dmW(),Math.min(innerWidth,600*K)); b.sl._pc=bx.pageCss; el.innerHTML='<div class="dmx"><div style="width:'+bx.w+'px;height:'+bx.h+'px;margin-left:auto"></div></div>'; dmIO.observe(el); } });
     const words=B.slice(start).reduce((a,b)=>a+b.w,0); if(!err) wcSet(p+':'+KEYS[p],words);
     PB.push({p,start,end:B.length,err:!!err}); });
   add('end','<b>סיום הלימוד ברצף</b><a href="./">חזרה למסך הבית</a>',2,'סיום',null);

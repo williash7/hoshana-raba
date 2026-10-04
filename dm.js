@@ -8,7 +8,7 @@ export const SUBJECTS = [
   {id:'hayomyom', name:'היום יום',            test:(h,top)=>h.includes('היוםיום')||top.includes('לוחהיוםיום'), whole:true},
   {id:'rambam3',  name:'רמב״ם – ג׳ פרקים',    test:h=>h.includes('רמבםגפרקיםליום')},
   {id:'rambam1',  name:'רמב״ם – פרק אחד',     test:h=>h.includes('רמבםפרקאחדליום')},
-  {id:'sm',       name:'ספר המצוות',          test:h=>h.includes('רמבםספרהמצוות'), whole:true},
+  {id:'sm',       name:'ספר המצוות',          test:h=>h.includes('רמבםספרהמצוות')},
   {id:'halacha',  name:'הלכה יומית ברמב״ם',    test:h=>h.includes('הלכהיומיתלעיוןברמבם')},
   {id:'mishna',   name:'משנה',               test:h=>/^[א-ת]{0,3}מסכת.*משנה/.test(h)},
 ];
@@ -27,34 +27,38 @@ async function buildIndex(doc, onProgress){
   const pages=[];
   for(let p=1;p<=doc.numPages;p++){
     const pg=await doc.getPage(p); const vp=pg.getViewport({scale:1}); const tc=await pg.getTextContent();
-    const lines={}; let words=0;
-    tc.items.forEach(it=>{ const y=Math.round(vp.height-it.transform[5]); (lines[y]=lines[y]||[]).push(it.str); const s=it.str.replace(/[\u0591-\u05C7]/g,''); const m=s.match(/[\u05d0-\u05ea]{2,}|[A-Za-z\u00c0-\u02af\u2000-\u2fff]{2,}/g); if(m) words+=m.length; });
+    const lines={}, litems={}; let words=0;
+    tc.items.forEach(it=>{ const y=Math.round(vp.height-it.transform[5]); (lines[y]=lines[y]||[]).push(it.str); (litems[y]=litems[y]||[]).push(it); const s=it.str.replace(/[\u0591-\u05C7]/g,''); const m=s.match(/[\u05d0-\u05ea]{2,}|[A-Za-z\u00c0-\u02af\u2000-\u2fff]{2,}/g); if(m) words+=m.length; });
     const ys=Object.keys(lines).map(Number).sort((a,b)=>a-b);
     let head='', top=''; ys.forEach(y=>{ const t=lines[y].join(' '); if(y<HEAD) head+=t+' '; if(y<120) top+=t+' '; });
     head=norm(head).replace(/^[א-ת]{1,4}(?=שיעור|מתוך|הלכה|מסכת|היום)/,''); top=norm(top);
     const marks=[];
     ys.forEach(y=>{ if(y<HEAD) return; const t=lines[y].join(''); if(!t.includes('â')) return; const n=norm(t);
-      DAYW.forEach((ws,i)=>{ if(ws.some(w=>n.includes('יום'+w))||(i===6&&n.includes('שבתקודש'))) marks.push({y,day:i,label:t.replace(/â/g,'').replace(/\s+/g,' ').trim()}); }); });
+      DAYW.forEach((ws,i)=>{ if(ws.some(w=>n.includes('יום'+w))||(i===6&&n.includes('שבתקודש'))) { const its=litems[y].filter(it=>it.str.includes('â')); const xs=its.length?its.map(it=>it.transform[4]+it.width/2):litems[y].map(it=>it.transform[4]+it.width/2); const c=(Math.min(...xs)+Math.max(...xs))/2; const col=Math.abs(c-vp.width/2)<vp.width*0.1?'F':(c>vp.width/2?'R':'L'); marks.push({y,day:i,col,label:t.replace(/â/g,'').replace(/\s+/g,' ').trim()}); } }); });
+    // column geometry: find the gutter (widest empty band near the middle) and the outer text edges
+    const bins=new Uint16Array(Math.ceil(vp.width/2)+2); let minX=vp.width, maxX=0;
+    tc.items.forEach(it=>{ const y=vp.height-it.transform[5]; if(y<HEAD||y>vp.height-FOOT||!it.str.trim()) return; const x0=it.transform[4], x1=x0+it.width; if(it.width<=0) return;
+      minX=Math.min(minX,x0); maxX=Math.max(maxX,x1); for(let b=Math.floor(x0/2);b<=Math.floor(x1/2)&&b<bins.length;b++) bins[b]++; });
+    let gs=-1, ge=-1, best=0; const lo=Math.floor(vp.width*0.38/2), hi=Math.ceil(vp.width*0.62/2);
+    for(let b=lo,run=0,st=0;b<=hi;b++){ if(bins[b]===0){ if(!run) st=b; run++; if(run>best){ best=run; gs=st*2; ge=(b+1)*2; } } else run=0; }
+    const gut=best>=2?[gs,ge]:[vp.width/2-3,vp.width/2+3];
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words});
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,gut,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
   // segments per subject and day
-  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words})), subjects:{}};
+  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,ex:x.ex})), subjects:{}};
   SUBJECTS.forEach(S=>{
     const ps=pages.filter(x=>x.subj===S.id); if(!ps.length) return;
     const first=ps[0].p, last=ps[ps.length-1].p;
-    const marks=[]; ps.forEach(x=>x.marks.forEach(m=>marks.push({p:x.p,y:m.y,day:m.day,label:m.label})));
+    const marks=[]; ps.forEach(x=>x.marks.forEach(m=>marks.push({p:x.p,y:m.y,col:m.col,day:m.day,label:m.label})));
     const days={};
     if(S.whole || !marks.length){ for(let d=0;d<7;d++) days[d]={from:{p:first,y:HEAD},to:{p:last,y:null},whole:true}; }
     else {
       const byDay={}; marks.forEach(m=>{ if(!(m.day in byDay)) byDay[m.day]=m; });
-      const order=Object.values(byDay).sort((a,b)=>a.p-b.p||a.y-b.y);
-      order.forEach((m,i)=>{ const nx=order[i+1];
-        let to=nx?{p:nx.p,y:nx.y}:{p:last,y:null};
-        // markers out of reading order on the same page (multi-column) -> whole pages
-        const messy=nx && nx.p===m.p && nx.day!==m.day+1;
-        days[m.day]={from:{p:m.p,y:messy?HEAD:m.y}, to:messy?{p:m.p,y:null}:to, label:m.label}; });
+      const ds=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
+      ds.forEach((dd,i)=>{ const m=byDay[dd], nx=byDay[ds[i+1]];
+        days[dd]={from:{p:m.p,y:m.y,col:m.col}, to:nx?{p:nx.p,y:nx.y,col:nx.col}:{p:last,y:null,col:'F'}, label:m.label}; });
       // a combined day (e.g. Friday–Shabbat) without its own marker: reuse the neighbour's range
       for(let d=0;d<7;d++){ if(!days[d]){ const n=days[d+1]||days[d-1]; if(n) days[d]=Object.assign({},n,{shared:true}); } }
     }
@@ -88,21 +92,38 @@ export function slices(index, subj, day){
   const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return [];
   const out=[]; const P=index.pages;
   for(let p=D.from.p;p<=D.to.p;p++){ const pg=P[p-1]; if(!pg) continue;
-    let y0=HEAD, y1=pg.h-FOOT;
-    if(p===D.from.p && D.from.y!=null) y0=Math.max(HEAD,D.from.y-14);
-    if(p===D.to.p && D.to.y!=null){ if(D.to.y-8<=y0) continue; y1=D.to.y-8; }
-    const frac=(y1-y0)/(pg.h-HEAD-FOOT);
-    out.push({p,y0,y1,w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.05,frac))}); }
+    const top=HEAD, bot=pg.h-FOOT, gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w];
+    let Rr=[top,bot], Lr=[top,bot];
+    if(p===D.from.p && D.from.y!=null){ const y=Math.max(top,D.from.y-14);
+      if(D.from.col==='R'){ Rr[0]=y; } else if(D.from.col==='L'){ Rr=[0,0]; Lr[0]=y; } else { Rr[0]=Lr[0]=y; } }
+    if(p===D.to.p && D.to.y!=null){ const y=D.to.y-8;
+      if(D.to.col==='R'){ Rr[1]=y; Lr=[0,0]; } else if(D.to.col==='L'){ Lr[1]=y; } else { Rr[1]=Math.min(Rr[1],y); Lr[1]=Math.min(Lr[1],y); } }
+    const ok=r=>r[1]-r[0]>12;
+    const push=(x0,x1,r,col)=>{ const frac=(r[1]-r[0])*(x1-x0)/((pg.h-HEAD-FOOT)*pg.w); out.push({p,x0,x1,col,y0:r[0],y1:r[1],w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.03,frac))}); };
+    if(ok(Rr)&&ok(Lr)&&Rr[0]===Lr[0]&&Rr[1]===Lr[1]) push(0,pg.w,Rr);
+    else { if(ok(Rr)) push(gut[1]-3,ex[1],Rr,'R'); if(ok(Lr)) push(ex[0],gut[0]+3,Lr,'L'); } }
   return out; }
 
 /* render one slice into a canvas of the given css width */
+/* css size of a slice: full-width slices use the page zoom, single columns fill the screen */
+export function sliceBox(sl, pageCss, screenW){ const full=(sl.x1-sl.x0)>sl.w*0.8; const pc=full?pageCss:Math.max(pageCss, screenW*0.97*sl.w/(sl.x1-sl.x0));
+  return {pageCss:pc, w:(sl.x1-sl.x0)*pc/sl.w, h:(sl.y1-sl.y0)*pc/sl.w}; }
 export async function renderSlice(sl, cssWidth, canvas){
   const d=await doc(); const pg=await d.getPage(sl.p);
   const dpr=Math.min(3,window.devicePixelRatio||1); const scale=cssWidth/sl.w*dpr;
   const vp=pg.getViewport({scale});
   const full=document.createElement('canvas'); full.width=Math.ceil(vp.width); full.height=Math.ceil((sl.y1)*scale);
   await pg.render({canvasContext:full.getContext('2d'), viewport:vp}).promise;
-  const h=Math.ceil((sl.y1-sl.y0)*scale);
-  canvas.width=full.width; canvas.height=h;
-  canvas.getContext('2d').drawImage(full,0,Math.floor(sl.y0*scale),full.width,h,0,0,full.width,h);
+  const h=Math.ceil((sl.y1-sl.y0)*scale); let x0=Math.floor((sl.x0||0)*scale), wd=Math.ceil(((sl.x1||sl.w)-(sl.x0||0))*scale);
+  if(sl.col){ // find the real gutter from the pixels of this band
+    const W=full.width, gx0=Math.floor(W*0.38), gw=Math.floor(W*0.24), yy=Math.floor(sl.y0*scale);
+    const img=full.getContext('2d').getImageData(gx0,yy,gw,h).data; const cnt=new Uint32Array(gw); let rows=0;
+    for(let y=0;y<h;y+=2){ rows++; const row=y*gw*4; for(let x=0;x<gw;x++){ const i=row+x*4; if(img[i+3]>40 && (img[i]+img[i+1]+img[i+2])<420) cnt[x]++; } }
+    const thr=Math.max(2,rows*0.05);
+    let best=0,bs=-1,be=-1; for(let x=0,run=0,st=0;x<gw;x++){ if(cnt[x]<=thr){ if(!run) st=x; run++; if(run>best){ best=run; bs=st; be=x+1; } } else run=0; }
+    if(best>=Math.max(4,2*dpr)){ const gs=gx0+bs, ge=gx0+be;
+      if(sl.col==='R'){ const r=Math.ceil((sl.x1||sl.w)*scale); x0=ge-Math.round(2*dpr); wd=r-x0; }
+      else { x0=Math.floor((sl.x0||0)*scale); wd=gs+Math.round(2*dpr)-x0; } } }
+  canvas.width=wd; canvas.height=h;
+  canvas.getContext('2d').drawImage(full,x0,Math.floor(sl.y0*scale),wd,h,0,0,wd,h);
   full.width=full.height=0; return canvas; }

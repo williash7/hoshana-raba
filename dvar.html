@@ -97,7 +97,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .tabs button.today{border-color:var(--gold)}
 #wrap{overflow-x:auto;direction:rtl}
 #doc.dm{width:var(--dw);margin:0 auto}
-.sl{position:relative;background:#fff;margin:0 0 calc(6px*var(--k))}
+.sl{position:relative;background:#fff;margin:0 0 calc(6px*var(--k)) 0;margin-right:0;margin-left:auto}
 .sl canvas{display:block;width:100%;height:100%}
 .sl .pn{position:absolute;left:calc(6px*var(--k));top:calc(4px*var(--k));font-size:calc(11px*var(--k));color:#9a8a6a;font-family:var(--ui)}
 :root[data-theme="dark"] .sl canvas{filter:invert(.88) hue-rotate(180deg)}
@@ -199,9 +199,10 @@ async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   root.style.setProperty('--dw',cssW()+'px'); $('zoom').textContent='×'+V.zoom;
   if(!sl.length){ doc.innerHTML='<div class="t msg">אין שיעור '+DM.SUBJECTS.find(s=>s.id===V.subj).name+' ליום '+DM.DAYNAMES[DAY]+' בחוברת.</div>'; update(); return; }
   const w=cssW();
-  sl.forEach(s=>{ const el=document.createElement('div'); el.className='sl'; el.style.height=((s.y1-s.y0)*w/s.w)+'px'; el.innerHTML='<span class="pn">'+gem(s.p)+'</span>'; el._sl=s; doc.appendChild(el); B.push({el,w:Math.max(1,s.words)}); });
+  const scr=Math.min(innerWidth,900*K);
+  sl.forEach(s=>{ const bx=DM.sliceBox(s,w,scr); const el=document.createElement('div'); el.className='sl'; el.style.height=bx.h+'px'; el.style.width=bx.w+'px'; s._pc=bx.pageCss; el.innerHTML='<span class="pn">'+gem(s.p)+'</span>'; el._sl=s; doc.appendChild(el); B.push({el,w:Math.max(1,s.words)}); });
   let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
-  io=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); el._c=c; el.appendChild(c); DM.renderSlice(el._sl,cssW(),c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
+  io=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); el._c=c; el.appendChild(c); DM.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
   B.forEach(b=>io.observe(b.el));
   measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
 
