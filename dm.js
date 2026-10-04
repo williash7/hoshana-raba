@@ -16,7 +16,7 @@ export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמיש
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=5;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=6;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* legacy Hebrew fonts: letters stored as cp1255 bytes shown as Latin-1 or Mac-Roman characters */
 const MACR='ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…\xa0ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ\uf8ffÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ';
@@ -31,6 +31,35 @@ const numVal=t=>[...t].reduce((a,c)=>a+(GV[c]||0),0);
 function idb(){ return new Promise((res,rej)=>{ const r=indexedDB.open('limud',1); r.onupgradeneeded=()=>r.result.createObjectStore('files'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
 async function put(k,v){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('files','readwrite'); tx.objectStore('files').put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
 async function get(k){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('files','readonly'); const r=tx.objectStore('files').get(k); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+
+/* ---------- page layout (from pixels, since legacy fonts report wrong text widths) ---------- */
+async function pageLayout(pg, vp){ const sc=0.5, v=pg.getViewport({scale:sc}); const W=Math.ceil(v.width), H=Math.ceil(v.height);
+  const cv=typeof OffscreenCanvas!=='undefined'?new OffscreenCanvas(W,H):Object.assign(document.createElement('canvas'),{width:W,height:H});
+  const ctx=cv.getContext('2d',{willReadFrequently:true}); ctx.fillStyle='#fff'; ctx.fillRect(0,0,W,H);
+  await pg.render({canvasContext:ctx, viewport:v}).promise;
+  const d=ctx.getImageData(0,0,W,H).data; const y0=Math.floor(HEAD*sc), y1=Math.floor((vp.height-FOOT)*sc);
+  const full=[[HEAD,vp.height-FOOT,'F',1,1]];
+  const ink=new Uint8Array(W*H); for(let i=0,j=0;i<d.length;i+=4,j++) ink[j]=d[i]+d[i+1]+d[i+2]<640?1:0;   // include grey (line numbers)
+  const cnt=new Uint32Array(W); for(let y=y0;y<y1;y++){ const r=y*W; for(let x=0;x<W;x++) cnt[x]+=ink[r+x]; }
+  let exL=0, exR=W-1; while(exL<W&&cnt[exL]<2) exL++; while(exR>0&&cnt[exR]<2) exR--;
+  const ex=exR>exL?[Math.max(0,exL/sc-9),Math.min(vp.width,(exR+1)/sc+9)]:null;
+  const lo=Math.floor(W*0.38), hi=Math.ceil(W*0.62), thr=Math.max(1,(y1-y0)*0.03);
+  // the gap closest to the page centre (line numbers may sit between the columns)
+  let best=0,bs=-1,bd=1e9; const cx=(exL+exR)/2;
+  for(let x=lo,run=0,st=0;x<=hi+1;x++){ if(x<=hi&&cnt[x]<=thr){ if(!run) st=x; run++; } else { if(run>=3){ const dd=Math.max(0,st-cx,cx-(st+run)); if(dd<bd-2||(Math.abs(dd-bd)<=2&&run>best)){ bd=dd; best=run; bs=st; } } run=0; } }
+  if(best<3) return {gut:null, ex, bands:full};
+  const gs=bs, ge=bs+best;
+  // rows whose ink crosses the gutter belong to full-width parts; the rest are two columns
+  const cr=[], rR=[], rL=[]; for(let y=y0;y<y1;y++){ const r=y*W; let c=0,a=0,b=0; for(let x=gs+1;x<ge-1;x++) c+=ink[r+x]; for(let x=ge;x<=exR;x++) a+=ink[r+x]; for(let x=exL;x<gs;x++) b+=ink[r+x]; cr.push(c>0); rR.push(a>0); rL.push(b>0); }
+  const gap=Math.round(10*sc), fb=[]; let cur=null;
+  cr.forEach((c,i)=>{ if(!c) return; const y=y0+i; if(cur&&y-cur[1]<=gap) cur[1]=y; else { if(cur) fb.push(cur); cur=[y,y]; } }); if(cur) fb.push(cur);
+  const P=y=>y/sc, bands=[]; let at=HEAD;
+  const side=(A,B)=>{ let r=0,l=0; for(let y=Math.max(y0,Math.floor(A*sc));y<Math.min(y1,Math.ceil(B*sc));y++){ r|=rR[y-y0]; l|=rL[y-y0]; } return [r,l]; };
+  const pushS=(A,B)=>{ if(B-A<=2) return; if(B-A<10&&bands.length&&bands[bands.length-1][2]==='F'){ bands[bands.length-1][1]=B; return; } const [r,l]=side(A,B); if(r||l) bands.push([A,B,'S',r,l]); else if(bands.length) bands[bands.length-1][1]=B; };
+  fb.forEach(([a,b])=>{ const A=Math.max(at,P(a)-3), B=P(b+1)+3; pushS(at,A); const last=bands[bands.length-1]; if(last&&last[2]==='F'&&A-last[1]<10) last[1]=B; else bands.push([A,B,'F',1,1]); at=B; });
+  pushS(at,vp.height-FOOT);
+  if(!bands.some(b=>b[2]==='S')) return {gut:null, ex, bands:full};
+  return {gut:[gs/sc,ge/sc], ex, bands}; }
 
 /* ---------- indexing ---------- */
 async function buildIndex(doc, onProgress){
@@ -55,7 +84,14 @@ async function buildIndex(doc, onProgress){
       minX=Math.min(minX,x0); maxX=Math.max(maxX,x1); for(let b=Math.floor(x0/2);b<=Math.floor(x1/2)&&b<bins.length;b++) bins[b]++; });
     let gs=-1, ge=-1, best=0; const lo=Math.floor(vp.width*0.38/2), hi=Math.ceil(vp.width*0.62/2);
     for(let b=lo,run=0,st=0;b<=hi;b++){ if(bins[b]===0){ if(!run) st=b; run++; if(run>best){ best=run; gs=st*2; ge=(b+1)*2; } } else run=0; }
-    const gut=best>=2?[gs,ge]:[vp.width/2-3,vp.width/2+3];
+    let gut=best>=2?[gs,ge]:[vp.width/2-3,vp.width/2+3];
+    // page layout from the rendered pixels: gutter and vertical bands (full-width parts vs. two columns)
+    const L=await pageLayout(pg,vp); let bands=L.bands; if(L.gut) gut=L.gut; if(L.ex){ minX=L.ex[0]+6; maxX=L.ex[1]-6; }
+    // a two-column band must contain text; decorative titles (no text) stay whole
+    if(L.gut){ const mid=(gut[0]+gut[1])/2; bands=bands.map(b=>{ if(b[2]!=='S') return b; let r=0,l=0;
+        tc.items.forEach(it=>{ if(!it.str.trim()) return; const y=vp.height-it.transform[5]; if(y<b[0]||y>b[1]+4) return; if(it.transform[4]>=mid) r++; else l++; });
+        if(!r||!l) return (r||l)&&b[1]-b[0]>120?[b[0],b[1],'S',r?1:0,l?1:0]:[b[0],b[1],'F',1,1]; return b; });
+      const m=[]; bands.forEach(b=>{ const t=m[m.length-1]; if(t&&t[2]==='F'&&b[2]==='F') t[1]=b[1]; else m.push(b); }); bands=m; }
     // printed line numbers in the outer margins (sichos, maamarim…): [y, number, side]
     let ln=[]; tc.items.forEach(it=>{ const t=it.str.trim(); if(!/^\d{1,3}$/.test(t)) return; const x0=it.transform[4], x1=x0+(it.width||0), y=Math.round(vp.height-it.transform[5]);
       if(y<HEAD||y>vp.height-FOOT) return; if(x0<75) ln.push([y,+t,'L']); else if(x1>vp.width-75) ln.push([y,+t,'R']); });
@@ -70,12 +106,13 @@ async function buildIndex(doc, onProgress){
       if(h>=17.5&&h<19.5){ (bigL[y]=bigL[y]||[]).push(it); } });
     Object.entries(bigL).forEach(([y,its])=>{ const t=decHeb(its.map(i=>i.str).join('')).replace(/\s/g,''); if(t.length<=9 && /קר|רק/.test(t)){ const lab=numLab(t.replace(/[פרק]/g,'')); if(lab&&lab.length<=2) lm.push([+y,'k',lab,side(its[0])]); } });
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
+    if(subj==='chumash') bands=[[HEAD,vp.height-FOOT,'F',1,1]];   // designed verse/targum/Rashi layout: keep the page whole
     { const keep=subj==='chumash'?['p']:/^(rambam|sm|halacha)/.test(subj||'')?['h','k']:[]; for(let i=lm.length-1;i>=0;i--) if(!keep.includes(lm[i][1])) lm.splice(i,1); }
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,ln,lm,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,bands,ln,lm,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
   // segments per subject and day
-  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,ex:x.ex,ln:x.ln.length?x.ln:undefined,lm:x.lm.length?x.lm:undefined})), subjects:{}};
+  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,bands:x.bands,ex:x.ex,ln:x.ln.length?x.ln:undefined,lm:x.lm.length?x.lm:undefined})), subjects:{}};
   SUBJECTS.forEach(S=>{
     const ps=pages.filter(x=>x.subj===S.id); if(!ps.length) return;
     const first=ps[0].p, last=ps[ps.length-1].p;
@@ -131,21 +168,29 @@ export function dayForLabel(index, hebLabel){ const n=norm(hebLabel); const L=in
 
 /* list of page slices for a subject/day: [{p, y0, y1, w, h, words}] (PDF units) */
 export function sectionSlices(index, i){ const s=(index.sections||[])[i]; if(!s) return []; const out=[];
-  for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; out.push({p,x0:0,x1:pg.w,y0:HEAD-14,y1:pg.h-FOOT+10,w:pg.w,h:pg.h,words:pg.words}); } return out; }
+  for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c)); }); } return out; }
+/* reading-order pieces of a page: full-width parts as they are, two-column parts as right column then left column */
+function pieces(pg){ const bands=pg.bands||[[HEAD,pg.h-FOOT,'F',1,1]], out=[];
+  bands.forEach((b,bi)=>{ if(b[2]==='F') out.push({bi,y0:b[0],y1:b[1],col:null}); else { if(b[3]) out.push({bi,y0:b[0],y1:b[1],col:'R'}); if(b[4]) out.push({bi,y0:b[0],y1:b[1],col:'L'}); } });
+  return out; }
+const bandAt=(pg,y)=>{ const bs=pg.bands||[[HEAD,pg.h-FOOT,'F']]; let k=bs.findIndex(b=>y>=b[0]-2&&y<=b[1]+2); if(k<0){ k=0; bs.forEach((b,i)=>{ if(b[0]<=y) k=i; }); } return k; };
+function pieceSlice(pg,p,c){ const gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w]; const x0=c.col==='R'?gut[1]-3:c.col==='L'?ex[0]:0, x1=c.col==='R'?ex[1]:c.col==='L'?gut[0]+3:pg.w;
+  const frac=(c.y1-c.y0)*(x1-x0)/((pg.h-HEAD-FOOT)*pg.w); return {p,x0,x1,gx:(gut[0]+gut[1])/2,col:c.col||undefined,fit:!c.col&&!!(pg.bands&&pg.bands.some(b=>b[2]==='S'))||undefined,y0:c.y0,y1:c.y1,w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.02,frac))}; }
 export function slices(index, subj, day){
   const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return [];
   const out=[]; const P=index.pages;
-  for(let p=D.from.p;p<=D.to.p;p++){ const pg=P[p-1]; if(!pg) continue;
-    const top=HEAD, bot=pg.h-FOOT, gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w];
-    let Rr=[top,bot], Lr=[top,bot];
-    if(p===D.from.p && D.from.y!=null){ const y=Math.max(top,D.from.y-14);
-      if(D.from.col==='R'){ Rr[0]=y; } else if(D.from.col==='L'){ Rr=[0,0]; Lr[0]=y; } else { Rr[0]=Lr[0]=y; } }
-    if(p===D.to.p && D.to.y!=null){ const y=D.to.y-8;
-      if(D.to.col==='R'){ Rr[1]=y; Lr=[0,0]; } else if(D.to.col==='L'){ Lr[1]=y; } else { Rr[1]=Math.min(Rr[1],y); Lr[1]=Math.min(Lr[1],y); } }
-    const ok=r=>r[1]-r[0]>12;
-    const push=(x0,x1,r,col)=>{ const frac=(r[1]-r[0])*(x1-x0)/((pg.h-HEAD-FOOT)*pg.w); out.push({p,x0,x1,col,y0:r[0],y1:r[1],w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.03,frac))}); };
-    if(ok(Rr)&&ok(Lr)&&Rr[0]===Lr[0]&&Rr[1]===Lr[1]) push(0,pg.w,Rr);
-    else { if(ok(Rr)) push(gut[1]-3,ex[1],Rr,'R'); if(ok(Lr)) push(ex[0],gut[0]+3,Lr,'L'); } }
+  for(let p=D.from.p;p<=D.to.p;p++){ const pg=P[p-1]; if(!pg) continue; let ps=pieces(pg);
+    if(p===D.from.p && D.from.y!=null){ const Y=Math.max(HEAD,D.from.y-14), bi=bandAt(pg,D.from.y), C=D.from.col;
+      ps=ps.filter(c=>c.bi>=bi).map(c=>{ if(c.bi!==bi) return c; if(!c.col) return Object.assign({},c,{y0:Math.max(c.y0,Y)});
+        if(C==='L') return c.col==='L'?Object.assign({},c,{y0:Math.max(c.y0,Y)}):null;
+        if(C==='R') return c.col==='R'?Object.assign({},c,{y0:Math.max(c.y0,Y)}):c;
+        return Object.assign({},c,{y0:Math.max(c.y0,Y)}); }).filter(Boolean); }
+    if(p===D.to.p && D.to.y!=null){ const E=D.to.y-8, bj=bandAt(pg,D.to.y), C=D.to.col;
+      ps=ps.filter(c=>c.bi<=bj).map(c=>{ if(c.bi!==bj) return c; if(!c.col) return Object.assign({},c,{y1:Math.min(c.y1,E)});
+        if(C==='R') return c.col==='R'?Object.assign({},c,{y1:Math.min(c.y1,E)}):null;
+        if(C==='L') return c.col==='L'?Object.assign({},c,{y1:Math.min(c.y1,E)}):c;
+        return Object.assign({},c,{y1:Math.min(c.y1,E)}); }).filter(Boolean); }
+    ps.forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c)); }); }
   return out; }
 
 /* printed line numbers inside a slice, in reading order */
@@ -166,7 +211,7 @@ export function unitPoints(index, sl){ const W=sl.reduce((a,b)=>a+b.words,0)||1;
   return {W, segs, kind, pts:kind?pts.filter(p=>p.kind===kind):[]}; }
 /* render one slice into a canvas of the given css width */
 /* css size of a slice: full-width slices use the page zoom, single columns fill the screen */
-export function sliceBox(sl, pageCss, screenW){ const full=(sl.x1-sl.x0)>sl.w*0.8; const pc=full?pageCss:Math.max(pageCss, screenW*0.97*sl.w/(sl.x1-sl.x0));
+export function sliceBox(sl, pageCss, screenW){ const full=(sl.x1-sl.x0)>sl.w*0.8&&!sl.fit; const pc=full?pageCss:screenW*0.97*sl.w/(sl.x1-sl.x0)*Math.max(1,pageCss/(screenW*1.6));
   return {pageCss:pc, w:(sl.x1-sl.x0)*pc/sl.w, h:(sl.y1-sl.y0)*pc/sl.w}; }
 export async function renderSlice(sl, cssWidth, canvas){
   const d=await doc(); const pg=await d.getPage(sl.p);
@@ -180,10 +225,12 @@ export async function renderSlice(sl, cssWidth, canvas){
     const img=full.getContext('2d').getImageData(gx0,yy,gw,h).data; const cnt=new Uint32Array(gw); let rows=0;
     for(let y=0;y<h;y+=2){ rows++; const row=y*gw*4; for(let x=0;x<gw;x++){ const i=row+x*4; if(img[i+3]>40 && (img[i]+img[i+1]+img[i+2])<420) cnt[x]++; } }
     const thr=Math.max(2,rows*0.05);
-    let best=0,bs=-1,be=-1; for(let x=0,run=0,st=0;x<gw;x++){ if(cnt[x]<=thr){ if(!run) st=x; run++; if(run>best){ best=run; bs=st; be=x+1; } } else run=0; }
+    let best=0,bs=-1,be=-1,bd=1e9; const cx=(sl.gx?sl.gx*scale:W/2)-gx0, minW=Math.max(4,2*dpr);
+    for(let x=0,run=0,st=0;x<=gw;x++){ if(x<gw&&cnt[x]<=thr){ if(!run) st=x; run++; } else { if(run>=minW){ const dd=Math.max(0,st-cx,cx-(st+run)); if(dd<bd-3*dpr||(Math.abs(dd-bd)<=3*dpr&&run>best)){ bd=dd; best=run; bs=st; be=st+run; } } run=0; } }
     if(best>=Math.max(4,2*dpr)){ const gs=gx0+bs, ge=gx0+be;
-      if(sl.col==='R'){ const r=Math.ceil((sl.x1||sl.w)*scale); x0=ge-Math.round(2*dpr); wd=r-x0; }
-      else { x0=Math.floor((sl.x0||0)*scale); wd=gs+Math.round(2*dpr)-x0; } } }
+      const pad=Math.round(Math.min(5*dpr,(ge-gs)/2));
+      if(sl.col==='R'){ const r=Math.ceil((sl.x1||sl.w)*scale); x0=ge-pad; wd=r-x0; }
+      else { x0=Math.floor((sl.x0||0)*scale); wd=gs+pad-x0; } } }
   canvas.width=wd; canvas.height=h;
   canvas.getContext('2d').drawImage(full,x0,Math.floor(sl.y0*scale),wd,h,0,0,wd,h);
   full.width=full.height=0; return canvas; }
