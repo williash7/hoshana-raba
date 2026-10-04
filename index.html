@@ -103,6 +103,12 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .seg.dk{background:var(--night2)}
 .seg.dk button{color:var(--ink)}
 .seg.dk button.on{background:var(--gold);color:#241c08}
+.inst{background:var(--card);border:calc(1px*var(--k)) solid var(--gold);border-radius:calc(16px*var(--k));padding:calc(12px*var(--k)) calc(14px*var(--k));margin-bottom:calc(14px*var(--k));font-size:calc(15px*var(--k))}
+.inst-row{display:flex;align-items:center;gap:calc(10px*var(--k))}
+.inst-row span{flex:1}
+.inst button{border:0;background:var(--gold);color:#241c08;font-weight:700;border-radius:calc(12px*var(--k));padding:calc(9px*var(--k)) calc(16px*var(--k));font-size:calc(15px*var(--k))}
+.inst summary{cursor:pointer;color:var(--textmuted);font-size:calc(14px*var(--k));margin-top:calc(8px*var(--k))}
+.inst ol{margin:calc(8px*var(--k)) 0 0;padding-inline-start:calc(20px*var(--k));line-height:1.6;font-size:calc(14px*var(--k))}
 footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));padding:0 calc(16px*var(--k)) calc(30px*var(--k))}
 @media (max-width:360px){ .hero h1{font-size:calc(27px*var(--k))} }
 </style>
@@ -117,6 +123,16 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
   </div>
 </header>
 <main>
+  <div class="inst" id="inst" hidden>
+    <div class="inst-row"><span>📲 אפשר להתקין את "לימוד יומי" כאפליקציה בטלפון</span><button id="instBtn" hidden>התקנה</button></div>
+    <details id="instHelp"><summary>איך מתקינים? / כתוב שכבר מותקן</summary>
+      <ol>
+        <li>בכרום: לחץ על שלוש הנקודות ⋮ למעלה, ואז <b>"התקנת אפליקציה"</b> או <b>"הוספה למסך הבית"</b> ← <b>"התקנה"</b>.</li>
+        <li>אם כתוב שהאפליקציה כבר מותקנת אבל אין אייקון: היכנס ל<b>הגדרות הטלפון ← אפליקציות</b>, חפש <b>"הושענא רבה"</b> או <b>"לימוד יומי"</b> והסר אותה. אחר כך חזור לכאן והתקן שוב.</li>
+        <li>אם זה עדיין לא עובד: בכרום ⋮ ← הגדרות ← הגדרות אתרים ← כל האתרים ← <b>williash7.github.io</b> ← "ניקוי ואיפוס", ואז פתח שוב את הקישור.</li>
+      </ol>
+    </details>
+  </div>
   <section class="flow" id="flow">
     <h3>תוכנית לימוד</h3>
     <p class="hint">כמה זמן יש לך עכשיו? קודם חת״ת ורמב״ם – של היום ומה שהוחסר השבוע – ואם נשאר זמן, משאר החוברת.</p>
@@ -292,6 +308,12 @@ import('./dm.js').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTAT
   if(!H.on[k] || wcGet(k+':'+iso) || wkFrac(id)>=1) continue;
   try{ const r=await (k==='chumash'?partChumash(dt,!!H.diaspora,true):partTanya(dt)); wcSet(k+':'+iso, r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }catch(e){} } } })();
 if(H.on.tanya){ sefCalendar(today).then(cal=>{ const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(it){ tanyaText=(it.heRef||it.ref).replace(/^תניא,?\s*/,''); render(); } }).catch(()=>{}); }
+// install: offer the browser's install prompt, or explain how (hidden when already running as the app)
+{ const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone; let DP=null;
+  if(!standalone){ $('inst').hidden=false; }
+  addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); DP=e; $('inst').hidden=false; $('instBtn').hidden=false; });
+  $('instBtn').onclick=async()=>{ if(!DP) return; DP.prompt(); const r=await DP.userChoice.catch(()=>null); DP=null; $('instBtn').hidden=true; if(r&&r.outcome==='accepted') $('inst').hidden=true; };
+  addEventListener('appinstalled',()=>{ $('inst').hidden=true; }); }
 addEventListener('pageshow',e=>{ if(e.persisted) render(); });
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ render(); renderFlow(); } });
 </script>
