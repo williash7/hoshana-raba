@@ -180,7 +180,9 @@ const MODS={
   korbanot:{name:'קרבנות למנחה', href:'study.html?m=korbanot'},
   hoshana:{name:'סדר ליל הושענא רבה', href:'hoshana.html', opt:1}
 };
-let H=Object.assign({order:['chumash','tehillim','tanya','dvar','korbanot','hoshana'], on:{tehillim:1,chumash:1,tanya:1,dvar:1,korbanot:1,hoshana:0}, diaspora:0, dm:['rambam3']},lsGet('home-v1',{}));
+let H=Object.assign({order:['tehillim','chumash','tanya','dvar','korbanot','hoshana'], on:{tehillim:1,chumash:1,tanya:1,dvar:1,korbanot:1,hoshana:0}, diaspora:0, dm:['rambam3']},lsGet('home-v1',{}));
+// order of Chitas: Tehillim, Chumash, Tanya (once, for screens saved with the old default)
+if(!H.ordV){ const i=H.order.indexOf('tehillim'), j=H.order.indexOf('chumash'); if(i>j&&j>=0){ H.order.splice(i,1); H.order.splice(j,0,'tehillim'); } H.ordV=2; lsSet('home-v1',H); }
 if(H.on.dvar==null) H.on.dvar=1; if(H.on.korbanot==null) H.on.korbanot=1; if(!H.dm) H.dm=['rambam3'];
 if(!H.order.includes('korbanot')){ const i=H.order.indexOf('hoshana'); H.order.splice(i<0?H.order.length:i,0,'korbanot'); }
 Object.keys(MODS).forEach(k=>{ if(!H.order.includes(k)) H.order.push(k); });
