@@ -276,7 +276,8 @@ function slOf(id){ const a=id.split(':'), I=DMX.index, DM=DMX.DM;
 // Korbanos before Mincha: on by default between midday and sunset (until said today)
 // Mincha time: from midday (chatzot) until a little after sunset – only then is Korbanos offered
 function minchaTime(){ const n=new Date(); return n.getTime()>=noonMs(n) && n.getTime()<sunsetMs(n)+20*6e4; }
-function korbOn(){ if(!minchaTime()) return false; if(P.korb!=null&&P.korbDay===isoDate(today)) return !!P.korb; return getProgress('korbanot',isoDate(today))<1; }
+const korbSaid=()=>getProgress('korbanot',isoDate(today))>=1;
+function korbOn(){ if(!minchaTime()||korbSaid()) return false; if(P.korb!=null&&P.korbDay===isoDate(today)) return !!P.korb; return getProgress('korbanot',isoDate(today))<1; }
 function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
   const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
@@ -305,7 +306,7 @@ function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.creat
   if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
 function renderFlow(){
   $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; P.korbDay=isoDate(today); savePlan(); renderFlow(); };
-  $('korbOn').closest('label').style.display=minchaTime()?'':'none'; $('korbPosRow').style.display=korbOn()?'':'none';
+  $('korbOn').closest('label').style.display=minchaTime()&&!korbSaid()?'':'none'; $('korbPosRow').style.display=korbOn()?'':'none';
   $('korbPos').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.korbPos); b.onclick=()=>{ P.korbPos=b.dataset.v; savePlan(); renderFlow(); }; });
   $('korbHint').textContent=getProgress('korbanot',isoDate(today))>=1?'כבר נאמרו היום ✓':'כ־'+fmtMin(mm(KORB_WORDS()*(PR()?pace()/printWpm():1)))+' לקרבנות, והשאר ללימוד – עד התפילה';
   $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
