@@ -100,6 +100,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .more summary{cursor:pointer;color:var(--gold);font-size:calc(14.5px*var(--k));padding:calc(4px*var(--k)) 0}
 .more .fp button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(13px*var(--k));flex:none}
 .flow a{color:var(--gold)}
+.restore{border:0;background:transparent;color:var(--gold);text-decoration:underline;font:inherit;padding:0}
 .fp.korb{border-bottom:0;padding-top:0}
 .fp.korb small{display:block}
 .row.korbPos{padding:calc(2px*var(--k)) 0 calc(6px*var(--k));font-size:calc(14px*var(--k));color:var(--muted)}
@@ -241,7 +242,7 @@ if(!P.korbPos) P.korbPos='start';
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
 if(GO){ P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
-function availMin(){ if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
+function availMin(){ if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; }
 const savePlan=()=>lsSet('plan-v1',P);
@@ -273,7 +274,9 @@ function slOf(id){ const a=id.split(':'), I=DMX.index, DM=DMX.DM;
   if(a[0]==='dm') return DM.slices(I,a[1],a[2]!=null?+a[2]:DMX.day);
   if(a[0]==='sec'){ const i=(I.sections||[]).findIndex(x=>x.from===+a[1]); return i<0?null:DM.sectionSlices(I,i); } return null; }
 // Korbanos before Mincha: on by default between midday and sunset (until said today)
-function korbOn(){ if(P.korb!=null) return !!P.korb; const n=new Date(); return n.getHours()>=12 && n.getTime()<sunsetMs(n) && getProgress('korbanot',isoDate(today))<1; }
+// Mincha time: from midday (chatzot) until a little after sunset – only then is Korbanos offered
+function minchaTime(){ const n=new Date(); return n.getTime()>=noonMs(n) && n.getTime()<sunsetMs(n)+20*6e4; }
+function korbOn(){ if(!minchaTime()) return false; if(P.korb!=null&&P.korbDay===isoDate(today)) return !!P.korb; return getProgress('korbanot',isoDate(today))<1; }
 function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
   const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
@@ -301,8 +304,8 @@ function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.creat
   d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
   if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
 function renderFlow(){
-  $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; savePlan(); renderFlow(); };
-  $('korbPosRow').hidden=!korbOn();
+  $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; P.korbDay=isoDate(today); savePlan(); renderFlow(); };
+  $('korbOn').closest('label').style.display=minchaTime()?'':'none'; $('korbPosRow').style.display=korbOn()?'':'none';
   $('korbPos').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.korbPos); b.onclick=()=>{ P.korbPos=b.dataset.v; savePlan(); renderFlow(); }; });
   $('korbHint').textContent=getProgress('korbanot',isoDate(today))>=1?'כבר נאמרו היום ✓':'כ־'+fmtMin(mm(KORB_WORDS()*(PR()?pace()/printWpm():1)))+' לקרבנות, והשאר ללימוד – עד התפילה';
   $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
@@ -315,20 +318,22 @@ function renderFlow(){
   const ti=document.createElement('input'); ti.type='time'; ti.hidden=true; ti.value=P.until||(()=>{ const d=new Date(Date.now()+30*6e4); return String(d.getHours()).padStart(2,'0')+':'+String(Math.round(d.getMinutes()/5)*5%60).padStart(2,'0'); })(); tb.appendChild(ti);
   ub.onclick=()=>{ ti.hidden=false; try{ ti.showPicker(); }catch(e){ ti.focus(); } };
   ti.onchange=()=>{ if(ti.value){ P.until=ti.value; savePlan(); renderFlow(); } };
-  if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent=a>0?'עד '+P.until+' – יש לך '+fmtMin(a):'השעה '+P.until+' כבר עברה – בחר שעה אחרת'; tb.appendChild(l); }
+  if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent='עד '+P.until+' – יש לך '+fmtMin(a); tb.appendChild(l); }
   const {sel,all,open,KB}=plan(); const box=$('plan'); box.innerHTML='';
   sel.forEach(s=>{ const u=s.u;
     row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך':''),
-      u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
+      u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; P.korbDay=isoDate(today); savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
   // today's lessons already done: shown (greyed) so it's clear why they are not in the plan
   all.filter(u=>u.g===0&&u.f>=1).forEach(u=>row(box,label(u),'✓ נלמד היום','בטל',()=>{ wkSet(u.id,0,true); const a=u.id.split(':'); if(a[0]==='teh') setProgress('tehillim',T.key,0); if(a[0]==='chu') setProgress('chumash',isoDate(today),0); if(a[0]==='tan') setProgress('tanya',isoDate(today),0); renderFlow(); render(); },null,null,'done'));
+  if(P.skip.length&&sel.length){ const d=document.createElement('div'); d.className='hint'; d.style.marginTop='6px'; d.innerHTML='הורדת '+(P.skip.length===1?'שיעור אחד':P.skip.length+' שיעורים')+' מהתוכנית להיום. <button class="restore">החזר אותם</button>'; d.querySelector('button').onclick=()=>{ P.skip=[]; savePlan(); renderFlow(); }; box.appendChild(d); }
   const tot=sel.reduce((a,s)=>a+s.w,0);
   $('startFlow').disabled=!sel.length;
   const studyN=sel.filter(s=>!s.u.korb&&!s.u.mincha).length;
   const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
-  $('flowSum').innerHTML=(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(open.some(u=>u.g<=1)?'הורדת את כל השיעורים מהתוכנית.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
+  $('flowSum').innerHTML=(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(availMin()<3?'אין מספיק זמן – בחר זמן ארוך יותר.':P.skip.length?'הורדת את השיעורים מהתוכנית. <button class="restore" id="restore">החזר את כולם</button>':open.length?'אין שיעור שנכנס בזמן הזה – בחר זמן ארוך יותר.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
     'התוכנית: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(availMin())+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
     (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
+  if($('restore')) $('restore').onclick=()=>{ P.skip=[]; P.pin=[]; savePlan(); renderFlow(); };
   $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+availMin()+(P.until?'&until='+P.until:''); };
   // weekly status
   const core=all.filter(u=>u.g<=1), cd=core.filter(u=>u.f>=1).length, missed=core.filter(u=>u.g===1&&u.f<1);

@@ -19,6 +19,11 @@ function sunsetMs(now){ const [lon,lat]=myLoc(), y=now.getFullYear(), m=now.getM
   const dec=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
   const ph=lat*Math.PI/180, H=Math.acos((Math.sin(-0.833*Math.PI/180)-Math.sin(ph)*Math.sin(dec))/(Math.cos(ph)*Math.cos(dec)))*180/Math.PI;
   return t0+(720-4*lon-eq+4*H)*6e4; }
+/* solar noon (chatzot) for the chosen location */
+function noonMs(now){ const [lon]=myLoc(), y=now.getFullYear(), m=now.getMonth(), d=now.getDate();
+  const t0=Date.UTC(y,m,d), doy=Math.round((t0-Date.UTC(y,0,1))/864e5)+1, g=2*Math.PI/365*(doy-1);
+  const eq=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  return t0+(720-4*lon-eq)*6e4; }
 function hebOf(date){ const d=new Date(date); d.setHours(12,0,0,0);
   const p=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'long',year:'numeric'}).formatToParts(d);
   const day=+p.find(x=>x.type==='day').value, year=+p.find(x=>x.type==='year').value, men=p.find(x=>x.type==='month').value;
