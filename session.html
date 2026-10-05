@@ -106,6 +106,13 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .t.goal{background:var(--gold);color:#241c08;font-family:var(--ui);text-align:center;padding:calc(12px*var(--k)) calc(18px*var(--k));font-size:calc(14px*var(--k));margin:calc(6px*var(--k)) 0}
 .t.goal b{display:block;font-family:var(--serif);font-size:calc(19px*var(--k))}
 .bar .tick.goal{background:var(--gold);width:calc(3px*var(--k))}
+.t.pause{background:var(--night2);color:var(--ink);font-family:var(--ui);text-align:center;padding:calc(22px*var(--k)) calc(18px*var(--k));font-size:calc(15px*var(--k));line-height:1.6}
+.t.pause b{display:block;font-family:var(--serif);font-size:calc(22px*var(--k));color:var(--gold);margin-bottom:calc(4px*var(--k))}
+.offer{position:fixed;left:calc(12px*var(--k));right:calc(12px*var(--k));bottom:calc(var(--dockH,76px) + calc(10px*var(--k)));z-index:30;background:var(--night);color:var(--ink);border:calc(1.5px*var(--k)) solid var(--gold);border-radius:calc(16px*var(--k));padding:calc(14px*var(--k));text-align:center;font-size:calc(15px*var(--k));box-shadow:0 6px 24px #0008}
+.offer b{color:var(--gold)}
+.offer div{display:flex;gap:calc(8px*var(--k));margin-top:calc(10px*var(--k))}
+.offer button{flex:1;border:0;border-radius:calc(12px*var(--k));padding:calc(10px*var(--k));font-size:calc(15px*var(--k));font-weight:700;background:var(--gold);color:#241c08}
+.offer button+button{background:var(--night2);color:var(--ink);font-weight:400}
 .t.part{padding:calc(14px*var(--k)) calc(20px*var(--k));background:var(--night);color:var(--gold);font-family:var(--serif);font-size:calc(20px*var(--k));text-align:center;font-weight:700}
 </style>
 </head>
@@ -145,6 +152,8 @@ const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const Q=new URLSearchParams(location.search);
 const BUDGET=Math.max(1,+(Q.get('min')||10));
+const UNTIL=Q.get('until'), UNTILMS=UNTIL?(()=>{ const [h,m]=UNTIL.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); })():null;
+const MINCHA=+(Q.get('mincha')||0);
 const HOME=lsGet('home-v1',{});
 const DMN={chumash:'חומש',tanya:'תניא',hayomyom:'היום יום',rambam3:'רמב״ם ג׳ פרקים',rambam1:'רמב״ם פרק אחד',sm:'ספר המצוות',halacha:'הלכה יומית',mishna:'משנה'};
 const today=new Date(); today.setHours(12,0,0,0);
@@ -158,7 +167,7 @@ function uName(id){ const a=id.split(':'); const tag=d=>+d===WD?'':' ('+DSHORT[+
   if(a[0]==='chu') return 'חומש'+tag(a[1]); if(a[0]==='tan') return 'תניא'+tag(a[1]);
   if(a[0]==='teh') return 'תהילים'+(+a[1]===T.day?'':' ('+gq(+a[1])+')');
   if(a[0]==='dm') return (DMN[a[1]]||a[1])+(a[2]!=null?tag(a[2]):'');
-  if(a[0]==='sec') return 'מהחוברת'; if(a[0]==='korb') return 'קרבנות'; return id; }
+  if(a[0]==='sec') return 'מהחוברת'; if(a[0]==='korb') return 'קרבנות'; if(a[0]==='mincha') return 'מנחה'; return id; }
 const NAMES={}; UNITS.forEach(u=>NAMES[u.id]=uName(u.id));
 let fit=Q.get('fit')!=='0';
 let wpm=getWpm();
@@ -189,6 +198,7 @@ function loadUnit(id){ const a=id.split(':');
   if(a[0]==='dm') return partDvar(a[1],a[2]!=null?+a[2]:null);
   if(a[0]==='sec') return partSection(+a[1]);
   if(a[0]==='korb') return partKorbanot();
+  if(a[0]==='mincha') return Promise.resolve({title:'תפילת מנחה',blocks:[{cls:'pause',html:'<b>🕍 עכשיו מתפללים מנחה</b>אשרי, שמונה עשרה, תחנון ועלינו.<br>הגלילה והשעון של הלימוד נעצרים כאן – לחץ ▶ כשתסיים, והלימוד ימשיך.',w:1,mark:'מנחה'}]});
   return Promise.reject(new Error('?')); }
 function dmW(){ return Math.min(innerWidth,900*K)*(DMV.zoom||1.6); }
 const dmIO=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); c.style.width='100%'; el._c=c; el.firstChild.firstChild.appendChild(c); DMmod.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
@@ -231,8 +241,10 @@ function posFromScroll(){ if(!B.length) return 0; const y=scrollY+lineY(), i=idx
 function scrollToPos(p){ if(!B.length) return; p=Math.max(0,Math.min(TOTAL-0.01,p)); const i=idxP(p); scrollTo(0,Math.max(0,tops[i]+(p-B[i].cum)/B[i].w*hts[i]-lineY())); curPos=p; }
 
 /* time budget */
-const leftMs=()=>BUDGET*6e4-(t0?Date.now()-t0:0);
-function applyFit(){ if(!ready) return; const lw=Math.max(1,(curPos<GOAL-1?GOAL:TOTAL)-curPos), lm=leftMs()/6e4; if(lm<=0.2) return; wpm=Math.max(20,Math.min(400,lw/lm)); $('spd').textContent=Math.round(wpm); }
+let minchaDone=false, minchaMs=0, minchaAt=null;  // time spent in Mincha is not reading time
+const leftMs=()=>UNTILMS?UNTILMS-Date.now():BUDGET*6e4-(t0?Date.now()-t0:0);
+const readLeftMs=()=>leftMs()-(MINCHA&&!minchaDone?MINCHA*6e4:0);
+function applyFit(){ if(!ready) return; const lw=Math.max(1,(curPos<GOAL-1?GOAL:TOTAL)-curPos), lm=readLeftMs()/6e4; if(lm<=0.2) return; wpm=Math.max(20,Math.min(400,lw/lm)); $('spd').textContent=Math.round(wpm); }
 setInterval(()=>{ if(fit) applyFit(); },10000);
 $('fitBtn').onclick=()=>{ fit=!fit; $('fitBtn').classList.toggle('on',fit); if(fit){ applyFit(); toast('הקצב מותאם לסיום תוך '+BUDGET+' דק׳'); } else { setWpm(wpm); toast('קצב ידני'); } update(); };
 
@@ -248,25 +260,33 @@ async function setPlaying(v){ playing=v; last=0; accY=null;
   if(v){ requestAnimationFrame(frame); try{ if('wakeLock' in navigator) wake=await navigator.wakeLock.request('screen'); }catch(e){} } else { try{wake&&wake.release();}catch(e){} wake=null; } }
 addEventListener('touchstart',e=>{ if(!e.target.closest('.dock,.top')) touching=true; },{passive:true});
 addEventListener('touchend',()=>{touching=false;accY=null;},{passive:true});
-$('play').onclick=()=>{ if(!ready) return; if(!t0){ t0=Date.now(); if(fit) applyFit(); } setPlaying(!playing); };
+$('play').onclick=()=>{ if(!ready) return; if(!t0){ t0=Date.now(); if(fit) applyFit(); } if(minchaAt!=null&&!minchaDone&&!playing){ minchaDone=true; const pb=B.find(b=>b.el.classList.contains('pause')); if(pb) scrollToPos(pb.cum+pb.w+0.5); toast('ממשיכים ללמוד'); if(fit) applyFit(); } setPlaying(!playing); };
 function nudge(f){ fit=false; $('fitBtn').classList.remove('on'); wpm=Math.max(20,Math.min(400,Math.round(wpm*f))); setWpm(wpm); $('spd').textContent=Math.round(wpm); update(); }
 $('slower').onclick=()=>nudge(1/1.1); $('faster').onclick=()=>nudge(1.1);
 
 /* status */
 let toastT; function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600); }
 const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); return (neg?'-':'')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
-function update(){ const lm=leftMs(); $('clock').textContent=mmss(lm); $('clockLbl').textContent=!t0?'השעון יתחיל בלחיצה על ▶':(lm>=0?'נותרו מתוך '+BUDGET+' דק׳':'עבר הזמן שהגדרת');
+function checkStops(p){ // stop at Mincha; offer more learning when finished early
+  const pb=B.find(b=>b.el.classList.contains('pause'));
+  if(pb && !minchaDone && minchaAt==null && p>=pb.cum-0.5){ minchaAt=Date.now(); setPlaying(false); toast('עכשיו מתפללים מנחה'); }
+  if(TOTAL-p<3 && t0 && !offered){ offered=true; const lm=leftMs(); if(lm>=2.5*6e4) showOffer(Math.floor(lm/6e4)); } }
+let offered=false;
+function showOffer(m){ const d=document.createElement('div'); d.className='offer';
+  d.innerHTML='סיימת לפני הזמן! נשארו עוד <b>'+m+' דק׳</b>.<br>תרצה ללמוד עוד קטע?<div><button>כן, תכין לי עוד</button><button>לא, תודה</button></div>';
+  const [y,n]=d.querySelectorAll('button'); y.onclick=()=>{ location.href='index.html?go=1&min='+m+(UNTIL?'&until='+UNTIL:''); }; n.onclick=()=>d.remove(); document.body.appendChild(d); }
+function update(){ const lm=leftMs(); $('clock').textContent=mmss(lm); $('clockLbl').textContent=UNTIL?(lm>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):!t0?'השעון יתחיל בלחיצה על ▶':(lm>=0?'נותרו מתוך '+BUDGET+' דק׳':'עבר הזמן שהגדרת');
   if(!ready) return;
-  const p=curPos; $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
+  const p=curPos; checkStops(p); $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
   const box=$('parts'); box.innerHTML='';
   PB.forEach(x=>{ const i=document.createElement('i'); const fr=Math.max(0,Math.min(1,(p-x.a)/Math.max(1,x.z-x.a))); const uf=x.err?0:Math.min(1,(x.S+fr*(x.G!=null?x.G:x.W-x.S))/x.W);
     const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; i.textContent=NAMES[x.p]+(dn?' ✓':''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); box.appendChild(i);
-    if(!x.err && p>=x.a-0.5){ if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else wkSet(x.p,v);
+    if(!x.err && x.p!=='mincha' && p>=x.a-0.5){ if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else wkSet(x.p,v);
       const a=x.p.split(':'); if(a[0]==='chu'&&+a[1]===WD) setProgress('chumash',isoDate(today),v); if(a[0]==='tan'&&+a[1]===WD) setProgress('tanya',isoDate(today),v);
       if(a[0]==='teh'&&+a[1]===T.day) setProgress('tehillim',T.key,v); } });
   const tgt=p<GOAL-1?GOAL:TOTAL, lw=Math.max(0,tgt-p), need=lw/wpm;
   $('left').innerHTML=TOTAL-p<3?'<b>✓ סיימת</b>':(tgt===GOAL&&GOAL<TOTAL-2?'עד היעד ':'נשאר ')+'כ־<b>'+fmtMin(need)+'</b> בקצב הזה';
-  $('pace').innerHTML=lw<3?(TOTAL-p<3?'':'<span class="fit">הגעת ליעד ✓</span>'):(need<=lm/6e4+0.05?'<span class="fit">מספיק בזמן</span>':'<span class="nofit">חסרות '+fmtMin(need-lm/6e4)+'</span>');
+  $('pace').innerHTML=lw<3?(TOTAL-p<3?'':'<span class="fit">הגעת ליעד ✓</span>'):(need<=readLeftMs()/6e4+0.05?'<span class="fit">מספיק בזמן</span>':'<span class="nofit">חסרות '+fmtMin(need-readLeftMs()/6e4)+'</span>');
   $('spd').textContent=Math.round(wpm); }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); },{passive:true});
 setInterval(()=>{ update(); if(playing&&document.visibilityState==='visible') addWeekTime(1000); },1000);

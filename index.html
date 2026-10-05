@@ -102,6 +102,10 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .flow a{color:var(--gold)}
 .fp.korb{border-bottom:0;padding-top:0}
 .fp.korb small{display:block}
+.row.korbPos{padding:calc(2px*var(--k)) 0 calc(6px*var(--k));font-size:calc(14px*var(--k));color:var(--muted)}
+.row.korbPos .seg button{font-size:calc(13px*var(--k));padding:calc(6px*var(--k)) calc(9px*var(--k))}
+.times input[type=time]{width:auto}
+.untilLbl{width:100%;font-size:calc(13px*var(--k));color:var(--muted);margin-top:calc(2px*var(--k))}
 .seg.dk{background:var(--night2)}
 .seg.dk button{color:var(--ink)}
 .seg.dk button.on{background:var(--gold);color:#241c08}
@@ -139,7 +143,8 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
     <h3>תוכנית לימוד</h3>
     <p class="hint">כמה זמן יש לך עכשיו? קודם חת״ת ורמב״ם – של היום ומה שהוחסר השבוע – ואם נשאר זמן, משאר החוברת.</p>
     <div class="row" style="padding:calc(4px*var(--k)) 0"><span>לומד מתוך</span><div class="seg dk" id="mode"><button data-v="screen">המסך</button><button data-v="print">החוברת המודפסת</button></div></div>
-    <label class="fp korb"><input type="checkbox" id="korbOn"><span>לפני מנחה – לסיים בקרבנות<small id="korbHint"></small></span></label>
+    <label class="fp korb"><input type="checkbox" id="korbOn"><span>כולל קרבנות למנחה<small id="korbHint"></small></span></label>
+    <div class="row korbPos" id="korbPosRow"><span>מתי לומר קרבנות</span><div class="seg dk" id="korbPos"><button data-v="start">קודם קרבנות, ואז לימוד</button><button data-v="end">קודם לימוד, ואז קרבנות</button></div></div>
     <div class="times" id="times"></div>
     <div id="plan"></div>
     <div class="flowSum" id="flowSum"></div>
@@ -229,6 +234,12 @@ function mv(i,d){ const j=i+d; if(j<0||j>=H.order.length) return; [H.order[i],H.
 $('editBtn').onclick=()=>{ const p=$('panel'); p.hidden=!p.hidden; $('editBtn').textContent=p.hidden?'✎ התאמת מסך הבית':'סיום התאמה'; if(!p.hidden) p.scrollIntoView({behavior:'smooth',block:'start'}); };
 /* ---------- study planner ---------- */
 let P=Object.assign({min:30,day:'',skip:[],pin:[],mode:'screen'},lsGet('plan-v1',{}));
+if(!P.korbPos) P.korbPos='start';
+// "continue learning" from a finished plan: index.html?go=1&min=..&until=..
+const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
+if(GO){ P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; history.replaceState(null,'','./'); }
+const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
+function availMin(){ if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; }
 const savePlan=()=>lsSet('plan-v1',P);
@@ -265,7 +276,7 @@ function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
   const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
   const rest=open.filter(u=>(u.g===2||u.g===3)&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
-  const wpm=pace(); let budget=P.min*wpm, acc=0; const sel=[];
+  const wpm=pace(); let budget=availMin()*wpm, acc=0; const sel=[];
   let KB=null; if(korbOn()){ const kw=KORB_WORDS()*(PR()?pace()/printWpm():1); KB={u:{id:'korb',name:'קרבנות למנחה',g:-1,f:0,w:kw,rem:kw,korb:1},w:kw}; budget-=kw; }
   // 1) Chitas, Rambam and added items: everything that fits whole, in order (a short Tehillim is not pushed out by a long Rambam)
   //    first today's, then what was missed this week (+ added items); a day's group is finished before moving on
@@ -279,33 +290,40 @@ function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   else for(const u of rest){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
     else { if(left()>=3*wpm) sel.push({u,w:left(),partial:true}); break; } }
   const ord=first.concat(rest); sel.sort((x,y)=>ord.indexOf(x.u)-ord.indexOf(y.u));
-  if(KB) sel.push(KB);
-  return {sel,all,open}; }
-const label=u=>u.name+(u.korb?' <em>· בסוף, לפני אשרי</em>':u.d!=null?' <em>· '+dayTag(u.d)+'</em>':u.sec?' <em>· מהחוברת</em>':'');
+  if(KB){ if(P.korbPos==='start') sel.unshift(KB); else sel.push(KB); }
+  return {sel,all,open,KB}; }
+const label=u=>u.name+(u.mincha?' <em>· אחרי הקרבנות</em>':u.korb?(P.korbPos==='start'?' <em>· קודם, ואז לימוד</em>':' <em>· בסוף, לפני אשרי</em>'):u.d!=null?' <em>· '+dayTag(u.d)+'</em>':u.sec?' <em>· מהחוברת</em>':'');
 function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.createElement('label'); d.className='fp'+(cls?' '+cls:'');
   d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
   if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
 function renderFlow(){
   $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; savePlan(); renderFlow(); };
-  $('korbHint').textContent=getProgress('korbanot',isoDate(today))>=1?'כבר נאמרו היום ✓':'כ־'+fmtMin(mm(KORB_WORDS()*(PR()?pace()/printWpm():1)))+' שמורות לקרבנות, והשאר ללימוד';
+  $('korbPosRow').hidden=!korbOn();
+  $('korbPos').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.korbPos); b.onclick=()=>{ P.korbPos=b.dataset.v; savePlan(); renderFlow(); }; });
+  $('korbHint').textContent=getProgress('korbanot',isoDate(today))>=1?'כבר נאמרו היום ✓':'כ־'+fmtMin(mm(KORB_WORDS()*(PR()?pace()/printWpm():1)))+' לקרבנות, והשאר ללימוד – עד התפילה';
   $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
   $('startFlow').textContent=PR()?'התחל – עם מדידת זמן ⏱':'התחל ▶';
   const tb=$('times'); tb.innerHTML='<b>יש לי:</b>'; const TM=[10,15,20,30,45,60];
-  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=P.min===m?'on':''; b.onclick=()=>{ P.min=m; savePlan(); renderFlow(); }; tb.appendChild(b); });
-  const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=300; inp.placeholder='אחר'; inp.inputMode='numeric'; if(!TM.includes(P.min)) inp.value=P.min;
-  inp.onchange=()=>{ const v=+inp.value; if(v>0){ P.min=v; savePlan(); renderFlow(); } }; tb.appendChild(inp);
-  const {sel,all,open}=plan(); const box=$('plan'); box.innerHTML='';
+  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=!P.until&&P.min===m?'on':''; b.onclick=()=>{ P.min=m; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(b); });
+  const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=300; inp.placeholder='אחר'; inp.inputMode='numeric'; if(!P.until&&!TM.includes(P.min)) inp.value=P.min;
+  inp.onchange=()=>{ const v=+inp.value; if(v>0){ P.min=v; P.until=null; savePlan(); renderFlow(); } }; tb.appendChild(inp);
+  const ub=document.createElement('button'); ub.textContent=P.until?'עד '+P.until:'עד שעה…'; ub.className=P.until?'on':''; tb.appendChild(ub);
+  const ti=document.createElement('input'); ti.type='time'; ti.hidden=true; ti.value=P.until||(()=>{ const d=new Date(Date.now()+30*6e4); return String(d.getHours()).padStart(2,'0')+':'+String(Math.round(d.getMinutes()/5)*5%60).padStart(2,'0'); })(); tb.appendChild(ti);
+  ub.onclick=()=>{ ti.hidden=false; try{ ti.showPicker(); }catch(e){ ti.focus(); } };
+  ti.onchange=()=>{ if(ti.value){ P.until=ti.value; savePlan(); renderFlow(); } };
+  if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent=a>0?'עד '+P.until+' – יש לך '+fmtMin(a):'השעה '+P.until+' כבר עברה – בחר שעה אחרת'; tb.appendChild(l); }
+  const {sel,all,open,KB}=plan(); const box=$('plan'); box.innerHTML='';
   sel.forEach(s=>{ const u=s.u;
     row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך':''),
-      u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb){ P.korb=false; savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
+      u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
   const tot=sel.reduce((a,s)=>a+s.w,0);
   $('startFlow').disabled=!sel.length;
-  const studyN=sel.filter(s=>!s.u.korb).length;
+  const studyN=sel.filter(s=>!s.u.korb&&!s.u.mincha).length;
   const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
   $('flowSum').innerHTML=(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(open.some(u=>u.g<=1)?'הורדת את כל השיעורים מהתוכנית.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
-    'התוכנית: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(P.min)+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
+    'התוכנית: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(availMin())+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
     (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
-  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+P.min; };
+  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+availMin()+(P.until?'&until='+P.until:''); };
   // weekly status
   const core=all.filter(u=>u.g<=1), cd=core.filter(u=>u.f>=1).length, missed=core.filter(u=>u.g===1&&u.f<1);
   let wk='<div>חת״ת'+(DMX&&DMX.day>=0&&H.dm.some(s=>RAMBAM.includes(s))?' ורמב״ם':'')+' השבוע: נלמדו <b>'+cd+'</b> מתוך '+core.length+'</div><div class="track"><i style="width:'+(core.length?cd/core.length*100:0)+'%"></i></div>';
@@ -322,9 +340,10 @@ function renderFlow(){
   dn.forEach(u=>row(dl,label(u),'✓','בטל',()=>{ wkSet(u.id,0,true); renderFlow(); }));
   $('doneBox').hidden=!dn.length; }
 render(); renderFlow();
+setInterval(()=>{ if(P.until&&document.visibilityState==='visible') renderFlow(); },30000);
 // Dvar Malchus booklet stored on this device
 import('./dm.js').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTATE='טען את חוברת השבוע'; render(); return; }
-  DMI=DM.todayInfo(m.index, hebOf(today).label); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; DMX={DM,index:m.index,day:DM.dayForLabel(m.index,hebOf(today).label)}; render(); renderFlow(); }).catch(()=>{});
+  DMI=DM.todayInfo(m.index, hebOf(today).label); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; DMX={DM,index:m.index,day:DM.dayForLabel(m.index,hebOf(today).label)}; render(); renderFlow(); }).catch(()=>{}).finally(()=>{ if(GO){ const b=$('startFlow'); if(!b.disabled) b.click(); else $('flow').scrollIntoView(); } });
 // count words of today's Chumash / Tanya in the background for accurate estimates
 (async()=>{ for(let d=WD;d>=0;d--){ const dt=dateOf(d), iso=isoDate(dt); for(const k of ['chumash','tanya']){ const id=(k==='chumash'?'chu:':'tan:')+d;
   if(!H.on[k] || wcGet(k+':'+iso) || wkFrac(id)>=1) continue;

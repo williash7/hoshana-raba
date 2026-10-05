@@ -86,6 +86,8 @@ computeK();
 TW={"cw": [57, 77, 63, 68, 98, 74, 124, 66, 150, 147, 62, 72, 48, 64, 44, 78, 116, 345, 113, 62, 92, 224, 50, 81, 133, 73, 126, 80, 81, 87, 200, 99, 137, 139, 203, 81, 259, 144, 108, 168, 104, 114, 46, 173, 139, 87, 64, 100, 144, 149, 137, 82, 67, 58, 175, 107, 94, 85, 134, 102, 60, 96, 81, 74, 101, 131, 49, 295, 251, 43, 174, 140, 171, 174, 77, 78, 141, 473, 115, 124, 111, 51, 109, 101, 83, 128, 47, 131, 341, 125, 99, 100, 41, 146, 77, 95, 84, 67, 77, 36, 70, 183, 141, 233, 256, 288, 253, 85, 201, 55, 68, 72, 51, 47, 118, 109, 12, 178, 946, 42, 46, 57, 35, 54, 43, 45, 49, 43, 50, 47, 27, 109, 29, 20, 144, 159, 68, 62, 160, 104, 81, 68, 102, 120, 126, 74, 126, 87, 57, 34], "v119": [5, 5, 5, 5, 5, 4, 6, 4, 5, 4, 6, 5, 4, 5, 4, 5, 5, 4, 6, 5, 5, 7, 8, 4, 5, 5, 4, 5, 5, 4, 4, 5, 6, 5, 5, 4, 6, 5, 7, 5, 5, 5, 7, 5, 5, 6, 4, 6, 5, 6, 6, 5, 5, 5, 6, 5, 5, 5, 5, 5, 6, 7, 6, 6, 5, 7, 7, 4, 8, 6, 5, 5, 6, 6, 6, 5, 5, 7, 5, 6, 5, 6, 6, 6, 6, 5, 6, 5, 5, 6, 6, 6, 6, 5, 6, 7, 5, 6, 6, 5, 7, 4, 5, 6, 4, 5, 5, 6, 6, 7, 6, 6, 4, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 4, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 6, 5, 4, 5, 6, 4, 5, 5, 6, 5, 5, 6, 5, 5, 6, 5, 6, 7, 6, 5, 6, 6, 5, 6, 6, 5, 5, 6, 6, 5, 6, 6, 5, 5, 4, 9]};
 const Q=new URLSearchParams(location.search);
 const BUDGET=Math.max(1,+(Q.get('min')||30));
+const UNTIL=Q.get('until'), UNTILMS=UNTIL?(()=>{ const [h,m]=UNTIL.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); })():null;
+const leftNow=tot=>UNTILMS?UNTILMS-Date.now():BUDGET*6e4-tot;
 const today=new Date(); today.setHours(12,0,0,0);
 const WD=today.getDay(), T=tehToday();
 const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return x; };
@@ -160,7 +162,9 @@ function render(){ const box=$('list'); box.innerHTML='';
     const P=unitPace(); const pc=Object.keys(UNITNAME).filter(k=>P[k]).map(k=>UNITNAME[k]+' – '+(P[k]>=60?Math.floor(P[k]/60)+':'+String(P[k]%60).padStart(2,'0')+' דק׳':P[k]+' שנ׳')).join(' · ');
     s.innerHTML='<h3>סיום ✓</h3>למדת <b>'+fmtMin(tot/6e4)+'</b> · '+[dn?(dn===1?'חלק אחד הושלם':dn+' חלקים הושלמו'):'', S.items.length>dn?(S.items.length-dn===1?'חלק אחד יימשך':(S.items.length-dn)+' חלקים יימשכו')+' בפעם הבאה מהמקום שעצרת':''].filter(Boolean).join(', ')+'.<br>זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b>'+
       (pc?'<br><span style="color:var(--muted);font-size:.9em">הקצב שלך בממוצע: '+pc+'. התוכניות הבאות יחושבו לפי זה.</span>':'');
-    box.appendChild(s); }
+    const lm=leftNow(tot); if(lm>=2.5*6e4){ const m=Math.floor(lm/6e4); const o=document.createElement('div'); o.className='sum'; o.style.borderColor='var(--gold)';
+      o.innerHTML='סיימת לפני הזמן! נשארו עוד <b style="color:var(--gold)">'+m+' דק׳</b>. תרצה ללמוד עוד קטע?<div class="acts"><button class="ok">כן, תכין לי עוד</button></div>';
+      o.querySelector('.ok').onclick=()=>{ location.href='index.html?go=1&min='+m+(UNTIL?'&until='+UNTIL:''); }; box.appendChild(s); box.appendChild(o); } else box.appendChild(s); }
   tick(); }
 // "where did you stop?" – first the page, then the line / verse / halacha on it
 function picker(i,it,I,goalF){ const pg=document.createElement('div'); pg.className='pages';
@@ -187,9 +191,9 @@ function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; s
   if(it.id==='korb') setProgress('korbanot',isoDate(today),it.f);
   pick=-1; pickSl=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
 const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); const h=Math.floor(s/3600); return (neg?'-':'')+(h?h+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0'); };
-function tick(){ const tot=totalMs(), left=BUDGET*6e4-tot;
+function tick(){ const tot=totalMs(), left=leftNow(tot);
   $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);
-  $('clockLbl').textContent=left>=0?'נותרו מתוך '+fmtMin(BUDGET):'עבר הזמן שתכננת';
+  $('clockLbl').textContent=UNTIL?(left>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):left>=0?'נותרו מתוך '+fmtMin(BUDGET):'עבר הזמן שתכננת';
   $('fill').style.width=Math.min(100,tot/(BUDGET*6e4)*100)+'%';
   const allDone=S.items.every(it=>it.st);
   $('play').textContent=allDone?'חזרה למסך הבית':S.since?'⏸ השהה':(tot?'המשך ▶':'התחל ▶'); $('play').classList.toggle('run',!!S.since);
