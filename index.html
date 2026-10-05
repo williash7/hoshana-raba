@@ -142,7 +142,7 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
   </div>
   <section class="flow" id="flow">
     <h3>תוכנית לימוד</h3>
-    <p class="hint">כמה זמן יש לך עכשיו? קודם חת״ת ורמב״ם – של היום ומה שהוחסר השבוע – ואם נשאר זמן, משאר החוברת.</p>
+    <p class="hint">כמה זמן יש לך עכשיו? קודם השלמה של מה שהוחסר השבוע, אחר כך חת״ת ורמב״ם של היום – ואם נשאר זמן, משאר החוברת.</p>
     <div class="row" style="padding:calc(4px*var(--k)) 0"><span>לומד מתוך</span><div class="seg dk" id="mode"><button data-v="screen">המסך</button><button data-v="print">החוברת המודפסת</button></div></div>
     <label class="fp korb"><input type="checkbox" id="korbOn"><span>כולל קרבנות למנחה<small id="korbHint"></small></span></label>
     <div class="row korbPos" id="korbPosRow"><span>מתי לומר קרבנות</span><div class="seg dk" id="korbPos"><button data-v="start">קודם קרבנות, ואז לימוד</button><button data-v="end">קודם לימוד, ואז קרבנות</button></div></div>
@@ -253,7 +253,7 @@ const dayTag=d=>d===WD?'היום':'מיום '+WEEKDAYS[d];
 const RAMBAM=['rambam3','rambam1','sm'];
 const DMNAME=Object.fromEntries(DMS);
 const SKIPSEC=/מפתח|הנחת תפילין|לוח|זמני|מזמורי תהלים|קריאה בציבור/;
-function catalog(){ const out=[], days=[WD].concat([...Array(WD).keys()]);
+function catalog(){ const out=[], days=[...Array(WD+1).keys()];   // oldest missed day first, today last
   const ok=DMX&&DMX.day>=0, dmW=(s,d)=>DMX.DM.slices(DMX.index,s,d).reduce((a,b)=>a+b.words,0);
   days.forEach(d=>{ const g=d===WD?0:1, dt=dateOf(d), iso=isoDate(dt);
     const CH={chumash:()=>{ const w=PR()&&ok?dmW('chumash',d):wcGet('chumash:'+iso); out.push({id:'chu:'+d,g,d,name:'חומש',w:w||900,est:!w}); }, tehillim:()=>{ const t=tehFor(dt); out.push({id:'teh:'+t.day,g,d,name:'תהילים',w:tehWords(t.day,t.short)||800}); }, tanya:()=>{ const w=PR()&&ok?dmW('tanya',d):wcGet('tanyaP:'+iso); out.push({id:'tan:'+d,g,d,name:'תניא',w:w||700,est:!w}); } };
@@ -287,7 +287,8 @@ function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   // 1) Chitas, Rambam and added items: everything that fits whole, in order (a short Tehillim is not pushed out by a long Rambam)
   //    first today's, then what was missed this week (+ added items); a day's group is finished before moving on
   const first=pri.concat(pins); let skipped=null;
-  for(const grp of [pri.filter(u=>u.g===0), pri.filter(u=>u.g!==0).concat(pins)]){
+  const dayGroups=[...Array(WD).keys()].map(d=>pri.filter(u=>u.g!==0&&u.d===d)).filter(g=>g.length);
+  for(const grp of [...dayGroups, pri.filter(u=>u.g===0), pins]){   // make-up day by day (oldest first), then today, then added items
     // if the whole day doesn't fit, take the most complete lessons (shorter first), then part of the first one left out
     const tot=grp.reduce((a,u)=>a+u.rem,0), byLen=acc+tot<=budget*1.05?grp:grp.slice().sort((x,y)=>x.rem-y.rem);
     for(const u of byLen){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; } }
