@@ -282,8 +282,10 @@ function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   //    first today's, then what was missed this week (+ added items); a day's group is finished before moving on
   const first=pri.concat(pins); let skipped=null;
   for(const grp of [pri.filter(u=>u.g===0), pri.filter(u=>u.g!==0).concat(pins)]){
-    for(const u of grp){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; } else if(!skipped) skipped=u; }
-    if(skipped) break; }
+    // if the whole day doesn't fit, take the most complete lessons (shorter first), then part of the first one left out
+    const tot=grp.reduce((a,u)=>a+u.rem,0), byLen=acc+tot<=budget*1.05?grp:grp.slice().sort((x,y)=>x.rem-y.rem);
+    for(const u of byLen){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; } }
+    const out=grp.filter(u=>!sel.some(x=>x.u===u)); if(out.length){ skipped=out[0]; break; } }
   const left=()=>budget-acc;
   // 2) the time left goes to the first one that did not fit (part of it); only if all fit, to the rest of the booklet
   if(skipped){ if(left()>=3*wpm){ sel.push({u:skipped,w:left(),partial:true}); acc=budget; } }
