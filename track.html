@@ -79,7 +79,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
   <button class="play" id="play">התחל ▶</button>
   <a class="home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
 </div></nav>
-<script src="common.js?v=bbce6dfa"></script>
+<script src="common.js?v=08e75aee"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
 computeK();
@@ -94,7 +94,7 @@ const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return
 const dayTag=d=>d===WD?'היום':'מיום '+WEEKDAYS[d];
 const CURWK=wkId(), dateIn=(wk,d)=>{ if(wk===CURWK) return dateOf(d); const x=weekStart(wk); x.setDate(x.getDate()+d); return x; };
 const tagIn=(wk,d)=>wk===CURWK?dayTag(d):'יום '+WEEKDAYS[d]+' '+hebOf(dateIn(wk,d)).label;
-const DMN={chumash:'חומש',tanya:'תניא',hayomyom:'היום יום',rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד',sm:'ספר המצוות',halacha:'הלכה יומית',mishna:'משנה',gemara:'גמרא יומית'};
+const DMN={chumash:'חומש',tanya:'תניא',hayomyom:'היום יום',rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד',sm:'ספר המצוות',halacha:'הלכה יומית',mishna:'משנה',gemara:'גמרא יומית',rav:'שו״ע הרב'};
 const COL={R:'עמודה ימנית',L:'עמודה שמאלית'};
 const UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.split('~'); return {id,end:w&&w[0]==='e'?+w.slice(1):null,plan:w&&w[0]!=='e'?+w:null}; });
 
@@ -132,8 +132,8 @@ function info(full){ const [id,wk]=splitWk(full), past=wk!==CURWK; const a=id.sp
     return {name:'תהילים',tag:dd!=null?tagIn(wk,dd):'',where:'מתוך ספר התהילים שלך: <b>מזמורים '+t.range+'</b> (יום '+gq(+a[1])+' לחודש)',W:tehWords(+a[1],t.short)||800}; }
   const subj=a[0]==='chu'?'chumash':a[0]==='tan'?'tanya':a[0]==='dm'?a[1]:null;
   const bookTag=past?'מחוברת '+hebOf(weekStart(wk)).label:'מהחוברת';
-  if(a[0]==='sec'){ const i=ix?(ix.sections||[]).findIndex(x=>x.from===+a[1]):-1; if(i<0) return {name:'מהחוברת',where:'',W:1000};
-    return fromSlices(DM.sectionSlices(ix,i),{name:ix.sections[i].title,tag:bookTag},ix); }
+  if(a[0]==='sec'){ const i=ix?DM.sectionIndex(ix,a[1]):-1; if(i<0) return {name:'מהחוברת',where:'',W:1000};
+    return fromSlices(DM.sectionSlices(ix,i),{name:ix.sections[i].title+(ix.sections[i].part?' ('+ix.sections[i].part.replace(/\d+/g,n=>gem(+n))+')':''),tag:bookTag},ix); }
   const d=a[0]==='dm'?(a[2]!=null?+a[2]:(past?0:IDAY)):+a[1];
   const base={name:DMN[subj]||subj,tag:a[2]!=null||a[0]!=='dm'?tagIn(wk,d):''};
   if(ix){ const sl=DM.slices(ix,subj,d); if(sl.length){ const r=fromSlices(sl,base,ix); const lab=dmDay(subj,d); if(lab) r.where+='<br><span style="color:var(--muted);font-size:.9em">'+lab+(past?' – בחוברת של אותו שבוע':'')+'</span>'; return r; } }
@@ -209,7 +209,7 @@ addEventListener('pagehide',save); document.addEventListener('visibilitychange',
 
 /* ---------- load ---------- */
 (async()=>{
-  try{ DM=await import('./dm.js?v=bbce6dfa'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
+  try{ DM=await import('./dm.js?v=08e75aee'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
     for(const w of new Set(S.items.map(it=>splitWk(it.id)[1]).filter(w=>w!==CURWK))){ const b=await DM.loadStored(null,w); if(b) IDXW[w]=b.index; } }catch(e){}
   S.items.forEach(it=>{ INFO[it.id]=info(it.id); });
   if(!S.items.length){ $('list').innerHTML='<div class="msg">אין מה ללמוד בתוכנית. <a href="./" style="color:var(--gold)">חזרה למסך הבית</a></div>'; return; }

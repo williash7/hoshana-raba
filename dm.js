@@ -12,12 +12,13 @@ export const SUBJECTS = [
   {id:'halacha',  name:'הלכה יומית ברמב״ם',    test:h=>h.includes('הלכהיומיתלעיוןברמבם')},
   {id:'mishna',   name:'משנה',               test:h=>/^[א-ת]{0,3}מסכת.*משנה/.test(h)},
   {id:'gemara',   name:'גמרא יומית',          test:()=>false, byPage:true},
+  {id:'rav',      name:'שו״ע הרב – רב יומי',   test:()=>false, inSection:true},
 ];
 export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת קודש'];
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=7;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=8;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* legacy Hebrew fonts: letters stored as cp1255 bytes shown as Latin-1 or Mac-Roman characters */
 const MACR='ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…\xa0ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ\uf8ffÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ';
@@ -113,10 +114,18 @@ async function buildIndex(doc, onProgress){
       lt.push({y,title:'מכתב'+(date?' – '+date:'')}); });
     const cb=[]; ys.forEach(y=>{ if(y<HEAD) return; const n=norm(lines[y].join('')); if(!n.includes('המשךביאורלמס')) return; const m=n.match(/ליום(ראשון|שני|שלישי|רביעי|חמישי|שישי|ששי|שבת)/);
       cb.push({y,day:m?['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'].indexOf(m[1]==='ששי'?'שישי':m[1]):-1}); });
+    const hd=[]; let pre=null;
+    ys.forEach(y=>{ if(y<HEAD) return; const its=litems[y]; const h=Math.max(...its.map(i=>i.height||0)); if(h<16) return; const raw=its.map(i=>i.str).join('').replace(/\s+/g,' ').trim();
+      if(/^הוד כ["״]ק/.test(raw)){ const m=raw.split(/\s[-–]\s/); pre={y,name:m.length>1?m[m.length-1].trim():''}; return; }
+      if(pre&&!pre.name&&y-pre.y<40&&/[א-ת]{3}/.test(raw)&&!raw.includes('â')){ pre.name=raw.split(/\s[–-]\s/)[0].trim(); return; }
+      if(!raw.includes('â')) return; const t=raw.replace(/[âã]/g,' ').replace(/\s+/g,' ').trim(); const n=norm(t);
+      if((n.length<16&&/^יום|^שבתקודש/.test(n))||(t.match(/[א-ת]/g)||[]).length<4||/[À-ÿ]/.test(t)) return;   // (old-font text uses â for ג)
+      const xs=its.map(i=>i.transform[4]+(i.width||0)/2), c=(Math.min(...xs)+Math.max(...xs))/2, col=Math.abs(c-vp.width/2)<vp.width*0.12?'F':(c>vp.width/2?'R':'L');
+      hd.push({y,col,title:((pre&&pre.name&&y-pre.y<90)?pre.name+' – ':'')+t}); pre=null; });
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
     if(subj==='chumash') bands=[[HEAD,vp.height-FOOT,'F',1,1]];   // designed verse/targum/Rashi layout: keep the page whole
     { const keep=subj==='chumash'?['p']:/^(rambam|sm|halacha)/.test(subj||'')?['h','k']:[]; for(let i=lm.length-1;i>=0;i--) if(!keep.includes(lm[i][1])) lm.splice(i,1); }
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,bands,ln,lm,lt,cb,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,bands,ln,lm,lt,cb,hd,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
   // daily Gemara: pages whose running header says "ליום <day>" (the Gemara facsimile pages follow their day's explanation)
@@ -156,8 +165,28 @@ async function buildIndex(doc, onProgress){
       last.to=x.p; if(k) last.keys.add(k); if(!last.title && x.rh) last.title=x.rh; last.words+=x.words; return; }
     secs.push({from:x.p,to:x.p,keys:new Set(k?[k]:[]),title:(x.big||x.rh||'').slice(0,60),words:x.words}); });
   const tidy=t=>t.replace(/["״]/g,'״').replace(/\s*תלמוד בבלי המבואר.*$/,'').replace(/\s+/g,' ').trim().slice(0,48);
-  index.sections=secs.filter(s=>s.title).map(s=>({from:s.from,to:s.to,title:tidy(s.title),words:s.words}));
-  pages.forEach(x=>x.lt.forEach((l,k)=>{ const y1=cutAfter(x,l.y); index.sections.push({from:Math.round((x.p+0.5+k*0.1)*10)/10,to:x.p,title:l.title.slice(0,48),words:Math.round(x.words*(y1-l.y)/(x.h-HEAD-FOOT)),letter:{y0:l.y-12,y1}}); }));
+  const plain=secs.filter(s=>s.title).map(s=>({from:s.from,to:s.to,title:tidy(s.title),words:s.words}));
+  // units: each titled work in a section is its own unit; a block divided by days becomes the daily "רב יומי"; long untitled parts → ~2 pages each
+  const ord=o=>o.p*100000+(o.col==='L'?50000:0)+o.y; const units=[];
+  const wordsOf=r=>rangeSlices(index,r).reduce((a,b)=>a+b.words,0);
+  plain.forEach(sec=>{ const pgs=pages.filter(x=>x.p>=sec.from&&x.p<=sec.to);
+    const cuts=[]; pgs.forEach(x=>x.hd.forEach(h=>{ if(x.p===sec.from&&h.y<HEAD+90) return; cuts.push({p:x.p,y:h.y,col:h.col,title:h.title}); })); cuts.sort((a,b)=>ord(a)-ord(b));
+    const mk=[]; pgs.forEach(x=>x.marks.forEach(m=>mk.push({p:x.p,y:m.y,col:m.col,day:m.day,label:m.label})));
+    if(mk.length){ const byDay={}; mk.forEach(m=>{ if(!(m.day in byDay)) byDay[m.day]=m; }); const ds=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
+      const lo=Math.min(...mk.map(ord)), hi=Math.max(...mk.map(ord)); const before=cuts.filter(c=>ord(c)<lo).pop(), after=cuts.find(c=>ord(c)>hi);
+      const days={}; ds.forEach((d,i)=>{ const m=byDay[d], nx=byDay[ds[i+1]]; days[d]={from:{p:m.p,y:m.y,col:m.col},to:nx?{p:nx.p,y:nx.y,col:nx.col}:(after?{p:after.p,y:after.y,col:after.col}:{p:sec.to,y:null,col:'F'}),label:m.label}; });
+      index.subjects.rav={first:sec.from,last:sec.to,days,title:before?before.title:''}; if(before) before.daily=true; }
+    const segs=[{p:sec.from,y:HEAD,col:'F',title:sec.title,start:true}].concat(cuts);
+    segs.forEach((c,i)=>{ if(c.daily) return; const nx=segs[i+1]; const r={from:{p:c.p,y:c.start?null:c.y,col:c.col},to:nx?{p:nx.p,y:nx.y,col:nx.col}:{p:sec.to,y:null,col:'F'}};
+      if(c.start) r.from={p:c.p,y:null,col:'F'};
+      const w=wordsOf(r); if(w<(c.start&&nx?150:40)) return; const whole=c.start&&!nx;
+      const endP=r.to.y==null?r.to.p:r.to.p-(r.to.y<HEAD+40?1:0);
+      if(w>1500 && endP-c.p>=2){ for(let a=c.p;a<=endP;a+=2){ const b=Math.min(endP,a+1), last=b>=endP;
+          const rr={from:a===c.p?r.from:{p:a,y:null,col:'F'},to:last?r.to:{p:b,y:null,col:'F'}}; const ww=wordsOf(rr); if(ww<40) continue;
+          units.push({key:a+'_'+(a===c.p&&r.from.y!=null?Math.round(r.from.y):HEAD),from:a,to:last?endP:b,title:c.title,part:'עמ׳ '+a+(b>a?'–'+b:''),words:ww,range:rr,group:sec.title}); } }
+      else units.push({key:whole?String(sec.from):c.p+'_'+(c.start?HEAD:Math.round(c.y)),from:c.p,to:endP,title:c.title,words:w,range:whole?null:r,group:sec.title}); }); });
+  index.sections=units.map(u=>Object.assign(u,{title:tidy(u.title)}));
+  pages.forEach(x=>x.lt.forEach((l,k)=>{ const y1=cutAfter(x,l.y); index.sections.push({key:String(Math.round((x.p+0.5+k*0.1)*10)/10),from:Math.round((x.p+0.5+k*0.1)*10)/10,to:x.p,title:l.title.slice(0,48),words:Math.round(x.words*(y1-l.y)/(x.h-HEAD-FOOT)),letter:{y0:l.y-12,y1}}); }));
   index.sections.sort((a,b)=>a.from-b.from);
   return index;
 }
@@ -205,7 +234,9 @@ export function todayInfo(index, hebLabel){ const d=dayForLabel(index,hebLabel);
 export function dayForLabel(index, hebLabel){ const n=norm(hebLabel); const L=index.dayLabels||[]; for(let d=0;d<7;d++){ if(L[d] && norm(L[d]).includes(n)) return d; } return -1; }
 
 /* list of page slices for a subject/day: [{p, y0, y1, w, h, words}] (PDF units) */
+export const sectionIndex=(index,key)=>(index.sections||[]).findIndex(x=>String(x.key!=null?x.key:x.from)===String(key));
 export function sectionSlices(index, i){ const s=(index.sections||[])[i]; if(!s) return []; const out=[];
+  if(s.range) return rangeSlices(index,s.range);
   if(s.letter){ const p=s.to, pg=index.pages[p-1]; pieces(pg,[s.letter.y0,s.letter.y1]).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); return out; }
   for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); } return out; }
 /* reading-order pieces of a page: full-width parts as they are, two-column parts as right column then left column */
@@ -218,7 +249,8 @@ const bandAt=(pg,y)=>{ const bs=pg.bands||[[HEAD,pg.h-FOOT,'F']]; let k=bs.findI
 function pieceSlice(pg,p,c,bk){ const gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w]; const x0=c.col==='R'?gut[1]-3:c.col==='L'?ex[0]:0, x1=c.col==='R'?ex[1]:c.col==='L'?gut[0]+3:pg.w;
   const frac=(c.y1-c.y0)*(x1-x0)/((pg.h-HEAD-FOOT)*pg.w); return {bk,p,x0,x1,gx:(gut[0]+gut[1])/2,col:c.col||undefined,fit:!c.col&&!!(pg.bands&&pg.bands.some(b=>b[2]==='S'))||undefined,y0:c.y0,y1:c.y1,w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.02,frac))}; }
 export function slices(index, subj, day){
-  const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return [];
+  const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return []; return rangeSlices(index,D); }
+export function rangeSlices(index, D){
   const out=[]; const P=index.pages;
   if(D.pages){ D.pages.forEach(p=>{ const pg=P[p-1]; if(pg) pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); });
     (D.extra||[]).forEach(e=>{ const pg=P[e.p-1]; if(pg) pieces(pg,[e.y0,e.y1]).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,e.p,c,index.bk)); }); }); return out; }
