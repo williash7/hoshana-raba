@@ -11,12 +11,13 @@ export const SUBJECTS = [
   {id:'sm',       name:'ספר המצוות',          test:h=>h.includes('רמבםספרהמצוות')},
   {id:'halacha',  name:'הלכה יומית ברמב״ם',    test:h=>h.includes('הלכהיומיתלעיוןברמבם')},
   {id:'mishna',   name:'משנה',               test:h=>/^[א-ת]{0,3}מסכת.*משנה/.test(h)},
+  {id:'gemara',   name:'גמרא יומית',          test:()=>false, byPage:true},
 ];
 export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת קודש'];
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=6;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=7;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* legacy Hebrew fonts: letters stored as cp1255 bytes shown as Latin-1 or Mac-Roman characters */
 const MACR='ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…\xa0ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ\uf8ffÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ';
@@ -105,20 +106,35 @@ async function buildIndex(doc, onProgress){
       if(h>=19.5){ const m=t.trim().match(/^\.?([א-ת]{1,3})\.?$/); if(m&&t.includes('.')) lm.push([y,'h',numLab(m[1]),side(it)]); }
       if(h>=17.5&&h<19.5){ (bigL[y]=bigL[y]||[]).push(it); } });
     Object.entries(bigL).forEach(([y,its])=>{ const t=decHeb(its.map(i=>i.str).join('')).replace(/\s/g,''); if(t.length<=9 && /קר|רק/.test(t)){ const lab=numLab(t.replace(/[פרק]/g,'')); if(lab&&lab.length<=2) lm.push([+y,'k',lab,side(its[0])]); } });
+    // boxed letters ("אגרות קודש") sitting at the bottom of a page: heading y + date line
+    const lt=[]; ys.forEach((y,i)=>{ if(y<HEAD) return; const t=lines[y].join(''); if(norm(t).replace(/[^א-ת]/g,'')!=='אגרותקודש') return;
+      if(/\d/.test(t)) return;   // a table-of-contents entry, not a letter
+      let date=''; for(let j=i+1;j<ys.length&&ys[j]<y+60;j++){ const u=lines[ys[j]].join(' ').replace(/\s+/g,' ').trim(); if(/ב["״]ה/.test(u)){ date=u.replace(/ב["״]ה,?/,'').replace(/\s+/g,' ').replace(/\s+(["״])/g,'$1').replace(/^[,\s]+|[,\s]+$/g,'').trim(); break; } }
+      lt.push({y,title:'מכתב'+(date?' – '+date:'')}); });
+    const cb=[]; ys.forEach(y=>{ if(y<HEAD) return; const n=norm(lines[y].join('')); if(!n.includes('המשךביאורלמס')) return; const m=n.match(/ליום(ראשון|שני|שלישי|רביעי|חמישי|שישי|ששי|שבת)/);
+      cb.push({y,day:m?['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'].indexOf(m[1]==='ששי'?'שישי':m[1]):-1}); });
     const subj=(SUBJECTS.find(s=>s.test(head,top))||{}).id||null;
     if(subj==='chumash') bands=[[HEAD,vp.height-FOOT,'F',1,1]];   // designed verse/targum/Rashi layout: keep the page whole
     { const keep=subj==='chumash'?['p']:/^(rambam|sm|halacha)/.test(subj||'')?['h','k']:[]; for(let i=lm.length-1;i>=0;i--) if(!keep.includes(lm[i][1])) lm.splice(i,1); }
-    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,bands,ln,lm,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
+    pages.push({p,h:vp.height,w:vp.width,subj,marks,words,rh,big,gut,bands,ln,lm,lt,cb,ex:[Math.max(0,minX-6),Math.min(vp.width,maxX+6)]});
     if(onProgress) onProgress(p/doc.numPages);
   }
+  // daily Gemara: pages whose running header says "ליום <day>" (the Gemara facsimile pages follow their day's explanation)
+  { const DN=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']]; let cur=-1;
+    pages.forEach(x=>{ if(x.subj) { cur=-1; return; } const txt=x.rh||''; const isG=/דף\s*\S+\s*עמוד/.test(txt)&&/תלמוד בבלי המבואר|מתוך מהדורת/.test(txt);
+      if(!isG){ cur=-1; return; } const m=norm(txt).match(/ליום(ראשון|שני|שלישי|רביעי|חמישי|שישי|ששי|שבת)/); if(m) cur=DN.findIndex(a=>a.includes(m[1]));
+      if(cur>=0){ x.subj='gemara'; x.gday=cur; } }); }
   // segments per subject and day
-  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,bands:x.bands,ex:x.ex,ln:x.ln.length?x.ln:undefined,lm:x.lm.length?x.lm:undefined})), subjects:{}};
+  const index={pages:pages.map(x=>({h:x.h,w:x.w,words:x.words,gut:x.gut,bands:x.bands,ex:x.ex,ln:x.ln.length?x.ln:undefined,lm:x.lm.length?x.lm:undefined,lt:(x.lt.length||x.cb.length)?x.lt.map(l=>l.y).concat(x.cb.map(c=>c.y)).sort((a,b)=>a-b):undefined})), subjects:{}};
+  const cutAfter=(x,y)=>{ const c=x.lt.map(l=>l.y).concat(x.cb.map(b=>b.y)).filter(v=>v>y).sort((a,b)=>a-b); return c.length?c[0]-6:x.h-FOOT; };
+  pages.forEach(x=>{ const c=x.lt.map(l=>l.y).concat(x.cb.map(b=>b.y)); x.noHost=c.length&&Math.min(...c)-HEAD<40; });
   SUBJECTS.forEach(S=>{
     const ps=pages.filter(x=>x.subj===S.id); if(!ps.length) return;
     const first=ps[0].p, last=ps[ps.length-1].p;
     const marks=[]; ps.forEach(x=>x.marks.forEach(m=>marks.push({p:x.p,y:m.y,col:m.col,day:m.day,label:m.label})));
     const days={};
-    if(S.whole || !marks.length){ for(let d=0;d<7;d++) days[d]={from:{p:first,y:HEAD},to:{p:last,y:null},whole:true}; }
+    if(S.byPage){ for(let d=0;d<7;d++){ const pp=ps.filter(x=>x.gday===d).map(x=>x.p); const ex=[]; pages.forEach(x=>x.cb.forEach(c=>{ if(c.day===d) ex.push({p:x.p,y0:c.y-12,y1:cutAfter(x,c.y)}); })); if(pp.length||ex.length) days[d]={pages:pp,extra:ex}; } }
+    else if(S.whole || !marks.length){ for(let d=0;d<7;d++) days[d]={from:{p:first,y:HEAD},to:{p:last,y:null},whole:true}; }
     else {
       const byDay={}; marks.forEach(m=>{ if(!(m.day in byDay)) byDay[m.day]=m; });
       const ds=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
@@ -134,13 +150,15 @@ async function buildIndex(doc, onProgress){
   index.dayLabels=lab; index.v=IDXV;
   // weekly (not daily) sections: group the remaining pages by their running header
   const secs=[]; const key=s=>(s||'').replace(/^[\/\s]+/,'').split(/[\s\-–.\/]+/).filter(Boolean)[0]||'';
-  pages.forEach(x=>{ if(x.subj || x.p===1) return; const last=secs[secs.length-1]; const k=key(x.rh);
+  pages.forEach(x=>{ if(x.subj || x.p===1 || x.noHost) return; const last=secs[secs.length-1]; const k=key(x.rh);
     const nn=s=>norm(s||'').replace(/[^א-ת]/g,''); const startsNew = !!x.big && (!x.rh || nn(x.rh).startsWith(nn(x.big).slice(0,8)));
     if(last && last.to===x.p-1 && !startsNew && ((k && (last.keys.has(k) || last.keys.size<2)) || (!k && !x.big))){
       last.to=x.p; if(k) last.keys.add(k); if(!last.title && x.rh) last.title=x.rh; last.words+=x.words; return; }
     secs.push({from:x.p,to:x.p,keys:new Set(k?[k]:[]),title:(x.big||x.rh||'').slice(0,60),words:x.words}); });
   const tidy=t=>t.replace(/["״]/g,'״').replace(/\s*תלמוד בבלי המבואר.*$/,'').replace(/\s+/g,' ').trim().slice(0,48);
   index.sections=secs.filter(s=>s.title).map(s=>({from:s.from,to:s.to,title:tidy(s.title),words:s.words}));
+  pages.forEach(x=>x.lt.forEach((l,k)=>{ const y1=cutAfter(x,l.y); index.sections.push({from:Math.round((x.p+0.5+k*0.1)*10)/10,to:x.p,title:l.title.slice(0,48),words:Math.round(x.words*(y1-l.y)/(x.h-HEAD-FOOT)),letter:{y0:l.y-12,y1}}); }));
+  index.sections.sort((a,b)=>a.from-b.from);
   return index;
 }
 
@@ -188,10 +206,13 @@ export function dayForLabel(index, hebLabel){ const n=norm(hebLabel); const L=in
 
 /* list of page slices for a subject/day: [{p, y0, y1, w, h, words}] (PDF units) */
 export function sectionSlices(index, i){ const s=(index.sections||[])[i]; if(!s) return []; const out=[];
+  if(s.letter){ const p=s.to, pg=index.pages[p-1]; pieces(pg,[s.letter.y0,s.letter.y1]).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); return out; }
   for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); } return out; }
 /* reading-order pieces of a page: full-width parts as they are, two-column parts as right column then left column */
-function pieces(pg){ const bands=pg.bands||[[HEAD,pg.h-FOOT,'F',1,1]], out=[];
-  bands.forEach((b,bi)=>{ if(b[2]==='F') out.push({bi,y0:b[0],y1:b[1],col:null}); else { if(b[3]) out.push({bi,y0:b[0],y1:b[1],col:'R'}); if(b[4]) out.push({bi,y0:b[0],y1:b[1],col:'L'}); } });
+function pieces(pg,range){ const bands=pg.bands||[[HEAD,pg.h-FOOT,'F',1,1]], out=[];
+  const [lo,hi]=range||[HEAD, pg.lt&&pg.lt.length?Math.min(...pg.lt)-14:pg.h];   // a boxed letter is read on its own
+  bands.forEach((b,bi)=>{ const y0=Math.max(b[0],lo), y1=Math.min(b[1],hi); if(y1-y0<=2) return;
+    if(b[2]==='F') out.push({bi,y0,y1,col:null}); else { if(b[3]) out.push({bi,y0,y1,col:'R'}); if(b[4]) out.push({bi,y0,y1,col:'L'}); } });
   return out; }
 const bandAt=(pg,y)=>{ const bs=pg.bands||[[HEAD,pg.h-FOOT,'F']]; let k=bs.findIndex(b=>y>=b[0]-2&&y<=b[1]+2); if(k<0){ k=0; bs.forEach((b,i)=>{ if(b[0]<=y) k=i; }); } return k; };
 function pieceSlice(pg,p,c,bk){ const gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w]; const x0=c.col==='R'?gut[1]-3:c.col==='L'?ex[0]:0, x1=c.col==='R'?ex[1]:c.col==='L'?gut[0]+3:pg.w;
@@ -199,6 +220,8 @@ function pieceSlice(pg,p,c,bk){ const gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex|
 export function slices(index, subj, day){
   const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return [];
   const out=[]; const P=index.pages;
+  if(D.pages){ D.pages.forEach(p=>{ const pg=P[p-1]; if(pg) pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); });
+    (D.extra||[]).forEach(e=>{ const pg=P[e.p-1]; if(pg) pieces(pg,[e.y0,e.y1]).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,e.p,c,index.bk)); }); }); return out; }
   for(let p=D.from.p;p<=D.to.p;p++){ const pg=P[p-1]; if(!pg) continue; let ps=pieces(pg);
     if(p===D.from.p && D.from.y!=null){ const Y=Math.max(HEAD,D.from.y-14), bi=bandAt(pg,D.from.y), C=D.from.col;
       ps=ps.filter(c=>c.bi>=bi).map(c=>{ if(c.bi!==bi) return c; if(!c.col) return Object.assign({},c,{y0:Math.max(c.y0,Y)});

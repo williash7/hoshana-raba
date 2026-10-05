@@ -154,9 +154,9 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 <div class="toast" id="toast"></div>
 <script>window.onerror=function(m,src,l){ var d=document.getElementById('doc'); if(d) d.innerHTML='<div class="t msg">שגיאה בטעינת הדף<div class="dbg">'+String(m).replace(/[<>&]/g,'')+' ('+String(src||'').split('/').pop()+':'+l+')</div></div>'; };</script>
-<script src="common.js?v=500df281"></script>
+<script src="common.js?v=bbce6dfa"></script>
 <script type="module">
-import * as DM from './dm.js?v=500df281';
+import * as DM from './dm.js?v=bbce6dfa';
 const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const HOME=lsGet('home-v1',{});
@@ -224,7 +224,7 @@ async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   $('line').style.display=''; $('shade').style.display=''; measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
 function showList(){ const doc=$('doc'); doc.className=''; ready=false; B=[]; $('line').style.display='none'; $('shade').style.display='none';
   let h='<div class="secs"><h3>עוד בחוברת השבוע</h3><p>תכנים שאינם מחולקים לפי ימים – לבחירה לפי הזמן שלך.</p>';
-  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"><b></b><span>עמ׳ '+gem(s.from)+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(wkFrac('sec:'+s.from+sfx())>=1?' · ✓ נלמד':(lp||wkFrac('sec:'+s.from+sfx()))?' · התחלת':'')+'</span></button>'; });
+  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"'+(s.letter?' class="letter"':'')+'><b></b><span>'+(s.letter?'✉ ':'')+'עמ׳ '+gem(Math.floor(s.from))+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(wkFrac('sec:'+s.from+sfx())>=1?' · ✓ נלמד':(lp||wkFrac('sec:'+s.from+sfx()))?' · התחלת':'')+'</span></button>'; });
   if(META.wk<wkId()) h+='<button class="rmbook" id="rmbook">הסר את החוברת הזו מהארכיון</button>';
   doc.innerHTML=h+'</div>'; if($('rmbook')) $('rmbook').onclick=async()=>{ if(!confirm('להסיר את חוברת '+bookName(META.wk)+' מהארכיון? מה שלא נלמד ממנה לא יוצע יותר.')) return; await DM.removeBooklet(META.wk); location.reload(); }; doc.querySelectorAll('.secs button[data-i]').forEach(b=>{ b.querySelector('b').textContent=IDX.sections[+b.dataset.i].title; b.onclick=()=>{ V.sec=+b.dataset.i; save(); show(); }; });
   update(); }
