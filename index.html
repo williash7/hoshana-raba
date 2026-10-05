@@ -240,12 +240,14 @@ let P=Object.assign({min:30,day:'',skip:[],pin:[],mode:'screen'},lsGet('plan-v1'
 if(!P.korbPos) P.korbPos='start';
 // "continue learning" from a finished plan: index.html?go=1&min=..&until=..
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
-if(GO){ P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; history.replaceState(null,'','./'); }
+// these values are for this one plan only – the saved settings stay as they were
+let GOTMP=GO?{min:P.min,until:P.until||null,korb:P.korb}:null;
+if(GO){ P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; P.korbDay=isoDate(new Date()); history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
 function availMin(){ if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; }
-const savePlan=()=>lsSet('plan-v1',P);
+const savePlan=()=>lsSet('plan-v1',GOTMP?Object.assign({},P,GOTMP):P);
 let DMX=null;   // {DM, index, day} = this week's booklet; DMX.byWk[<sunday>] = every archived booklet's index
 const WD=today.getDay(), CURWK=wkId();
 const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return x; };
@@ -326,13 +328,13 @@ function renderFlow(){
   $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
   $('startFlow').textContent=PR()?'התחל – עם מדידת זמן ⏱':'התחל ▶';
   const tb=$('times'); tb.innerHTML='<b>יש לי:</b>'; const TM=[10,15,20,30,45,60];
-  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=!P.until&&P.min===m?'on':''; b.onclick=()=>{ P.min=m; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(b); });
+  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=!P.until&&P.min===m?'on':''; b.onclick=()=>{ GOTMP=null; P.min=m; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(b); });
   const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=300; inp.placeholder='אחר'; inp.inputMode='numeric'; if(!P.until&&!TM.includes(P.min)) inp.value=P.min;
-  inp.onchange=()=>{ const v=+inp.value; if(v>0){ P.min=v; P.until=null; savePlan(); renderFlow(); } }; tb.appendChild(inp);
+  inp.onchange=()=>{ const v=+inp.value; if(v>0){ GOTMP=null; P.min=v; P.until=null; savePlan(); renderFlow(); } }; tb.appendChild(inp);
   const ub=document.createElement('button'); ub.textContent=P.until?'עד '+P.until:'עד שעה…'; ub.className=P.until?'on':''; tb.appendChild(ub);
-  const ti=document.createElement('input'); ti.type='time'; ti.hidden=true; ti.value=P.until||(()=>{ const d=new Date(Date.now()+30*6e4); return String(d.getHours()).padStart(2,'0')+':'+String(Math.round(d.getMinutes()/5)*5%60).padStart(2,'0'); })(); tb.appendChild(ti);
+  const ti=document.createElement('input'); ti.type='time'; ti.hidden=true; ti.value=P.until||''; tb.appendChild(ti);
   ub.onclick=()=>{ ti.hidden=false; try{ ti.showPicker(); }catch(e){ ti.focus(); } };
-  ti.onchange=()=>{ if(ti.value){ P.until=ti.value; savePlan(); renderFlow(); } };
+  const setUntil=()=>{ if(ti.value&&ti.value!==P.until){ GOTMP=null; P.until=ti.value; savePlan(); renderFlow(); } }; ti.onchange=setUntil; ti.oninput=setUntil; ti.onblur=setUntil;
   if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent='עד '+P.until+' – יש לך '+fmtMin(a); tb.appendChild(l); }
   const {sel,all,open,KB}=plan(); const box=$('plan'); box.innerHTML='';
   sel.forEach(s=>{ const u=s.u;
