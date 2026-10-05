@@ -320,6 +320,8 @@ function renderFlow(){
   sel.forEach(s=>{ const u=s.u;
     row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך':''),
       u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
+  // today's lessons already done: shown (greyed) so it's clear why they are not in the plan
+  all.filter(u=>u.g===0&&u.f>=1).forEach(u=>row(box,label(u),'✓ נלמד היום','בטל',()=>{ wkSet(u.id,0,true); const a=u.id.split(':'); if(a[0]==='teh') setProgress('tehillim',T.key,0); if(a[0]==='chu') setProgress('chumash',isoDate(today),0); if(a[0]==='tan') setProgress('tanya',isoDate(today),0); renderFlow(); render(); },null,null,'done'));
   const tot=sel.reduce((a,s)=>a+s.w,0);
   $('startFlow').disabled=!sel.length;
   const studyN=sel.filter(s=>!s.u.korb&&!s.u.mincha).length;
