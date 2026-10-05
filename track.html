@@ -79,7 +79,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
   <button class="play" id="play">התחל ▶</button>
   <a class="home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
 </div></nav>
-<script src="common.js"></script>
+<script src="common.js?v=b5b5a918"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
 computeK();
@@ -205,7 +205,7 @@ addEventListener('pagehide',save); document.addEventListener('visibilitychange',
 
 /* ---------- load ---------- */
 (async()=>{
-  try{ DM=await import('./dm.js'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=DM.dayForLabel(IDX,hebOf(today).label); } }catch(e){}
+  try{ DM=await import('./dm.js?v=b5b5a918'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=DM.dayForLabel(IDX,hebOf(today).label); } }catch(e){}
   S.items.forEach(it=>{ INFO[it.id]=info(it.id); });
   if(!S.items.length){ $('list').innerHTML='<div class="msg">אין מה ללמוד בתוכנית. <a href="./" style="color:var(--gold)">חזרה למסך הבית</a></div>'; return; }
   render(); })();
