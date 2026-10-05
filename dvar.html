@@ -112,6 +112,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .empty ol{text-align:right;color:var(--textmuted);font-size:calc(14.5px*var(--k));line-height:1.7;padding-right:calc(20px*var(--k))}
 .prog{height:calc(6px*var(--k));background:var(--rule);border-radius:calc(3px*var(--k));overflow:hidden;margin-top:calc(14px*var(--k))}
 .prog i{display:block;height:100%;background:var(--willow);width:0}
+.rmbook{display:block;width:100%;margin-top:calc(14px*var(--k));border:calc(1px*var(--k)) dashed #c0705e;background:transparent;color:#c0705e;border-radius:calc(12px*var(--k));padding:calc(10px*var(--k));font-size:calc(14px*var(--k))}
 .secs{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) calc(16px*var(--k))}
 .secs h3{font-family:var(--serif);font-size:calc(22px*var(--k));margin:0;color:var(--text)}
 .secs p{color:var(--textmuted);font-size:calc(14px*var(--k));margin:calc(4px*var(--k)) 0 calc(12px*var(--k))}
@@ -128,6 +129,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
     <div style="min-width:0"><div style="font-family:var(--serif);font-size:calc(20px*var(--k));font-weight:700;color:var(--gold)">דבר מלכות</div><div style="font-size:calc(12.5px*var(--k));color:var(--muted)" id="week"></div></div>
     <div class="where"><div class="sec" id="cur"></div><div class="pct" id="hdate"></div></div>
   </div>
+  <div class="tabs books" id="bookTabs" hidden></div>
   <div class="tabs" id="subjTabs"></div>
   <div class="tabs" id="dayTabs"></div>
   <div class="bar"><div class="fill" id="fill"></div></div>
@@ -152,9 +154,9 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 <div class="toast" id="toast"></div>
 <script>window.onerror=function(m,src,l){ var d=document.getElementById('doc'); if(d) d.innerHTML='<div class="t msg">שגיאה בטעינת הדף<div class="dbg">'+String(m).replace(/[<>&]/g,'')+' ('+String(src||'').split('/').pop()+':'+l+')</div></div>'; };</script>
-<script src="common.js?v=b5b5a918"></script>
+<script src="common.js?v=500df281"></script>
 <script type="module">
-import * as DM from './dm.js?v=b5b5a918';
+import * as DM from './dm.js?v=500df281';
 const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const HOME=lsGet('home-v1',{});
@@ -183,14 +185,19 @@ async function ingest(buf,name){ const pr=$('prog'); if(pr){ pr.hidden=false; }
 $('file').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('doc').innerHTML='<div class="empty"><h2>מעבד את החוברת…</h2><p>זה לוקח כחצי דקה בפעם הראשונה בכל שבוע.</p><div class="prog" id="prog"><i></i></div></div>'; ingest(await f.arrayBuffer(), f.name); };
 async function autoLoad(){ try{ toast('מנסה להוריד…'); const buf=await DM.tryDownload(dlUrl); $('doc').innerHTML='<div class="empty"><h2>מעבד את החוברת…</h2><div class="prog" id="prog"><i></i></div></div>'; ingest(buf,'dvar-malchus.pdf'); }
   catch(e){ toast('האתר לא מאפשר טעינה ישירה – השתמש בהורדה ובחירת הקובץ'); } }
-$('more').onclick=()=>{ if(confirm('לטעון חוברת חדשה במקום הנוכחית?')) emptyState(''); };
+$('more').onclick=()=>{ if(confirm('לטעון חוברת חדשה? החוברות הקודמות יישארו בארכיון עד שתסיים ללמוד אותן.')) emptyState(''); };
 
 function afterLoad(fresh){
-  TODAYDAY=DM.dayForLabel(IDX,todayLbl);
+  TODAYDAY=META.wk===wkId()?DM.dayForLabel(IDX,todayLbl):-1; bookTabs();
   const L=IDX.dayLabels||[]; $('week').textContent=(L[0]&&L[6]?L[0].replace(/^יום ראשון\s*/,'')+' – '+L[6].replace(/^שבת קודש\s*/,''):(META.name||''));
-  if(TODAYDAY<0){ toast('החוברת שטעונה אינה של השבוע הנוכחי'); } else DAY=TODAYDAY;
+  if(TODAYDAY<0){ if(META.wk>=wkId()) toast('החוברת שטעונה אינה של השבוע הנוכחי'); DAY=Math.min(DAY,6); } else DAY=TODAYDAY;
   if(V.subj!=='more' && !IDX.subjects[V.subj]) V.subj=Object.keys(IDX.subjects)[0];
   tabs(); show(); if(fresh) toast('החוברת נטענה ✓'); }
+// archive: one booklet per week, kept until it's all learned
+const bookName=wk=>{ const sh=weekStart(wk); sh.setDate(sh.getDate()+6); const c=chumashFor(sh,!!lsGet('home-v1',{}).diaspora); return (c?'פרשת '+c.he:hebOf(weekStart(wk)).label)+(wk===wkId()?' (השבוע)':''); };
+async function bookTabs(){ const L=await DM.listBooklets(), bt=$('bookTabs'); bt.innerHTML=''; bt.hidden=L.length<2; if(L.length<2) return;
+  L.forEach(e=>{ const b=document.createElement('button'); b.textContent=bookName(e.wk); b.className=e.wk===META.wk?'on':''; b.onclick=async()=>{ if(e.wk===META.wk) return; META=await DM.loadStored(null,e.wk); IDX=META.index; V.sec=null; afterLoad(false); }; bt.appendChild(b); }); }
+const sfx=()=>META&&META.wk!==wkId()?'@'+META.wk:'';
 function tabs(){ const st=$('subjTabs'); st.innerHTML='';
   DM.SUBJECTS.filter(s=>IDX.subjects[s.id]).forEach(s=>{ const b=document.createElement('button'); b.textContent=s.name; b.className=s.id===V.subj?'on':''; b.onclick=()=>{ V.subj=s.id; save(); tabs(); show(); }; st.appendChild(b); });
   if((IDX.sections||[]).length){ const b=document.createElement('button'); b.textContent='עוד בחוברת'; b.className=V.subj==='more'?'on':''; b.onclick=()=>{ V.subj='more'; V.sec=null; save(); tabs(); show(); }; st.appendChild(b); }
@@ -200,7 +207,7 @@ function tabs(){ const st=$('subjTabs'); st.innerHTML='';
 
 /* ---------- reader ---------- */
 let B=[], tops=[], hts=[], TOTAL=1, ready=false, curPos=0, io=null;
-const key=()=>V.subj==='more'?'sec:'+((IDX.sections[V.sec]||{}).title||V.sec):V.subj+':'+(IDX.dayLabels&&IDX.dayLabels[DAY]||DAY);
+const key=()=>V.subj==='more'?'sec:'+(META.wk||'')+((IDX.sections[V.sec]||{}).title||V.sec):V.subj+':'+(IDX.dayLabels&&IDX.dayLabels[DAY]||DAY);
 function cssW(){ return Math.min(innerWidth, 900*K)*V.zoom; }
 async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   if(V.subj==='more' && V.sec==null){ showList(); return; }
@@ -217,8 +224,9 @@ async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   $('line').style.display=''; $('shade').style.display=''; measure(); scrollToPos(V.pos[key()]||0); ready=true; update(); }
 function showList(){ const doc=$('doc'); doc.className=''; ready=false; B=[]; $('line').style.display='none'; $('shade').style.display='none';
   let h='<div class="secs"><h3>עוד בחוברת השבוע</h3><p>תכנים שאינם מחולקים לפי ימים – לבחירה לפי הזמן שלך.</p>';
-  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"><b></b><span>עמ׳ '+gem(s.from)+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(wkFrac('sec:'+s.from)>=1?' · ✓ נלמד':(lp||wkFrac('sec:'+s.from))?' · התחלת':'')+'</span></button>'; });
-  doc.innerHTML=h+'</div>'; doc.querySelectorAll('.secs button').forEach(b=>{ b.querySelector('b').textContent=IDX.sections[+b.dataset.i].title; b.onclick=()=>{ V.sec=+b.dataset.i; save(); show(); }; });
+  IDX.sections.forEach((s,i)=>{ const lp=V.pos['sec:'+s.title]; h+='<button data-i="'+i+'"><b></b><span>עמ׳ '+gem(s.from)+(s.to>s.from?'–'+gem(s.to):'')+' · כ־'+fmtMin(s.words/wpm)+(wkFrac('sec:'+s.from+sfx())>=1?' · ✓ נלמד':(lp||wkFrac('sec:'+s.from+sfx()))?' · התחלת':'')+'</span></button>'; });
+  if(META.wk<wkId()) h+='<button class="rmbook" id="rmbook">הסר את החוברת הזו מהארכיון</button>';
+  doc.innerHTML=h+'</div>'; if($('rmbook')) $('rmbook').onclick=async()=>{ if(!confirm('להסיר את חוברת '+bookName(META.wk)+' מהארכיון? מה שלא נלמד ממנה לא יוצע יותר.')) return; await DM.removeBooklet(META.wk); location.reload(); }; doc.querySelectorAll('.secs button[data-i]').forEach(b=>{ b.querySelector('b').textContent=IDX.sections[+b.dataset.i].title; b.onclick=()=>{ V.sec=+b.dataset.i; save(); show(); }; });
   update(); }
 
 function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight);
@@ -254,7 +262,7 @@ function update(){ $('spd').textContent=wpm;
   if(V.subj==='more'){ $('cur').textContent=(IDX.sections[V.sec]||{}).title||''; $('hdate').textContent='עוד בחוברת'; } else { $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':''); }
   $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; $('pct').textContent=Math.round(done*100)+'%';
   if(DAY===TODAYDAY && V.subj!=='more') setProgress('dm-'+V.subj,isoDate(today),left<2?1:done);
-  if(TODAYDAY>=0){ const sc=IDX.sections&&IDX.sections[V.sec]; const id=V.subj==='more'?(sc?'sec:'+sc.from:null):V.subj==='hayomyom'?'dm:hayomyom':(DAY<=TODAYDAY?'dm:'+V.subj+':'+DAY:null); if(id) wkSet(id,left<2?1:done); } }
+  const past=META&&META.wk<wkId(); if(TODAYDAY>=0||past){ const sc=IDX.sections&&IDX.sections[V.sec]; const id=V.subj==='more'?(sc?'sec:'+sc.from:null):V.subj==='hayomyom'?'dm:hayomyom':(past||DAY<=TODAYDAY?'dm:'+V.subj+':'+DAY:null); if(id) wkSet(id+sfx(),left<2?1:done); } }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); V.pos[key()]=curPos; update(); },{passive:true});
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); show().then(()=>scrollToPos(p)); });

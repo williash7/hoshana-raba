@@ -144,19 +144,39 @@ async function buildIndex(doc, onProgress){
   return index;
 }
 
-let DOC=null, META=null;
-let REIDX=null;
-export async function loadStored(onProgress){ if(META) return META; const m=await get('dm'); if(!m) return null;
-  if(!m.index || m.index.v!==IDXV){ // booklet stored by an older version: rebuild its index once
-    REIDX=REIDX||(async()=>{ const d=await pdfjs.getDocument({data:m.data.slice(0)}).promise; m.index=await buildIndex(d,onProgress); await put('dm',m); DOC=d; return m; })();
-    await REIDX; }
-  META=m; return m; }
-async function doc(){ if(DOC) return DOC; const m=await loadStored(); if(!m) throw new Error('no booklet'); DOC=await pdfjs.getDocument({data:m.data.slice(0)}).promise; return DOC; }
+/* ---------- booklet archive: one booklet per week (Sunday date), kept until everything in it is learned ----------
+   IndexedDB keys: 'dmlist' → [{wk,name,loadedAt}], 'dmidx:<wk>' → index, 'dmpdf:<wk>' → PDF bytes */
+const DOCS={}, IDXS={}; let LISTP=null;
+const sundayIso=d=>{ const x=new Date(d); x.setHours(12,0,0,0); x.setDate(x.getDate()-x.getDay()); return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); };
+// which week a booklet belongs to: the Sunday whose Hebrew date is the booklet's first day
+function weekOf(index){ const now=new Date(); now.setHours(12,0,0,0);
+  for(let k=-70;k<=21;k++){ const d=new Date(now); d.setDate(d.getDate()+k); if(d.getDay()!==0) continue; if(dayForLabel(index,globalThis.hebOf(d).label)===0) return sundayIso(d); }
+  for(let k=-70;k<=21;k++){ const d=new Date(now); d.setDate(d.getDate()+k); const i=dayForLabel(index,globalThis.hebOf(d).label); if(i>=0){ d.setDate(d.getDate()-i); return sundayIso(d); } }
+  return sundayIso(now); }
+async function migrate(){ const old=await get('dm'); if(!old) return;
+  let index=old.index; if(!index||index.v!==IDXV){ const d=await pdfjs.getDocument({data:old.data.slice(0)}).promise; index=await buildIndex(d); }
+  const wk=weekOf(index); await put('dmpdf:'+wk,old.data); await put('dmidx:'+wk,index);
+  const L=(await get('dmlist'))||[]; if(!L.some(x=>x.wk===wk)) L.push({wk,name:old.name,loadedAt:old.loadedAt||Date.now()}); await put('dmlist',L); await del('dm'); }
+async function del(k){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('files','readwrite'); tx.objectStore('files').delete(k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+export async function listBooklets(){ LISTP=LISTP||(async()=>{ await migrate(); return ((await get('dmlist'))||[]).sort((a,b)=>a.wk<b.wk?-1:1); })(); return LISTP; }
+let REIDX={};
+async function indexOf(wk,onProgress){ if(IDXS[wk]) return IDXS[wk];
+  let index=await get('dmidx:'+wk); if(!index) return null;
+  if(index.v!==IDXV){ REIDX[wk]=REIDX[wk]||(async()=>{ const data=await get('dmpdf:'+wk); const d=await pdfjs.getDocument({data:data.slice(0)}).promise; DOCS[wk]=d; const ix=await buildIndex(d,onProgress); await put('dmidx:'+wk,ix); return ix; })(); index=await REIDX[wk]; }
+  index.bk=wk; IDXS[wk]=index; return index; }
+// a booklet: {wk,name,loadedAt,index}; without wk → this week's booklet, or the newest one
+export async function loadStored(onProgress, wk){ const L=await listBooklets(); if(!L.length) return null;
+  const cur=sundayIso(new Date()); const e=wk?L.find(x=>x.wk===wk):(L.find(x=>x.wk===cur)||L[L.length-1]); if(!e) return null;
+  const index=await indexOf(e.wk,onProgress); return index?Object.assign({},e,{index}):null; }
+export async function loadAll(){ const L=await listBooklets(); const out=[]; for(const e of L){ const index=await indexOf(e.wk); if(index) out.push(Object.assign({},e,{index})); } return out; }
+export async function removeBooklet(wk){ await del('dmpdf:'+wk); await del('dmidx:'+wk); const L=((await get('dmlist'))||[]).filter(x=>x.wk!==wk); await put('dmlist',L); LISTP=null; delete IDXS[wk]; delete DOCS[wk]; }
+async function doc(wk){ if(DOCS[wk]) return DOCS[wk]; const data=await get('dmpdf:'+wk); if(!data) throw new Error('no booklet'); DOCS[wk]=await pdfjs.getDocument({data:data.slice(0)}).promise; return DOCS[wk]; }
 export async function importFile(buf,name,onProgress){
   const d=await pdfjs.getDocument({data:buf.slice(0)}).promise;
-  const index=await buildIndex(d,onProgress);
-  const m={data:buf,name,loadedAt:Date.now(),index};
-  await put('dm',m); META=m; DOC=d; return m; }
+  const index=await buildIndex(d,onProgress); const wk=weekOf(index);
+  await put('dmpdf:'+wk,buf); await put('dmidx:'+wk,index);
+  await listBooklets(); const L=((await get('dmlist'))||[]).filter(x=>x.wk!==wk); const e={wk,name,loadedAt:Date.now()}; L.push(e); await put('dmlist',L); LISTP=null;
+  index.bk=wk; IDXS[wk]=index; DOCS[wk]=d; return Object.assign({},e,{index}); }
 export async function tryDownload(url){ const r=await fetch(url,{cache:'no-store'}); if(!r.ok) throw new Error('HTTP '+r.status); return await r.arrayBuffer(); }
 
 /* which weekday column matches today's Hebrew date label (e.g. כ"ג תשרי) */
@@ -168,14 +188,14 @@ export function dayForLabel(index, hebLabel){ const n=norm(hebLabel); const L=in
 
 /* list of page slices for a subject/day: [{p, y0, y1, w, h, words}] (PDF units) */
 export function sectionSlices(index, i){ const s=(index.sections||[])[i]; if(!s) return []; const out=[];
-  for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c)); }); } return out; }
+  for(let p=s.from;p<=s.to;p++){ const pg=index.pages[p-1]; pieces(pg).forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); } return out; }
 /* reading-order pieces of a page: full-width parts as they are, two-column parts as right column then left column */
 function pieces(pg){ const bands=pg.bands||[[HEAD,pg.h-FOOT,'F',1,1]], out=[];
   bands.forEach((b,bi)=>{ if(b[2]==='F') out.push({bi,y0:b[0],y1:b[1],col:null}); else { if(b[3]) out.push({bi,y0:b[0],y1:b[1],col:'R'}); if(b[4]) out.push({bi,y0:b[0],y1:b[1],col:'L'}); } });
   return out; }
 const bandAt=(pg,y)=>{ const bs=pg.bands||[[HEAD,pg.h-FOOT,'F']]; let k=bs.findIndex(b=>y>=b[0]-2&&y<=b[1]+2); if(k<0){ k=0; bs.forEach((b,i)=>{ if(b[0]<=y) k=i; }); } return k; };
-function pieceSlice(pg,p,c){ const gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w]; const x0=c.col==='R'?gut[1]-3:c.col==='L'?ex[0]:0, x1=c.col==='R'?ex[1]:c.col==='L'?gut[0]+3:pg.w;
-  const frac=(c.y1-c.y0)*(x1-x0)/((pg.h-HEAD-FOOT)*pg.w); return {p,x0,x1,gx:(gut[0]+gut[1])/2,col:c.col||undefined,fit:!c.col&&!!(pg.bands&&pg.bands.some(b=>b[2]==='S'))||undefined,y0:c.y0,y1:c.y1,w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.02,frac))}; }
+function pieceSlice(pg,p,c,bk){ const gut=pg.gut||[pg.w/2-3,pg.w/2+3], ex=pg.ex||[0,pg.w]; const x0=c.col==='R'?gut[1]-3:c.col==='L'?ex[0]:0, x1=c.col==='R'?ex[1]:c.col==='L'?gut[0]+3:pg.w;
+  const frac=(c.y1-c.y0)*(x1-x0)/((pg.h-HEAD-FOOT)*pg.w); return {bk,p,x0,x1,gx:(gut[0]+gut[1])/2,col:c.col||undefined,fit:!c.col&&!!(pg.bands&&pg.bands.some(b=>b[2]==='S'))||undefined,y0:c.y0,y1:c.y1,w:pg.w,h:pg.h,words:Math.round(pg.words*Math.max(0.02,frac))}; }
 export function slices(index, subj, day){
   const S=index.subjects[subj]; if(!S) return []; const D=S.days[day]; if(!D) return [];
   const out=[]; const P=index.pages;
@@ -190,7 +210,7 @@ export function slices(index, subj, day){
         if(C==='R') return c.col==='R'?Object.assign({},c,{y1:Math.min(c.y1,E)}):null;
         if(C==='L') return c.col==='L'?Object.assign({},c,{y1:Math.min(c.y1,E)}):c;
         return Object.assign({},c,{y1:Math.min(c.y1,E)}); }).filter(Boolean); }
-    ps.forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c)); }); }
+    ps.forEach(c=>{ if(c.y1-c.y0>12) out.push(pieceSlice(pg,p,c,index.bk)); }); }
   return out; }
 
 /* printed line numbers inside a slice, in reading order */
@@ -214,7 +234,7 @@ export function unitPoints(index, sl){ const W=sl.reduce((a,b)=>a+b.words,0)||1;
 export function sliceBox(sl, pageCss, screenW){ const full=(sl.x1-sl.x0)>sl.w*0.8&&!sl.fit; const pc=full?pageCss:screenW*0.97*sl.w/(sl.x1-sl.x0)*Math.max(1,pageCss/(screenW*1.6));
   return {pageCss:pc, w:(sl.x1-sl.x0)*pc/sl.w, h:(sl.y1-sl.y0)*pc/sl.w}; }
 export async function renderSlice(sl, cssWidth, canvas){
-  const d=await doc(); const pg=await d.getPage(sl.p);
+  const d=await doc(sl.bk); const pg=await d.getPage(sl.p);
   const dpr=Math.min(3,window.devicePixelRatio||1); const scale=cssWidth/sl.w*dpr;
   const vp=pg.getViewport({scale});
   const full=document.createElement('canvas'); full.width=Math.ceil(vp.width); full.height=Math.ceil((sl.y1)*scale);

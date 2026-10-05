@@ -96,13 +96,18 @@ function tehToday(){ const now=new Date(), d=new Date(now); const night=now.getT
 /* weekly tracker: how much of each unit was learned this week (resets every Sunday).
    ids: chu:<weekday> tan:<weekday> teh:<hebrew day of month> dm:<subject>:<weekday> dm:hayomyom sec:<first page> */
 function wkId(){ const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-d.getDay()); return isoDate(d); }
-function wkAll(){ const W=lsGet('week-v1',null); return W&&W.wk===wkId()?W.u:{}; }
-function wkFrac(id){ return wkAll()[id]||0; }
+/* per-week tracker {<sunday>:{<unit>:fraction}}; a unit of an earlier week is written "<unit>@<sunday>" */
+const splitWk=id=>{ const i=String(id).indexOf('@'); return i<0?[id,wkId()]:[id.slice(0,i),id.slice(i+1)]; };
+function weekStart(wk){ const [y,m,d]=wk.split('-').map(Number); return new Date(y,m-1,d,12); }
+function trk(){ let T=lsGet('track-v2',null); if(!T){ T={}; const W=lsGet('week-v1',null); if(W&&W.u) T[W.wk]=W.u; lsSet('track-v2',T); } return T; }
+function wkAll(wk){ return trk()[wk||wkId()]||{}; }
+function wkFrac(id){ const [b,w]=splitWk(id); return (trk()[w]||{})[b]||0; }
 // one-time fix: Tanya progress recorded while only the first paragraph of the portion was shown
 (()=>{ try{ if(localStorage.getItem('fix-tanya-1')) return; const W=lsGet('week-v1',null); if(W&&W.u){ Object.keys(W.u).forEach(k=>{ if(k.startsWith('tan:')) delete W.u[k]; }); lsSet('week-v1',W); }
   const P=lsGet('progress-v1',{}); delete P.tanya; lsSet('progress-v1',P); localStorage.setItem('fix-tanya-1','1'); }catch(e){} })();
-function wkSet(id,f,force){ const u=wkAll(); f=Math.max(0,Math.min(1,f||0)); if(f>=0.98) f=1; f=Math.round(f*1000)/1000;
-  if(!force && f<=(u[id]||0)) return; if(f) u[id]=f; else delete u[id]; lsSet('week-v1',{wk:wkId(),u}); }
+function wkSet(id,f,force){ const [b,w]=splitWk(id); const T=trk(), u=T[w]||{}; f=Math.max(0,Math.min(1,f||0)); if(f>=0.98) f=1; f=Math.round(f*1000)/1000;
+  if(!force && f<=(u[b]||0)) return; if(f) u[b]=f; else delete u[b]; T[w]=u;
+  const old=isoDate(new Date(Date.now()-90*864e5)); Object.keys(T).forEach(k=>{ if(k<old) delete T[k]; }); lsSet('track-v2',T); }
 
 /* reading pace shared by all readers (words per minute) */
 function getWpm(){ return lsGet('pace-v1',{wpm:85}).wpm||85; }
