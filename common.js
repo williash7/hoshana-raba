@@ -131,6 +131,13 @@ async function partChumash(date,diaspora,rashi){ const c=chumashFor(date,diaspor
       h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>'; if(com.length) h+='<div class="rashi">'+com.map(s=>'<div>'+s+'</div>').join('')+'</div>';
       blocks.push({cls:'ps',html:h,w:wordsOf(v)+wordsOf(com.join(' ')),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); });
   return {title:'חומש · '+c.he+' · '+c.aliyahName, blocks}; }
+/* Korbanos before Mincha (Chabad nusach) */
+const KORB_PARTS=['פרשת התמיד','ושחט אותו','אתה הוא','פרשת הקטורת','פיטום הקטורת','רבן שמעון בן גמליאל','תניא רבי נתן','תניא בר קפרא','ה׳ צבאות עמנו'];
+const KORB_WORDS=()=>wcGet('korbanot')||750;
+async function partKorbanot(){ const txt=await sefText('Weekday Siddur Chabad, Mincha, Korbanot','hebrew');
+  const blocks=[{cls:'head',html:'<h3>סדר הקרבנות</h3><small>לפני תפילת מנחה</small>',w:2,mark:'קרבנות'}];
+  flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach((p,i)=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:KORB_PARTS[i]||'קרבנות'}));
+  wcSet('korbanot',blocks.reduce((a,b)=>a+b.w,0)); return {title:'קרבנות למנחה', blocks}; }
 async function partTanya(date){ const cal=await sefCalendar(date); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(!it) throw new Error('no tanya');
   const txt=await sefText(it.ref,'hebrew'); const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+(txt.heRef||it.heRef||it.ref)+'</small>',w:2,mark:'תניא'}];
   flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach(p=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:'תניא'}));

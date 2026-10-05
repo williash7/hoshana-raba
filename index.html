@@ -100,6 +100,8 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .more summary{cursor:pointer;color:var(--gold);font-size:calc(14.5px*var(--k));padding:calc(4px*var(--k)) 0}
 .more .fp button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(13px*var(--k));flex:none}
 .flow a{color:var(--gold)}
+.fp.korb{border-bottom:0;padding-top:0}
+.fp.korb small{display:block}
 .seg.dk{background:var(--night2)}
 .seg.dk button{color:var(--ink)}
 .seg.dk button.on{background:var(--gold);color:#241c08}
@@ -137,6 +139,7 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
     <h3>תוכנית לימוד</h3>
     <p class="hint">כמה זמן יש לך עכשיו? קודם חת״ת ורמב״ם – של היום ומה שהוחסר השבוע – ואם נשאר זמן, משאר החוברת.</p>
     <div class="row" style="padding:calc(4px*var(--k)) 0"><span>לומד מתוך</span><div class="seg dk" id="mode"><button data-v="screen">המסך</button><button data-v="print">החוברת המודפסת</button></div></div>
+    <label class="fp korb"><input type="checkbox" id="korbOn"><span>לפני מנחה – לסיים בקרבנות<small id="korbHint"></small></span></label>
     <div class="times" id="times"></div>
     <div id="plan"></div>
     <div class="flowSum" id="flowSum"></div>
@@ -257,19 +260,25 @@ function slOf(id){ const a=id.split(':'), I=DMX.index, DM=DMX.DM;
   if(a[0]==='chu') return DM.slices(I,'chumash',+a[1]); if(a[0]==='tan') return DM.slices(I,'tanya',+a[1]);
   if(a[0]==='dm') return DM.slices(I,a[1],a[2]!=null?+a[2]:DMX.day);
   if(a[0]==='sec'){ const i=(I.sections||[]).findIndex(x=>x.from===+a[1]); return i<0?null:DM.sectionSlices(I,i); } return null; }
+// Korbanos before Mincha: on by default between midday and sunset (until said today)
+function korbOn(){ if(P.korb!=null) return !!P.korb; const n=new Date(); return n.getHours()>=12 && n.getTime()<sunsetMs(n) && getProgress('korbanot',isoDate(today))<1; }
 function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
   const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
   const rest=open.filter(u=>(u.g===2||u.g===3)&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
-  const wpm=pace(), budget=P.min*wpm; let acc=0; const sel=[];
+  const wpm=pace(); let budget=P.min*wpm, acc=0; const sel=[];
+  let KB=null; if(korbOn()){ const kw=KORB_WORDS()*(PR()?pace()/printWpm():1); KB={u:{id:'korb',name:'קרבנות למנחה',g:-1,f:0,w:kw,rem:kw,korb:1},w:kw}; budget-=kw; }
   for(const u of pri.concat(pins,rest)){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
     else { const left=budget-acc; if(left>=3*wpm) sel.push({u,w:left,partial:true}); break; } }
+  if(KB) sel.push(KB);
   return {sel,all,open}; }
-const label=u=>u.name+(u.d!=null?' <em>· '+dayTag(u.d)+'</em>':u.sec?' <em>· מהחוברת</em>':'');
+const label=u=>u.name+(u.korb?' <em>· בסוף, לפני אשרי</em>':u.d!=null?' <em>· '+dayTag(u.d)+'</em>':u.sec?' <em>· מהחוברת</em>':'');
 function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.createElement('label'); d.className='fp'+(cls?' '+cls:'');
   d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
   if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
 function renderFlow(){
+  $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; savePlan(); renderFlow(); };
+  $('korbHint').textContent=getProgress('korbanot',isoDate(today))>=1?'כבר נאמרו היום ✓':'כ־'+fmtMin(mm(KORB_WORDS()*(PR()?pace()/printWpm():1)))+' שמורות לקרבנות, והשאר ללימוד';
   $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
   $('startFlow').textContent=PR()?'התחל – עם מדידת זמן ⏱':'התחל ▶';
   const tb=$('times'); tb.innerHTML='<b>יש לי:</b>'; const TM=[10,15,20,30,45,60];
@@ -279,13 +288,14 @@ function renderFlow(){
   const {sel,all,open}=plan(); const box=$('plan'); box.innerHTML='';
   sel.forEach(s=>{ const u=s.u;
     row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך':''),
-      '✓ למדתי',()=>{ wkSet(u.id,1,true); renderFlow(); }, true, ()=>{ if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
+      u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb){ P.korb=false; savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
   const tot=sel.reduce((a,s)=>a+s.w,0);
   $('startFlow').disabled=!sel.length;
+  const studyN=sel.filter(s=>!s.u.korb).length;
   const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
-  $('flowSum').innerHTML=!sel.length?(open.some(u=>u.g<=1)?'הורדת את כל השיעורים מהתוכנית.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
+  $('flowSum').innerHTML=(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(open.some(u=>u.g<=1)?'הורדת את כל השיעורים מהתוכנית.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
     'התוכנית: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(P.min)+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
-    (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':'');
+    (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
   $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+P.min; };
   // weekly status
   const core=all.filter(u=>u.g<=1), cd=core.filter(u=>u.f>=1).length, missed=core.filter(u=>u.g===1&&u.f<1);

@@ -97,7 +97,7 @@ const UNITS=(Q.get('u')||'').split(',').filter(Boolean).map(x=>{ const [id,w]=x.
 /* ---------- state (kept across reloads / screen lock) ---------- */
 const SIG=isoDate(today)+'|'+(Q.get('u')||'')+'|'+BUDGET;
 let S=lsGet('track-v1',null);
-if(!S||S.sig!==SIG) S={sig:SIG, cur:0, since:null, items:UNITS.map(u=>({id:u.id,plan:u.plan,end:u.end,f0:wkFrac(u.id),f:null,ms:0,st:''}))};
+if(!S||S.sig!==SIG) S={sig:SIG, cur:0, since:null, items:UNITS.map(u=>({id:u.id,plan:u.plan,end:u.end,f0:u.id==='korb'?0:wkFrac(u.id),f:null,ms:0,st:''}))};
 const save=()=>lsSet('track-v1',S);
 const runMs=()=>S.since?Date.now()-S.since:0;
 const itemMs=i=>S.items[i].ms+(i===S.cur?runMs():0);
@@ -122,6 +122,7 @@ const unitsIn=(I,a,b)=>I.pts?I.pts.filter(p=>p.f>=a-0.0005&&p.f<b-0.0005).length
 function estimate(I,a,b){ return estMinPrint(I.W*(b-a), I.kind, unitsIn(I,a,b)); }
 function info(id){ const a=id.split(':');
   const dmDay=(subj,d)=>{ const D=IDX&&IDX.subjects[subj]&&IDX.subjects[subj].days[d]; return D&&D.label?'מתחיל בכותרת „'+D.label.replace(/\s+/g,' ')+'”':''; };
+  if(a[0]==='korb') return {name:'קרבנות למנחה',tag:'מהסידור',where:'מתוך הסידור: <b>פרשת התמיד</b> עד <b>„וערבה לה׳”</b>, ואחר כך אשרי ומנחה',W:KORB_WORDS()};
   if(a[0]==='teh'){ let t=T, dd=null; for(let d=0;d<=WD;d++){ const x=tehFor(dateOf(d)); if(x.day===+a[1]){ t=x; dd=d; } }
     return {name:'תהילים',tag:dd!=null?dayTag(dd):'',where:'מתוך ספר התהילים שלך: <b>מזמורים '+t.range+'</b> (יום '+gq(+a[1])+' לחודש)',W:tehWords(+a[1],t.short)||800}; }
   const subj=a[0]==='chu'?'chumash':a[0]==='tan'?'tanya':a[0]==='dm'?a[1]:null;
@@ -183,6 +184,7 @@ function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; s
   it.f=Math.max(it.f0,f); it.st=f>=0.999?'done':'part'; wkSet(it.id,it.f,true);
   if(I.kind) learnUnitPace(I.kind, unitsIn(I,it.f0,it.f>=0.999?1.01:it.f), it.ms); else learnPrintWpm((it.f-it.f0)*I.W, it.ms);
   if(it.id==='chu:'+WD) setProgress('chumash',isoDate(today),it.f); if(it.id==='tan:'+WD) setProgress('tanya',isoDate(today),it.f); if(it.id==='teh:'+T.day) setProgress('tehillim',T.key,it.f);
+  if(it.id==='korb') setProgress('korbanot',isoDate(today),it.f);
   pick=-1; pickSl=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
 const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); const h=Math.floor(s/3600); return (neg?'-':'')+(h?h+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0'); };
 function tick(){ const tot=totalMs(), left=BUDGET*6e4-tot;

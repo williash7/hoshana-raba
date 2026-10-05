@@ -158,7 +158,7 @@ function uName(id){ const a=id.split(':'); const tag=d=>+d===WD?'':' ('+DSHORT[+
   if(a[0]==='chu') return 'חומש'+tag(a[1]); if(a[0]==='tan') return 'תניא'+tag(a[1]);
   if(a[0]==='teh') return 'תהילים'+(+a[1]===T.day?'':' ('+gq(+a[1])+')');
   if(a[0]==='dm') return (DMN[a[1]]||a[1])+(a[2]!=null?tag(a[2]):'');
-  if(a[0]==='sec') return 'מהחוברת'; return id; }
+  if(a[0]==='sec') return 'מהחוברת'; if(a[0]==='korb') return 'קרבנות'; return id; }
 const NAMES={}; UNITS.forEach(u=>NAMES[u.id]=uName(u.id));
 let fit=Q.get('fit')!=='0';
 let wpm=getWpm();
@@ -188,6 +188,7 @@ function loadUnit(id){ const a=id.split(':');
   if(a[0]==='teh') return Promise.resolve(partTehillim(+a[1]));
   if(a[0]==='dm') return partDvar(a[1],a[2]!=null?+a[2]:null);
   if(a[0]==='sec') return partSection(+a[1]);
+  if(a[0]==='korb') return partKorbanot();
   return Promise.reject(new Error('?')); }
 function dmW(){ return Math.min(innerWidth,900*K)*(DMV.zoom||1.6); }
 const dmIO=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); c.style.width='100%'; el._c=c; el.firstChild.firstChild.appendChild(c); DMmod.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
@@ -199,18 +200,18 @@ async function load(){
   $('doc').innerHTML='<div class="t msg">טוען…</div>';
   const res=await Promise.all(UNITS.map(u=>loadUnit(u.id).then(r=>({u,r})).catch(e=>({u,err:e}))));
   $('doc').innerHTML=''; B=[]; PB=[]; let goalAt=null;
-  res.forEach(({u,r,err})=>{ const p=u.id, start=B.length;
+  res.forEach(({u,r,err},ui)=>{ const p=u.id, start=B.length; const more=ui<res.length-1; let cut=false;
     if(err){ add('part',NAMES[p],1,NAMES[p],p); add('msg','לא הצלחתי לטעון את '+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div>',1,NAMES[p],p); PB.push({p,start,end:B.length,err:true,S:0,W:1}); return; }
     const W=r.blocks.reduce((a,b)=>a+Math.max(1,b.w),0); const a=p.split(':');
     if(a[0]==='chu') wcSet('chumash:'+isoDate(dateOf(+a[1])),W); if(a[0]==='tan') wcSet('tanya:'+isoDate(dateOf(+a[1])),W);
     // skip what was already learned this week
-    const f0=wkFrac(p); let S=0, k=0; while(k<r.blocks.length-1 && S+Math.max(1,r.blocks[k].w)<=f0*W){ S+=Math.max(1,r.blocks[k].w); k++; }
+    const f0=p==='korb'?0:wkFrac(p); let S=0, k=0; while(k<r.blocks.length-1 && S+Math.max(1,r.blocks[k].w)<=f0*W){ S+=Math.max(1,r.blocks[k].w); k++; }
     add('part',(r.title||NAMES[p])+(S>0?' <small style="font-family:var(--ui);font-size:.65em;color:var(--muted)">· המשך</small>':''),1,NAMES[p],p);
     let got=0; if(u.end!=null) u.plan=Math.max(1,u.end*W-S);
-    r.blocks.slice(k).forEach(b=>{ add(b.cls,b.html,b.w,b.mark,p); got+=Math.max(1,b.w);
+    r.blocks.slice(k).forEach(b=>{ if(cut) return; add(b.cls,b.html,b.w,b.mark,p); got+=Math.max(1,b.w);
       if(b.sl){ const el=B[B.length-1].el; el._sl=b.sl; const bx=DMmod.sliceBox(b.sl,dmW(),Math.min(innerWidth,600*K)); b.sl._pc=bx.pageCss; el.innerHTML='<div class="dmx"><div style="width:'+bx.w+'px;height:'+bx.h+'px;margin-left:auto"></div></div>'; dmIO.observe(el); }
-      if(u.plan && goalAt==null && got>=u.plan){ goalAt=B.length; add('goal','<b>כאן מסתיים הזמן שתכננת</b>אפשר לעצור כאן – בפעם הבאה תמשיך מכאן. או להמשיך הלאה.',1,'יעד',p); } });
-    PB.push({p,start,end:B.length,S,W}); });
+      if(u.plan && goalAt==null && got>=u.plan){ if(more){ cut=true; add('goal','<b>עד כאן לעכשיו</b>בפעם הבאה תמשיך מכאן. ממשיכים ל'+NAMES[res[ui+1].u.id]+'.',1,'יעד',p); } else { goalAt=B.length; add('goal','<b>כאן מסתיים הזמן שתכננת</b>אפשר לעצור כאן – בפעם הבאה תמשיך מכאן. או להמשיך הלאה.',1,'יעד',p); } } });
+    PB.push({p,start,end:B.length,S,W,G:got}); });
   add('end','<b>סיום הלימוד</b><a href="./">חזרה למסך הבית</a>',2,'סיום',null);
   let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
   PB.forEach(x=>{ x.a=B[x.start].cum+1; x.z=B[x.end-1].cum+B[x.end-1].w; });
@@ -258,11 +259,11 @@ function update(){ const lm=leftMs(); $('clock').textContent=mmss(lm); $('clockL
   if(!ready) return;
   const p=curPos; $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
   const box=$('parts'); box.innerHTML='';
-  PB.forEach(x=>{ const i=document.createElement('i'); const fr=Math.max(0,Math.min(1,(p-x.a)/Math.max(1,x.z-x.a))); const uf=x.err?0:Math.min(1,(x.S+fr*(x.W-x.S))/x.W);
-    const dn=!x.err&&(uf>=0.98||fr>=0.98); i.textContent=NAMES[x.p]+(dn?' ✓':''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); box.appendChild(i);
-    if(!x.err && p>=x.a-0.5){ wkSet(x.p,fr>=0.98?1:uf);
-      const a=x.p.split(':'); if(a[0]==='chu'&&+a[1]===WD) setProgress('chumash',isoDate(today),fr>=0.98?1:uf); if(a[0]==='tan'&&+a[1]===WD) setProgress('tanya',isoDate(today),fr>=0.98?1:uf);
-      if(a[0]==='teh'&&+a[1]===T.day) setProgress('tehillim',T.key,fr>=0.98?1:uf); } });
+  PB.forEach(x=>{ const i=document.createElement('i'); const fr=Math.max(0,Math.min(1,(p-x.a)/Math.max(1,x.z-x.a))); const uf=x.err?0:Math.min(1,(x.S+fr*(x.G!=null?x.G:x.W-x.S))/x.W);
+    const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; i.textContent=NAMES[x.p]+(dn?' ✓':''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); box.appendChild(i);
+    if(!x.err && p>=x.a-0.5){ if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else wkSet(x.p,v);
+      const a=x.p.split(':'); if(a[0]==='chu'&&+a[1]===WD) setProgress('chumash',isoDate(today),v); if(a[0]==='tan'&&+a[1]===WD) setProgress('tanya',isoDate(today),v);
+      if(a[0]==='teh'&&+a[1]===T.day) setProgress('tehillim',T.key,v); } });
   const tgt=p<GOAL-1?GOAL:TOTAL, lw=Math.max(0,tgt-p), need=lw/wpm;
   $('left').innerHTML=TOTAL-p<3?'<b>✓ סיימת</b>':(tgt===GOAL&&GOAL<TOTAL-2?'עד היעד ':'נשאר ')+'כ־<b>'+fmtMin(need)+'</b> בקצב הזה';
   $('pace').innerHTML=lw<3?(TOTAL-p<3?'':'<span class="fit">הגעת ליעד ✓</span>'):(need<=lm/6e4+0.05?'<span class="fit">מספיק בזמן</span>':'<span class="nofit">חסרות '+fmtMin(need-lm/6e4)+'</span>');

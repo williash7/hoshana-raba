@@ -180,9 +180,8 @@ async function loadTanya(){ $('title').textContent='תניא יומי'; const h=
   finish('<b>סיום התניא היומי</b><a href="./">חזרה למסך הבית</a>'); }
 
 /* Korbanos before Mincha – Chabad nusach (Siddur Tehillat Hashem order), from Sefaria's Weekday Siddur Chabad */
-const KORB_PARTS=['פרשת התמיד','ושחט אותו','אתה הוא','פרשת הקטורת','פיטום הקטורת','רבן שמעון בן גמליאל','תניא רבי נתן','תניא בר קפרא','ה׳ צבאות עמנו'];
 async function loadKorbanot(){ $('title').textContent='קרבנות למנחה'; $('sub').textContent='נוסח חב״ד'; document.title='קרבנות – לפני מנחה';
-  const seq=loadSeq; const txt=await sefText('Weekday Siddur Chabad, Mincha, Korbanot','hebrew'); if(seq!==loadSeq) return;
+  const seq=loadSeq; const txt=await sefText('Weekday Siddur Chabad, Mincha, Korbanot','hebrew'); if(seq!==loadSeq) return; wcSet('korbanot',flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).reduce((a,p)=>a+wordsOf(p),0));
   $('doc').innerHTML=''; B=[]; MARK=[];
   block('head','<h3>סדר הקרבנות</h3><small>לפני תפילת מנחה</small>',2,'קרבנות');
   flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach((p,i)=>block('par','<p>'+p+'</p>',words(p),KORB_PARTS[i]||'קרבנות'));
