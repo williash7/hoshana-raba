@@ -170,12 +170,10 @@ async function loadChumash(){ const c=chumashFor(dayDate(),!!HOME.diaspora);
   finish('<b>סיום חומש היום</b>'+(c.aliyah<6?'פרשת '+c.he+' – '+c.aliyahName:'')+'<br><a href="./">חזרה למסך הבית</a>'); }
 
 async function loadTanya(){ $('title').textContent='תניא יומי'; const h=hebOf(dayDate()); $('sub').textContent=h.label; document.title='תניא יומי – '+h.label;
-  const seq=loadSeq; const cal=await sefCalendar(dayDate()); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi');
-  if(!it){ showMsg('לא נמצא שיעור תניא לתאריך הזה.'); return; }
-  const txt=await sefText(it.ref,'hebrew'); if(seq!==loadSeq) return;
+  const seq=loadSeq; let P; try{ P=await tanyaPortion(dayDate()); }catch(e){ if(String(e.message)!=='no tanya') throw e; showMsg('לא נמצא שיעור תניא לתאריך הזה.'); return; } if(seq!==loadSeq) return;
   $('doc').innerHTML=''; B=[]; MARK=[];
-  block('head','<h3>תניא יומי – '+h.label+'</h3><small>'+(txt.heRef||it.heRef||it.ref)+'</small>',2,'תניא');
-  flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach((p,i)=>block('par','<p>'+p+'</p>',words(p),'קטע '+gem(i+1)));
+  block('head','<h3>תניא יומי – '+h.label+'</h3><small>'+P.heRef+'</small>',2,'תניא');
+  P.segs.map(clean).filter(Boolean).forEach((p,i)=>block('par','<p>'+p+'</p>',words(p),'קטע '+gem(i+1)));
   const s=document.createElement('div'); s.className='src'; s.textContent='הטקסט מספריא (Sefaria)'; B[B.length-1].el.appendChild(s);
   finish('<b>סיום התניא היומי</b><a href="./">חזרה למסך הבית</a>'); }
 

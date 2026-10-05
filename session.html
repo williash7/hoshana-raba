@@ -213,7 +213,7 @@ async function load(){
   res.forEach(({u,r,err},ui)=>{ const p=u.id, start=B.length; const more=ui<res.length-1; let cut=false;
     if(err){ add('part',NAMES[p],1,NAMES[p],p); add('msg','לא הצלחתי לטעון את '+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div>',1,NAMES[p],p); PB.push({p,start,end:B.length,err:true,S:0,W:1}); return; }
     const W=r.blocks.reduce((a,b)=>a+Math.max(1,b.w),0); const a=p.split(':');
-    if(a[0]==='chu') wcSet('chumash:'+isoDate(dateOf(+a[1])),W); if(a[0]==='tan') wcSet('tanya:'+isoDate(dateOf(+a[1])),W);
+    if(a[0]==='chu') wcSet('chumash:'+isoDate(dateOf(+a[1])),W); if(a[0]==='tan') wcSet('tanyaP:'+isoDate(dateOf(+a[1])),W);
     // skip what was already learned this week
     const f0=p==='korb'?0:wkFrac(p); let S=0, k=0; while(k<r.blocks.length-1 && S+Math.max(1,r.blocks[k].w)<=f0*W){ S+=Math.max(1,r.blocks[k].w); k++; }
     add('part',(r.title||NAMES[p])+(S>0?' <small style="font-family:var(--ui);font-size:.65em;color:var(--muted)">· המשך</small>':''),1,NAMES[p],p);

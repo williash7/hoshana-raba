@@ -93,6 +93,9 @@ function tehToday(){ const now=new Date(), d=new Date(now); const night=now.getT
 function wkId(){ const d=new Date(); d.setHours(12,0,0,0); d.setDate(d.getDate()-d.getDay()); return isoDate(d); }
 function wkAll(){ const W=lsGet('week-v1',null); return W&&W.wk===wkId()?W.u:{}; }
 function wkFrac(id){ return wkAll()[id]||0; }
+// one-time fix: Tanya progress recorded while only the first paragraph of the portion was shown
+(()=>{ try{ if(localStorage.getItem('fix-tanya-1')) return; const W=lsGet('week-v1',null); if(W&&W.u){ Object.keys(W.u).forEach(k=>{ if(k.startsWith('tan:')) delete W.u[k]; }); lsSet('week-v1',W); }
+  const P=lsGet('progress-v1',{}); delete P.tanya; lsSet('progress-v1',P); localStorage.setItem('fix-tanya-1','1'); }catch(e){} })();
 function wkSet(id,f,force){ const u=wkAll(); f=Math.max(0,Math.min(1,f||0)); if(f>=0.98) f=1; f=Math.round(f*1000)/1000;
   if(!force && f<=(u[id]||0)) return; if(f) u[id]=f; else delete u[id]; lsSet('week-v1',{wk:wkId(),u}); }
 
@@ -138,7 +141,21 @@ async function partKorbanot(){ const txt=await sefText('Weekday Siddur Chabad, M
   const blocks=[{cls:'head',html:'<h3>סדר הקרבנות</h3><small>לפני תפילת מנחה</small>',w:2,mark:'קרבנות'}];
   flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach((p,i)=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:KORB_PARTS[i]||'קרבנות'}));
   wcSet('korbanot',blocks.reduce((a,b)=>a+b.w,0)); return {title:'קרבנות למנחה', blocks}; }
-async function partTanya(date){ const cal=await sefCalendar(date); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(!it) throw new Error('no tanya');
-  const txt=await sefText(it.ref,'hebrew'); const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+(txt.heRef||it.heRef||it.ref)+'</small>',w:2,mark:'תניא'}];
-  flat(txt.versions&&txt.versions[0]&&txt.versions[0].text).map(clean).filter(Boolean).forEach(p=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:'תניא'}));
+/* Tanya Yomi: Sefaria's calendar gives only where each day's portion STARTS (e.g. "…Iggeret HaKodesh 24:1"),
+   so the portion runs from today's start up to tomorrow's start */
+const splitRef=r=>{ const m=String(r).match(/^(.*?)\s(\d+)(?::(\d+))?$/); return m?{book:m[1],ch:+m[2],seg:m[3]?+m[3]:1}:null; };
+async function tanyaStart(date){ const cal=await sefCalendar(date); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(!it) throw new Error('no tanya'); return it; }
+async function chapSegs(book,ch){ const j=await sefText(book+' '+ch,'hebrew'); return {segs:flat(j.versions&&j.versions[0]&&j.versions[0].text), he:j.heRef||''}; }
+async function tanyaPortion(date){ const it=await tanyaStart(date);
+  if(/-/.test(it.ref)){ const j=await sefText(it.ref,'hebrew'); return {segs:flat(j.versions&&j.versions[0]&&j.versions[0].text), heRef:j.heRef||it.heRef||it.ref, it}; }
+  const nx=new Date(date); nx.setDate(nx.getDate()+1); let nit=null; try{ nit=await tanyaStart(nx); }catch(e){}
+  const A=splitRef(it.ref), Bn=nit?splitRef(nit.ref):null; if(!A){ const j=await sefText(it.ref,'hebrew'); return {segs:flat(j.versions[0].text),heRef:j.heRef||it.ref,it}; }
+  const out=[]; const first=await chapSegs(A.book,A.ch);
+  if(Bn&&Bn.book===A.book&&Bn.ch===A.ch){ out.push(...first.segs.slice(A.seg-1,Math.max(A.seg,Bn.seg-1))); }
+  else { out.push(...first.segs.slice(A.seg-1));
+    if(Bn&&Bn.book===A.book){ for(let c=A.ch+1;c<Bn.ch;c++) out.push(...(await chapSegs(A.book,c)).segs); if(Bn.seg>1) out.push(...(await chapSegs(Bn.book,Bn.ch)).segs.slice(0,Bn.seg-1)); }
+    else if(Bn&&Bn.seg>1){ out.push(...(await chapSegs(Bn.book,Bn.ch)).segs.slice(0,Bn.seg-1)); } }
+  return {segs:out, heRef:(first.he||it.heRef||it.ref).replace(/[:׃]\s*\S+$/,''), it}; }
+async function partTanya(date){ const P=await tanyaPortion(date); const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+P.heRef+'</small>',w:2,mark:'תניא'}];
+  P.segs.map(clean).filter(Boolean).forEach(p=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:'תניא'}));
   return {title:'תניא · '+hebOf(date).label, blocks}; }

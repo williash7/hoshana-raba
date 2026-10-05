@@ -255,7 +255,7 @@ const SKIPSEC=/מפתח|הנחת תפילין|לוח|זמני|מזמורי תה�
 function catalog(){ const out=[], days=[WD].concat([...Array(WD).keys()]);
   const ok=DMX&&DMX.day>=0, dmW=(s,d)=>DMX.DM.slices(DMX.index,s,d).reduce((a,b)=>a+b.words,0);
   days.forEach(d=>{ const g=d===WD?0:1, dt=dateOf(d), iso=isoDate(dt);
-    const CH={chumash:()=>{ const w=PR()&&ok?dmW('chumash',d):wcGet('chumash:'+iso); out.push({id:'chu:'+d,g,d,name:'חומש',w:w||900,est:!w}); }, tehillim:()=>{ const t=tehFor(dt); out.push({id:'teh:'+t.day,g,d,name:'תהילים',w:tehWords(t.day,t.short)||800}); }, tanya:()=>{ const w=PR()&&ok?dmW('tanya',d):wcGet('tanya:'+iso); out.push({id:'tan:'+d,g,d,name:'תניא',w:w||700,est:!w}); } };
+    const CH={chumash:()=>{ const w=PR()&&ok?dmW('chumash',d):wcGet('chumash:'+iso); out.push({id:'chu:'+d,g,d,name:'חומש',w:w||900,est:!w}); }, tehillim:()=>{ const t=tehFor(dt); out.push({id:'teh:'+t.day,g,d,name:'תהילים',w:tehWords(t.day,t.short)||800}); }, tanya:()=>{ const w=PR()&&ok?dmW('tanya',d):wcGet('tanyaP:'+iso); out.push({id:'tan:'+d,g,d,name:'תניא',w:w||700,est:!w}); } };
     H.order.filter(k=>CH[k]&&H.on[k]).forEach(k=>CH[k]());
     if(ok) H.dm.filter(s=>RAMBAM.includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d,g,d,name:DMNAME[s],w}); }); });
   if(ok){ days.forEach(d=>H.dm.filter(s=>!RAMBAM.includes(s)&&!['chumash','tanya','hayomyom'].includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d,g:2,d,name:DMNAME[s],w}); }));
@@ -352,8 +352,8 @@ import('./dm.js').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTAT
   DMI=DM.todayInfo(m.index, hebOf(today).label); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; DMX={DM,index:m.index,day:DM.dayForLabel(m.index,hebOf(today).label)}; render(); renderFlow(); }).catch(()=>{}).finally(()=>{ if(GO){ const b=$('startFlow'); if(!b.disabled) b.click(); else $('flow').scrollIntoView(); } });
 // count words of today's Chumash / Tanya in the background for accurate estimates
 (async()=>{ for(let d=WD;d>=0;d--){ const dt=dateOf(d), iso=isoDate(dt); for(const k of ['chumash','tanya']){ const id=(k==='chumash'?'chu:':'tan:')+d;
-  if(!H.on[k] || wcGet(k+':'+iso) || wkFrac(id)>=1) continue;
-  try{ const r=await (k==='chumash'?partChumash(dt,!!H.diaspora,true):partTanya(dt)); wcSet(k+':'+iso, r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }catch(e){} } } })();
+  const wk=(k==='tanya'?'tanyaP':k)+':'+iso; if(!H.on[k] || wcGet(wk) || wkFrac(id)>=1) continue;
+  try{ const r=await (k==='chumash'?partChumash(dt,!!H.diaspora,true):partTanya(dt)); wcSet(wk, r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }catch(e){} } } })();
 if(H.on.tanya){ sefCalendar(today).then(cal=>{ const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(it){ tanyaText=(it.heRef||it.ref).replace(/^תניא,?\s*/,''); render(); } }).catch(()=>{}); }
 // install: offer the browser's install prompt, or explain how (hidden when already running as the app)
 { const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone; let DP=null;
