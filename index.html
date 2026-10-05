@@ -163,6 +163,8 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
     <h3>שיעורים מתוך דבר מלכות</h3>
     <p class="hint">יופיעו בלימוד ברצף כשחוברת השבוע טעונה.</p>
     <div id="dmMods"></div>
+    <h3>מראה המסך</h3>
+    <div class="row"><span>צבעים</span><div class="seg" id="themeSeg"><button data-v="auto">לפי הטלפון</button><button data-v="light">בהיר</button><button data-v="dark">כהה</button></div></div>
     <h3>פרשת השבוע לפי</h3>
     <div class="row"><span>מנהג המקום</span><div class="seg" id="dia"><button data-v="0">ארץ ישראל</button><button data-v="1">חוץ לארץ</button></div></div>
   </div>
@@ -228,6 +230,8 @@ function renderPanel(){ const box=$('mods'); box.innerHTML='';
     d.querySelector('input').onchange=e=>{ H.on[k]=e.target.checked?1:0; save(); render(); };
     const [u,dn]=d.querySelectorAll('.ord button'); u.onclick=()=>mv(i,-1); dn.onclick=()=>mv(i,1); box.appendChild(d); });
   renderDmPanel();
+  $('themeSeg').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===(MAIN.theme||'auto')); b.onclick=()=>{ MAIN.theme=b.dataset.v; const A=lsGet('hoshana-raba-v2',{}); A.theme=MAIN.theme; lsSet('hoshana-raba-v2',A);
+    if(MAIN.theme==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',MAIN.theme); renderPanel(); }; });
   $('dia').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',+b.dataset.v===(H.diaspora?1:0)); b.onclick=()=>{ H.diaspora=+b.dataset.v; save(); render(); }; }); }
 const DMS=[['chumash','חומש'],['tanya','תניא'],['hayomyom','היום יום'],['rambam3','רמב״ם – ג׳ פרקים'],['rambam1','רמב״ם – פרק אחד'],['sm','ספר המצוות'],['halacha','הלכה יומית ברמב״ם'],['mishna','משנה'],['gemara','גמרא יומית'],['rav','שו״ע הרב – רב יומי']];
 function renderDmPanel(){ const box=$('dmMods'); box.innerHTML='';

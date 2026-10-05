@@ -103,6 +103,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .dmx{overflow-x:auto;direction:rtl}
 .dmx canvas{display:block}
 :root[data-theme="dark"] .dmx canvas{filter:invert(.88) hue-rotate(180deg)}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) .dmx canvas{filter:invert(.88) hue-rotate(180deg)} }
 .t.goal{background:var(--gold);color:#241c08;font-family:var(--ui);text-align:center;padding:calc(12px*var(--k)) calc(18px*var(--k));font-size:calc(14px*var(--k));margin:calc(6px*var(--k)) 0}
 .t.goal b{display:block;font-family:var(--serif);font-size:calc(19px*var(--k))}
 .bar .tick.goal{background:var(--gold);width:calc(3px*var(--k))}
