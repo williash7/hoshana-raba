@@ -18,7 +18,7 @@ export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמיש
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=8;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=9;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* legacy Hebrew fonts: letters stored as cp1255 bytes shown as Latin-1 or Mac-Roman characters */
 const MACR='ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…\xa0ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ\uf8ffÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ';
@@ -52,9 +52,21 @@ async function pageLayout(pg, vp){ const sc=0.5, v=pg.getViewport({scale:sc}); c
   if(best<3) return {gut:null, ex, bands:full};
   const gs=bs, ge=bs+best;
   // rows whose ink crosses the gutter belong to full-width parts; the rest are two columns
-  const cr=[], rR=[], rL=[]; for(let y=y0;y<y1;y++){ const r=y*W; let c=0,a=0,b=0; for(let x=gs+1;x<ge-1;x++) c+=ink[r+x]; for(let x=ge;x<=exR;x++) a+=ink[r+x]; for(let x=exL;x<gs;x++) b+=ink[r+x]; cr.push(c>0); rR.push(a>0); rL.push(b>0); }
+  // a row crosses the gutter only if real text (a good part of the gap is inked) or a separator rule (almost all of it) runs through it –
+  // a stray pixel of a letter must not split the columns
+  const gw=Math.max(1,ge-gs-2), cr=[], rule=[], rR=[], rL=[];
+  for(let y=y0;y<y1;y++){ const r=y*W; let c=0,a=0,b=0; for(let x=gs+1;x<ge-1;x++) c+=ink[r+x]; for(let x=ge;x<=exR;x++) a+=ink[r+x]; for(let x=exL;x<gs;x++) b+=ink[r+x];
+    cr.push(c>=Math.max(2,gw*0.3)); rule.push(c>=gw*0.9); rR.push(a>0); rL.push(b>0); }
   const gap=Math.round(10*sc), fb=[]; let cur=null;
   cr.forEach((c,i)=>{ if(!c) return; const y=y0+i; if(cur&&y-cur[1]<=gap) cur[1]=y; else { if(cur) fb.push(cur); cur=[y,y]; } }); if(cur) fb.push(cur);
+  // footnote separators: a short horizontal line (no box sides) in the lower part of the page splits the columns into text and notes
+  for(let y=Math.floor(y0+(y1-y0)*0.35);y<y1-4;y++){ const r=y*W; let best=0,bs=0; for(let x=exL,run=0,st=0;x<=exR+1;x++){ if(x<=exR&&ink[r+x]){ if(!run) st=x; run++; } else { if(run>best){ best=run; bs=st; } run=0; } }
+    if(best<W*0.07) continue; const thin=[-3,-2,2,3].every(d=>{ const rr=(y+d)*W; let n=0; for(let x=bs;x<bs+best;x++) n+=ink[rr+x]; return n<best*0.3; }); if(!thin) continue;
+    const side=x=>{ let n=0; for(let d=2;d<=10;d++) n+=ink[(y+d)*W+x]|ink[(y+d)*W+x+1]|ink[(y+d)*W+x-1]; return n>=6; }; if(side(bs)||side(bs+best-1)) continue;   // a box border
+    if(!fb.some(([a,b])=>y>=a-2&&y<=b+2)) fb.push([y,y,'rule']); y+=3; }
+  fb.sort((a,b)=>a[0]-b[0]);
+  // keep a crossing block only if it is a real text line (≥3 rows) or contains a rule
+  for(let i=fb.length-1;i>=0;i--){ const [a,b,k]=fb[i]; let hasRule=k==='rule'; for(let y=a;y<=b;y++) if(rule[y-y0]) hasRule=true; if(b-a<2&&!hasRule) fb.splice(i,1); }
   const P=y=>y/sc, bands=[]; let at=HEAD;
   const side=(A,B)=>{ let r=0,l=0; for(let y=Math.max(y0,Math.floor(A*sc));y<Math.min(y1,Math.ceil(B*sc));y++){ r|=rR[y-y0]; l|=rL[y-y0]; } return [r,l]; };
   const pushS=(A,B)=>{ if(B-A<=2) return; if(B-A<10&&bands.length&&bands[bands.length-1][2]==='F'){ bands[bands.length-1][1]=B; return; } const [r,l]=side(A,B); if(r||l) bands.push([A,B,'S',r,l]); else if(bands.length) bands[bands.length-1][1]=B; };
