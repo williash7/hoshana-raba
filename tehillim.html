@@ -111,6 +111,7 @@ button:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset
 .ppl .ord button{color:var(--muted);font-size:calc(12px*var(--k));padding:calc(3px*var(--k)) calc(8px*var(--k));line-height:1}
 .ppl .ord button:disabled{opacity:.25}
 .ppl button.ed{color:var(--ink)}
+.ppl button.pos{border:calc(1px*var(--k)) solid #3a3f58;border-radius:calc(12px*var(--k));padding:calc(3px*var(--k)) calc(8px*var(--k));font-size:calc(12.5px*var(--k));color:var(--gold);flex:none}
 .ppl .sp{display:inline-block;width:calc(64px*var(--k))}
 .addttl{font-size:calc(13px*var(--k));color:var(--muted);margin-bottom:calc(6px*var(--k))}
 .add.editing{outline:calc(2px*var(--k)) solid var(--gold)}
@@ -175,8 +176,8 @@ button:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset
   <button class="close" id="closeS" aria-label="סגור">✕</button>
   <a class="opt" href="hoshana.html"><span><b>סדר ליל הושענא רבה</b><small>חומש דברים, תהילים וזהר · מופיע בעיקר בערב הושענא רבה</small></span><i>›</i></a>
   <h2>פרקים אישיים</h2>
-  <p class="hint">הפרק לפי יום ההולדת העברי – מספר השנים שמלאו ועוד אחת. אפשר לסדר בחיצים, לערוך ב־✎ ולהפעיל או לכבות כל פרק.</p>
-  <div class="tg"><span>מתי לומר</span><div class="seg" id="pplPos"><button data-v="before">לפני היומי</button><button data-v="after">אחרי היומי</button></div></div>
+  <p class="hint">הפרק לפי יום ההולדת העברי – מספר השנים שמלאו ועוד אחת. אפשר לסדר בחיצים, לערוך ב־✎, להפעיל או לכבות כל פרק, ולקבוע לכל פרק אם לומר אותו לפני היומי או אחריו.</p>
+  <div class="tg"><span>כולם</span><div class="seg" id="pplPos"><button data-v="before">לפני היומי</button><button data-v="after">אחרי היומי</button></div></div>
   <ul class="ppl" id="ppl"></ul>
   <div class="add" id="addBox">
     <div class="addttl" id="addTtl">הוספת פרק</div>
@@ -249,8 +250,9 @@ function parseYear(s){ s=String(s||'').trim(); if(/^\d+$/.test(s)){ let n=+s; if
 /* build the day's text */
 let H=hebInfo(), B=[], tops=[], hts=[], TOTAL=0, CHB=[];
 function today(){ return H.day; }
-function addPersonal(doc){ const P=people().map(x=>({x,k:kapitel(x)})).filter(o=>o.k>=1&&o.k<=150);
-  if(P.length){ const ph=document.createElement('div'); ph.className='t head'; ph.innerHTML='<h3>פרקים אישיים</h3><small>'+P.map(o=>o.x.name+' – '+gem(o.k)).join(' · ')+'</small>'; doc.appendChild(ph); B.push({el:ph,w:2});
+const posOf=p=>p.pos||D.pplPos||'after';
+function addPersonal(doc,where){ const P=people().filter(x=>posOf(x)===where).map(x=>({x,k:kapitel(x)})).filter(o=>o.k>=1&&o.k<=150);
+  if(P.length){ const ph=document.createElement('div'); ph.className='t head'; ph.innerHTML='<h3>פרקים אישיים'+(where==='before'?' – לפני היומי':'')+'</h3><small>'+P.map(o=>o.x.name+' – '+gem(o.k)).join(' · ')+'</small>'; doc.appendChild(ph); B.push({el:ph,w:2});
     P.forEach(o=>{ const c=o.k, vs=TEH[c-1]; const el=document.createElement('div'); el.className='t ch'; let w=0;
       let h='<span class="n">'+gem(c)+' <small style="font-weight:500">('+o.x.name+')</small></span><p>';
       vs.forEach((v,i)=>{ w+=v.split(' ').length; h+='<span class="v">'+gem(i+1)+'</span>'+v+' '; });
@@ -262,7 +264,7 @@ function build(){
   const head=document.createElement('div'); head.className='t head';
   const rng=parts.map(p=>p.v1||p.v0>1 ? 'קיט '+(p.v0>1?gem(p.v0):'א')+'–'+gem(p.v1||176) : gem(p.c0)+'–'+gem(p.c1)).join(', ');
   head.innerHTML='<h3>תהילים ליום '+gq(d)+(parts.length>1?' ול׳':'')+' לחודש</h3><small>'+(parts.length>1?'החודש חסר – אומרים גם את של יום ל׳ · ':'')+'מזמורים '+rng+'</small>';
-  if(D.pplPos==='before') addPersonal(doc);
+  addPersonal(doc,'before');
   doc.appendChild(head); B.push({el:head,w:2});
   parts.forEach(p=>{ for(let c=p.c0;c<=p.c1;c++){ const vs=TEH[c-1]; let a=0,z=vs.length;
       if(c===119){ if(p.v0>1) a=p.v0-1; if(p.v1) z=p.v1; }
@@ -270,7 +272,7 @@ function build(){
       let h='<span class="n">'+gem(c)+(c===119?' <small style="font-weight:500">('+gem(a+1)+'–'+gem(z)+')</small>':'')+'</span><p>';
       for(let i=a;i<z;i++){ w+=vs[i].split(' ').length; h+='<span class="v">'+gem(i+1)+'</span>'+vs[i]+' '; }
       el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length}); B.push({el,w}); } });
-  if(D.pplPos!=='before') addPersonal(doc);
+  addPersonal(doc,'after');
   const end=document.createElement('div'); end.className='t end';
   end.innerHTML='<b>סיום התהילים ליום '+gq(d)+'</b>'+(d<30?'<button id="nextDay">ליום '+gq(d+1)+' ›</button>':'');
   doc.appendChild(end); B.push({el:end,w:2});
@@ -327,10 +329,11 @@ function renderPeople(){ migrate(); segSet('pplPos',D.pplPos||'after');
   const ul=$('ppl'); ul.innerHTML=''; const L=D.list;
   L.forEach((p,i)=>{ const li=document.createElement('li'); const k=kapitel(p); li.className=p.on?'':'off';
     li.innerHTML='<input type="checkbox" class="on"'+(p.on?' checked':'')+' aria-label="פעיל"><div class="who"><b></b><span>'+gem(p.d)+' '+MONTHS.find(m=>m[0]===p.m)[1]+' '+gy(p.y)+'</span></div><small>'+(k>=1&&k<=150?gem(k):'—')+'</small>'+
-      '<div class="ord"><button class="up" aria-label="למעלה"'+(i===0?' disabled':'')+'>▲</button><button class="dn" aria-label="למטה"'+(i===L.length-1?' disabled':'')+'>▼</button></div>'+
+      '<button class="pos" aria-label="לפני או אחרי היומי">'+(posOf(p)==='before'?'לפני':'אחרי')+'</button>'+'<div class="ord"><button class="up" aria-label="למעלה"'+(i===0?' disabled':'')+'>▲</button><button class="dn" aria-label="למטה"'+(i===L.length-1?' disabled':'')+'>▼</button></div>'+
       (p.fixed?'<span class="sp"></span>':'<button class="ed" aria-label="עריכה">✎</button><button class="del" aria-label="מחיקה">✕</button>');
     li.querySelector('b').textContent=p.name;
     li.querySelector('.on').onchange=e=>{ p.on=e.target.checked; save(); renderPeople(); rebuild(); };
+    li.querySelector('.pos').onclick=()=>{ p.pos=posOf(p)==='before'?'after':'before'; save(); renderPeople(); rebuild(); };
     li.querySelector('.up').onclick=()=>move(i,-1); li.querySelector('.dn').onclick=()=>move(i,1);
     if(!p.fixed){ li.querySelector('.ed').onclick=()=>startEdit(p); li.querySelector('.del').onclick=()=>{ if(!confirm('למחוק את '+p.name+'?')) return; D.list.splice(i,1); if(editId===p.id) endEdit(); save(); renderPeople(); rebuild(); }; }
     ul.appendChild(li); }); }
@@ -350,7 +353,7 @@ function segSet(id,val){ $(id).querySelectorAll('button').forEach(b=>b.classList
     else { D.list.push(Object.assign({id:'p'+Date.now(),on:true},p)); toast('נוסף: '+p.name+' – פרק '+gem(kapitel(p))); }
     endEdit(); save(); renderPeople(); rebuild(); };
   $('pCancel').onclick=endEdit;
-  $('pplPos').querySelectorAll('button').forEach(b=>b.onclick=()=>{ D.pplPos=b.dataset.v; segSet('pplPos',D.pplPos); save(); rebuild(); }); })();
+  $('pplPos').querySelectorAll('button').forEach(b=>b.onclick=()=>{ D.pplPos=b.dataset.v; migrate(); D.list.forEach(x=>x.pos=D.pplPos); segSet('pplPos',D.pplPos); save(); renderPeople(); rebuild(); }); })();
 function rebuild(){ const p=D.pos; build(); measure(); scrollToPos(p); D.pos=p; update(); }
 function closeSheet(){ $('sheet').classList.remove('open'); $('veil').classList.remove('open'); }
 $('menu').onclick=openSheet; $('veil').onclick=closeSheet; $('closeS').onclick=closeSheet; $('grab').onclick=closeSheet;

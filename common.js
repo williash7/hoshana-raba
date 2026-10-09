@@ -109,6 +109,18 @@ function wkSet(id,f,force){ const [b,w]=splitWk(id); const T=trk(), u=T[w]||{}; 
   if(!force && f<=(u[b]||0)) return; if(f) u[b]=f; else delete u[b]; T[w]=u;
   const old=isoDate(new Date(Date.now()-90*864e5)); Object.keys(T).forEach(k=>{ if(k<old) delete T[k]; }); lsSet('track-v2',T); }
 
+/* personal Tehillim chapters (set in the Tehillim screen): [{name,k,pos:'before'|'after'}] for the current Hebrew date */
+function personalKapitels(){ const D=lsGet('tehillim-daily-v1',{}); let L=D.list;
+  if(!L){ L=(D.people||[]).map(p=>Object.assign({on:true},p)); if(D.rebbe) L.push({name:'הרבי',d:11,m:'nisan',y:5662,on:true}); if(D.rebbetzin) L.push({name:'הרבנית',d:25,m:'adar',y:5661,on:true}); }
+  const t=tehToday(), dd=t.date||new Date(); const p=new Intl.DateTimeFormat('en-u-ca-hebrew',{day:'numeric',month:'long',year:'numeric'}).formatToParts(dd);
+  const cy=+p.find(x=>x.type==='year').value, men=p.find(x=>x.type==='month').value, cd=+p.find(x=>x.type==='day').value;
+  const ORD={tishri:1,heshvan:2,kislev:3,tevet:4,shevat:5,adar1:6,adar:7,adar2:7,nisan:8,iyar:9,sivan:10,tamuz:11,av:12,elul:13};
+  const EN={Tishri:'tishri',Heshvan:'heshvan',Kislev:'kislev',Tevet:'tevet',Shevat:'shevat','Adar I':'adar1',Adar:'adar','Adar II':'adar2',Nisan:'nisan',Iyar:'iyar',Sivan:'sivan',Tamuz:'tamuz',Av:'av',Elul:'elul'};
+  const leap=y=>((7*y+1)%19)<7, cm=ORD[EN[men]]||1;
+  return (L||[]).filter(x=>x.on&&x.y).map(b=>{ let bm=ORD[b.m]; if(!leap(cy)&&(b.m==='adar1'||b.m==='adar2')) bm=7; const passed=cm>bm||(cm===bm&&cd>=b.d);
+    return {name:b.name,k:cy-b.y-(passed?0:1)+1,pos:b.pos||D.pplPos||'after'}; }).filter(o=>o.k>=1&&o.k<=150); }
+function personalWords(){ if(!TW) return 0; return personalKapitels().reduce((a,o)=>a+(TW.cw[o.k-1]||0),0); }
+
 /* reading pace shared by all readers (words per minute) */
 function getWpm(){ return lsGet('pace-v1',{wpm:85}).wpm||85; }
 function setWpm(w){ lsSet('pace-v1',{wpm:Math.max(20,Math.min(400,Math.round(w)))}); }
@@ -144,6 +156,23 @@ async function partChumash(date,diaspora,rashi){ const c=chumashFor(date,diaspor
       h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>'; if(com.length) h+='<div class="rashi">'+com.map(s=>'<div>'+s+'</div>').join('')+'</div>';
       blocks.push({cls:'ps',html:h,w:wordsOf(v)+wordsOf(com.join(' ')),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); });
   return {title:'חומש · '+c.he+' · '+c.aliyahName, blocks}; }
+/* Shnayim Mikra ve'Echad Targum: from Thursday evening until Shabbos, one unit per aliyah of this week's parsha */
+function shnayimTime(){ const n=new Date(), w=n.getDay(); return (w===4&&n.getTime()>sunsetMs(n))||w===5||w===6; }
+function shnayimRefs(i,date){ const c=chumashFor(date||new Date(),!!lsGet('home-v1',{}).diaspora); if(!c) return null;
+  return {he:c.he, refs:c.names.map(n=>{ const a=SCHED.aliyot[n][i]; return {parsha:SCHED.he[n]||n, book:a[0], ref:a[0]+' '+a[1]+'-'+a[2]}; })}; }
+async function partShnayim(i,date){ const R=shnayimRefs(i,date); if(!R) throw new Error('no parsha');
+  const data=await Promise.all(R.refs.map(r=>Promise.all([sefText(r.ref,"hebrew|Tanach with Ta'amei Hamikra"), sefText('Onkelos '+r.ref,'hebrew').catch(()=>null)])));
+  const blocks=[];
+  R.refs.forEach((r,ri)=>{ const [txt,on]=data[ri]; const tv={}; if(on) toVerses(on).forEach(x=>{ tv[x.ch+':'+x.v]=clean(flat(x.val).join(' ')); });
+    blocks.push({cls:'head',html:'<h3>שניים מקרא ואחד תרגום – פרשת '+r.parsha+' – '+ALIYAH[i]+'</h3><small>'+(txt.heRef||r.ref)+' · כל פסוק פעמיים ואחר כך התרגום</small>',w:2,mark:'פרשת '+r.parsha});
+    let lastCh=null;
+    toVerses(txt).forEach(x=>{ const v=clean(flat(x.val).join(' ')); const tg=tv[x.ch+':'+x.v]||'';
+      let h=''; if(x.ch!==lastCh){ h+='<span class="ch">פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
+      h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p><p class="mk2">'+v+'</p>'+(tg?'<div class="targ">'+tg+'</div>':'');
+      blocks.push({cls:'ps',html:h,w:wordsOf(v)*2+wordsOf(tg),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); });
+  const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('shm:'+wkId()+':'+i,W);
+  return {title:'שניים מקרא – '+R.he+' – '+ALIYAH[i], blocks}; }
+
 /* Korbanos before Mincha (Chabad nusach) */
 const KORB_PARTS=['פרשת התמיד','ושחט אותו','אתה הוא','פרשת הקטורת','פיטום הקטורת','רבן שמעון בן גמליאל','תניא רבי נתן','תניא בר קפרא','ה׳ צבאות עמנו'];
 const KORB_WORDS=()=>wcGet('korbanot')||750;
