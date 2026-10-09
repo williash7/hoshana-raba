@@ -155,9 +155,9 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 <div class="toast" id="toast"></div>
 <script>window.onerror=function(m,src,l){ var d=document.getElementById('doc'); if(d) d.innerHTML='<div class="t msg">שגיאה בטעינת הדף<div class="dbg">'+String(m).replace(/[<>&]/g,'')+' ('+String(src||'').split('/').pop()+':'+l+')</div></div>'; };</script>
-<script src="common.js?v=40cb119e"></script>
+<script src="common.js?v=dd40aa0e"></script>
 <script type="module">
-import * as DM from './dm.js?v=40cb119e';
+import * as DM from './dm.js?v=dd40aa0e';
 const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const HOME=lsGet('home-v1',{});
@@ -207,7 +207,7 @@ function tabs(){ const st=$('subjTabs'); st.innerHTML='';
   const on=st.querySelector('.on'); if(on) on.scrollIntoView({inline:'center',block:'nearest'}); }
 
 /* ---------- reader ---------- */
-let B=[], tops=[], hts=[], TOTAL=1, ready=false, curPos=0, io=null;
+let B=[], tops=[], hts=[], TOTAL=1, ready=false, curPos=0, io=null, UN=null;
 const key=()=>V.subj==='more'?'sec:'+(META.wk||'')+((IDX.sections[V.sec]||{}).title||V.sec)+((IDX.sections[V.sec]||{}).part||''):V.subj+':'+(IDX.dayLabels&&IDX.dayLabels[DAY]||DAY);
 function cssW(){ return Math.min(innerWidth, 900*K)*V.zoom; }
 async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
@@ -219,6 +219,9 @@ async function show(){ setPlaying(false); ready=false; if(io) io.disconnect();
   const scr=Math.min(innerWidth,900*K);
   sl.forEach(s=>{ const bx=DM.sliceBox(s,w,scr); const el=document.createElement('div'); el.className='sl'; el.style.height=bx.h+'px'; el.style.width=bx.w+'px'; s._pc=bx.pageCss; el.innerHTML='<span class="pn">'+gem(s.p)+'</span>'; el._sl=s; doc.appendChild(el); B.push({el,w:Math.max(1,s.words)}); });
   let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
+  // counted units: printed lines / verses / halachos when the booklet marks them, otherwise pages
+  { const U=DM.unitPoints(IDX,sl); if(U.kind&&U.pts.length>1){ UN={name:UNITPL[U.kind],ends:U.pts.map((pt,j)=>j+1<U.pts.length?U.pts[j+1].f:1)}; }
+    else { const ends={}; let c=0; sl.forEach(x=>{ c+=x.words; ends[x.p]=c/Math.max(1,TOTAL); }); UN={name:'עמודים',ends:Object.values(ends)}; } }
   io=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); el._c=c; el.appendChild(c); DM.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
   B.forEach(b=>io.observe(b.el));
   if(V.subj==='more'){ const bk=document.createElement('button'); bk.className='backlist'; bk.textContent='‹ חזרה לרשימת התכנים'; bk.onclick=()=>{ V.sec=null; save(); show(); }; doc.insertBefore(bk,doc.firstChild); }
@@ -261,7 +264,7 @@ function update(){ $('spd').textContent=wpm;
   const p=curPos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
   const left=Math.max(0,TOTAL-p);
   if(V.subj==='more'){ $('cur').textContent=(IDX.sections[V.sec]||{}).title||''; $('hdate').textContent='עוד בחוברת'; } else { $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':''); }
-  $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; $('pct').textContent=Math.round(done*100)+'%';
+  $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; { const fin=left<2, n=UN?UN.ends.filter(e=>e<=done+0.002).length:0; $('pct').textContent=progTxt(fin?1:done,UN?(fin?UN.ends.length:n):0,UN?UN.ends.length:0,UN?UN.name:''); }
   if(DAY===TODAYDAY && V.subj!=='more') setProgress('dm-'+V.subj,isoDate(today),left<2?1:done);
   const past=META&&META.wk<wkId(); if(TODAYDAY>=0||past){ const sc=IDX.sections&&IDX.sections[V.sec]; const id=V.subj==='more'?(sc?'sec:'+(sc.key!=null?sc.key:sc.from):null):V.subj==='hayomyom'?'dm:hayomyom':(past||DAY<=TODAYDAY?'dm:'+V.subj+':'+DAY:null); if(id) wkSet(id+sfx(),left<2?1:done); } }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); V.pos[key()]=curPos; update(); },{passive:true});

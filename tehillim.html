@@ -207,6 +207,7 @@ computeK();
 let M={}; try{ M=JSON.parse(localStorage.getItem('hoshana-raba-v2')||'{}')||{}; }catch(e){}
 if(M.theme && M.theme!=='auto') root.setAttribute('data-theme',M.theme);
 const KEY='tehillim-daily-v1';
+const progTxt=(pct,n,t,u)=>Math.round(Math.min(1,pct)*100)+'%'+(t?' · '+Math.min(n,t)+'/'+t+' '+u:'');
 let D={day:null,date:'',pos:0,mpp:2.0,fs:M.fs||23,done:{},list:null,pplPos:'after'};
 try{ const s=JSON.parse(localStorage.getItem(KEY)||'null'); if(s) D=Object.assign(D,s); }catch(e){}
 function save(){ try{ localStorage.setItem(KEY,JSON.stringify(D)); }catch(e){} }
@@ -256,7 +257,7 @@ function addPersonal(doc,where){ const P=people().filter(x=>posOf(x)===where).ma
     P.forEach(o=>{ const c=o.k, vs=TEH[c-1]; const el=document.createElement('div'); el.className='t ch'; let w=0;
       let h='<span class="n">'+gem(c)+' <small style="font-weight:500">('+o.x.name+')</small></span><p>';
       vs.forEach((v,i)=>{ w+=v.split(' ').length; h+='<span class="v">'+gem(i+1)+'</span>'+v+' '; });
-      el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length,who:o.x.name}); B.push({el,w}); }); }
+      el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length,who:o.x.name,nv:vs.length}); B.push({el,w}); }); }
 }
 function build(){
   const doc=$('doc'); doc.innerHTML=''; B=[]; CHB=[];
@@ -271,7 +272,7 @@ function build(){
       const el=document.createElement('div'); el.className='t ch'; let w=0;
       let h='<span class="n">'+gem(c)+(c===119?' <small style="font-weight:500">('+gem(a+1)+'–'+gem(z)+')</small>':'')+'</span><p>';
       for(let i=a;i<z;i++){ w+=vs[i].split(' ').length; h+='<span class="v">'+gem(i+1)+'</span>'+vs[i]+' '; }
-      el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length}); B.push({el,w}); } });
+      el.innerHTML=h+'</p>'; doc.appendChild(el); CHB.push({c,i:B.length,nv:z-a}); B.push({el,w}); } });
   addPersonal(doc,'after');
   const end=document.createElement('div'); end.className='t end';
   end.innerHTML='<b>סיום התהילים ליום '+gq(d)+'</b>'+(d<30?'<button id="nextDay">ליום '+gq(d+1)+' ›</button>':'');
@@ -368,8 +369,8 @@ function update(){ const p=D.pos, done=Math.min(1,p/TOTAL); $('fill').style.widt
   let cur=CHB[0]; CHB.forEach(x=>{ if(B[x.i].cum<=p+0.5) cur=x; }); $('curCh').textContent='מזמור '+gem(cur.c)+(cur.who?' · '+cur.who:'');
   const left=Math.max(0,TOTAL-p), leftCh=CHB.filter(x=>B[x.i].cum>p+0.5).length;
   $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשארו <b>'+(leftCh+1)+' מזמורים</b> (כ־'+Math.max(1,Math.round(left/wpm()))+' דק׳)';
-  $('pct').textContent=Math.round(done*100)+'%';
-  if(D.day===today()){ try{ const P=JSON.parse(localStorage.getItem('progress-v1')||'{}'); P.tehillim={key:H.key+':'+D.day,pct:left<3?1:Math.round(done*100)/100}; localStorage.setItem('progress-v1',JSON.stringify(P)); }catch(e){} }
+  const vt=CHB.reduce((a,x)=>a+(x.nv||0),0), cn=CHB.reduce((a,x)=>{ const b=B[x.i]; return a+(b.cum+b.w<=p+0.5?x.nv:b.cum<p?Math.floor((p-b.cum)/b.w*x.nv):0); },0); $('pct').textContent=progTxt(left<3?1:done,left<3?vt:cn,vt,'פסוקים');
+  if(D.day===today()){ try{ const P=JSON.parse(localStorage.getItem('progress-v1')||'{}'); P.tehillim={key:H.key+':'+D.day,pct:left<3?1:Math.round(done*100)/100,n:left<3?vt:cn,t:vt,u:'פסוקים'}; localStorage.setItem('progress-v1',JSON.stringify(P)); }catch(e){} }
   try{ const n=new Date(); n.setHours(12,0,0,0); n.setDate(n.getDate()-n.getDay()); const wk=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); let T=JSON.parse(localStorage.getItem('track-v2')||'null'); if(!T){ T={}; const W=JSON.parse(localStorage.getItem('week-v1')||'null'); if(W&&W.u) T[W.wk]=W.u; } const u=T[wk]||{}; const f=left<3?1:Math.round(done*1000)/1000, id='teh:'+D.day; if(f>(u[id]||0)){ u[id]=f; T[wk]=u; localStorage.setItem('track-v2',JSON.stringify(T)); } }catch(e){}
   if(left<3 && !D.done[H.key+':'+D.day]){ D.done[H.key+':'+D.day]=1; save(); } }
 let ready=false;

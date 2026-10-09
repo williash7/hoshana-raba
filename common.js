@@ -79,8 +79,11 @@ function clean(html){ const doc=new DOMParser().parseFromString('<div>'+String(h
   return walk(doc.body.firstChild); }
 
 /* per-day progress shared with the home screen */
-function setProgress(mod,key,pct){ const P=lsGet('progress-v1',{}); P[mod]={key,pct:Math.round(pct*100)/100}; lsSet('progress-v1',P); }
+function setProgress(mod,key,pct,n,t,u){ const P=lsGet('progress-v1',{}); P[mod]={key,pct:Math.round(pct*100)/100}; if(t){ P[mod].n=n; P[mod].t=t; P[mod].u=u; } lsSet('progress-v1',P); }
 function getProgress(mod,key){ const p=lsGet('progress-v1',{})[mod]; return p&&p.key===key?p.pct:0; }
+function getProgressInfo(mod,key){ const p=lsGet('progress-v1',{})[mod]; return p&&p.key===key?p:null; }
+/* "40% · 12/30 פסוקים" */
+function progTxt(pct,n,t,unit){ return Math.round(Math.min(1,pct)*100)+'%'+(t?' · '+Math.min(n,t)+'/'+t+(unit?' '+unit:''):''); }
 
 /* daily Tehillim (by the Hebrew date, switching at sunset) */
 const TDIV=[[1,1],[10,1],[18,1],[23,1],[29,1],[35,1],[39,1],[44,1],[49,1],[55,1],[60,1],[66,1],[69,1],[72,1],[77,1],[79,1],[83,1],[88,1],[90,1],[97,1],[104,1],[106,1],[108,1],[113,1],[119,1],[119,97],[120,1],[135,1],[140,1],[145,1],[151,1]];

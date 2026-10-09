@@ -79,7 +79,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
   <button class="play" id="play">התחל ▶</button>
   <a class="home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
 </div></nav>
-<script src="common.js?v=40cb119e"></script>
+<script src="common.js?v=dd40aa0e"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
 computeK();
@@ -140,6 +140,8 @@ function info(full){ const [id,wk]=splitWk(full), past=wk!==CURWK; const a=id.sp
   const base={name:DMN[subj]||subj,tag:a[2]!=null||a[0]!=='dm'?tagIn(wk,d):''};
   if(ix){ const sl=DM.slices(ix,subj,d); if(sl.length){ const r=fromSlices(sl,base,ix); const lab=dmDay(subj,d); if(lab) r.where+='<br><span style="color:var(--muted);font-size:.9em">'+lab+(past?' – בחוברת של אותו שבוע':'')+'</span>'; return r; } }
   return Object.assign(base,{where:'<span style="color:var(--muted)">'+(past?'החוברת של אותו שבוע לא שמורה – ללמוד מתוך חומש / תניא':'טען את חוברת השבוע כדי לראות באיזה עמוד')+'</span>',W:a[0]==='chu'?900:a[0]==='tan'?700:1500}); }
+// "40% · 8/21 פסוקים"
+const cntTxt=(I,f)=>{ const t=I.pts&&I.pts.length||0; const n=t?I.pts.filter((pt,j)=>(j+1<t?I.pts[j+1].f:1)<=f+0.0005).length:0; return progTxt(f,n,t,t?UNITPL[I.kind]:''); };
 const goalOf=(it,I)=>it.end!=null?it.end:it.plan?Math.min(1,it.f0+it.plan/I.W):null;
 
 /* ---------- render ---------- */
@@ -152,10 +154,10 @@ function render(){ const box=$('list'); box.innerHTML='';
     const nU=unitsIn(I,it.f0,goalF||1), uTxt=I.kind&&nU?' · '+nU+' '+(nU===1?UNITNAME[I.kind]:UNITPL[I.kind]):'';
     if(goalF){ est='מתוכנן: כ־'+fmtMin(estimate(I,it.f0,goalF))+' (חלק)'+uTxt; const g=posAt(I,goalF-0.001); if(g) est+=' – עד בערך '+g; }
     else est='משוער: כ־'+fmtMin(estimate(I,it.f0,1))+uTxt;
-    let where=I.where||''; if(it.f0>0&&!done){ const s=I.sl?resumeAt(I,it.f0):null; where+=s?'<br>המשך מ־<b>'+s+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
+    let where=I.where||''; if(it.f0>0&&!done) where+='<br><span style="color:var(--muted)">נלמד עד כה: '+cntTxt(I,it.f0)+'</span>'; if(it.f0>0&&!done){ const s=I.sl?resumeAt(I,it.f0):null; where+=s?'<br>המשך מ־<b>'+s+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
     const tm=itemMs(i);
     d.innerHTML='<div class="hd"><div class="n">'+(done?'✓':part?'½':gem(i+1))+'</div><h2>'+I.name+(I.tag?' <em>· '+I.tag+'</em>':'')+'</h2><div class="t">'+(tm||cur?mmss(tm):'')+'</div></div>'+
-      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב'+(I.sl?posAt(I,Math.max(0,(it.f||0)-0.001)):'־'+Math.round((it.f||0)*100)+'%'))+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
+      (done||part?'<div class="est">'+(done?'הושלם':'נעצר ב'+(I.sl?posAt(I,Math.max(0,(it.f||0)-0.001)):'־'+Math.round((it.f||0)*100)+'%'))+' · '+cntTxt(I,done?1:(it.f||0))+(tm?' · '+fmtMin(tm/6e4):'')+'</div>':'<div class="where">'+where+'</div><div class="est">'+est+'</div>');
     if(cur){ const ac=document.createElement('div'); ac.className='acts';
       ac.innerHTML='<button class="ok">✓ סיימתי</button><button class="st">עצרתי באמצע…</button><button class="sk">דלג</button>'; d.appendChild(ac);
       ac.querySelector('.ok').onclick=()=>finish(i,1);
@@ -211,7 +213,7 @@ addEventListener('pagehide',save); document.addEventListener('visibilitychange',
 
 /* ---------- load ---------- */
 (async()=>{
-  try{ DM=await import('./dm.js?v=40cb119e'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
+  try{ DM=await import('./dm.js?v=dd40aa0e'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
     for(const w of new Set(S.items.map(it=>splitWk(it.id)[1]).filter(w=>w!==CURWK))){ const b=await DM.loadStored(null,w); if(b) IDXW[w]=b.index; } }catch(e){}
   S.items.forEach(it=>{ INFO[it.id]=info(it.id); });
   if(!S.items.length){ $('list').innerHTML='<div class="msg">אין מה ללמוד בתוכנית. <a href="./" style="color:var(--gold)">חזרה למסך הבית</a></div>'; return; }
