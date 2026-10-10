@@ -291,7 +291,8 @@ function build(){
 function setDay(d,fromUser){ d=Math.max(1,Math.min(30,d)); const same=d===D.day; D.day=d; if(!same) D.pos=0; build(); measure(); scrollToPos(D.pos,false); save(); update(); if(fromUser) setPlaying(false); }
 
 /* geometry */
-function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight);
+let PXW=0;   // typical pixels per word of the text – headings never scroll much faster than text
+function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight); { const r=B.map((b,k)=>b.w>=4&&hts[k]>0?hts[k]/b.w:0).filter(Boolean).sort((a,b)=>a-b); PXW=r.length?r[r.length>>1]:0; }
   const b=$('dock').offsetHeight; placeBan(); root.style.setProperty('--dockH',b+'px'); tops=B.map(x=>x.el.offsetTop); hts=B.map(x=>x.el.offsetHeight); placeLine(); }
 function topH(){ const b=$('hrban'); return $('top').offsetHeight+(b.hidden?0:b.offsetHeight); }
 function lineY(){ const t=topH(),b=$('dock').offsetHeight; return t+(innerHeight-t-b)*0.28; }
@@ -306,7 +307,7 @@ const PW=170; let playing=false,last=0,accY=null,touching=false,wake=null;
 const wpm=()=>PW/D.mpp;
 function frame(t){ if(!playing) return; const dt=last?Math.min(0.1,(t-last)/1000):0; last=t;
   if(accY===null||Math.abs(scrollY-accY)>4) accY=scrollY;
-  if(!touching){ const i=idxP(D.pos); accY+=hts[i]/B[i].w*wpm()/60*dt; scrollTo(0,accY); }
+  if(!touching){ const i=idxY(accY+lineY()); const pw=hts[i]/B[i].w; accY+=(PXW?Math.min(pw,PXW*1.5):pw)*wpm()/60*dt; scrollTo(0,accY); }
   if(D.pos>=TOTAL-2.5 || accY>=document.documentElement.scrollHeight-innerHeight-2){ setPlaying(false); return; }
   requestAnimationFrame(frame); }
 async function setPlaying(v){ playing=v; last=0; accY=null;

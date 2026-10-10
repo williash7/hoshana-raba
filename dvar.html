@@ -233,7 +233,8 @@ function showList(){ const doc=$('doc'); doc.className=''; ready=false; B=[]; $(
   doc.innerHTML=h+'</div>'; if($('rmbook')) $('rmbook').onclick=async()=>{ if(!confirm('להסיר את חוברת '+bookName(META.wk)+' מהארכיון? מה שלא נלמד ממנה לא יוצע יותר.')) return; await DM.removeBooklet(META.wk); location.reload(); }; doc.querySelectorAll('.secs button[data-i]').forEach(b=>{ b.querySelector('b').textContent=IDX.sections[+b.dataset.i].title+(IDX.sections[+b.dataset.i].part?' · '+IDX.sections[+b.dataset.i].part.replace(/\d+/g,n=>gem(+n)):''); b.onclick=()=>{ V.sec=+b.dataset.i; save(); show(); }; });
   update(); }
 
-function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight);
+let PXW=0;   // typical pixels per word of the text – headings never scroll much faster than text
+function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight); { const r=B.map((b,k)=>b.w>=4&&hts[k]>0?hts[k]/b.w:0).filter(Boolean).sort((a,b)=>a-b); PXW=r.length?r[r.length>>1]:0; }
   const t=$('top').offsetHeight, b=$('dock').offsetHeight; $('scroller').style.paddingTop=t+'px'; root.style.setProperty('--dockH',b+'px'); placeLine(); }
 function lineY(){ const t=$('top').offsetHeight,b=$('dock').offsetHeight; return t+(innerHeight-t-b)*0.28; }
 function placeLine(){ const y=lineY(),t=$('top').offsetHeight; $('line').style.top=y+'px'; $('shade').style.top=t+'px'; $('shade').style.height=Math.max(0,y-t)+'px'; }
@@ -245,7 +246,7 @@ function scrollToPos(p){ if(!B.length) return; p=Math.max(0,Math.min(TOTAL-0.01,
 let playing=false,last=0,accY=null,touching=false,wake=null;
 function frame(t){ if(!playing) return; const dt=last?Math.min(0.1,(t-last)/1000):0; last=t;
   if(accY===null||Math.abs(scrollY-accY)>4) accY=scrollY;
-  if(!touching){ const i=idxP(curPos); accY+=hts[i]/B[i].w*wpm/60*dt; scrollTo(0,accY); }
+  if(!touching){ const i=idxY(accY+lineY()); const pw=hts[i]/B[i].w; accY+=(PXW?Math.min(pw,PXW*1.5):pw)*wpm/60*dt; scrollTo(0,accY); }
   if(curPos>=TOTAL-2 || accY>=document.documentElement.scrollHeight-innerHeight-2){ setPlaying(false); return; }
   requestAnimationFrame(frame); }
 async function setPlaying(v){ playing=v; last=0; accY=null;
