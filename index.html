@@ -102,6 +102,16 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .flow a{color:var(--gold)}
 .restore{border:0;background:transparent;color:var(--gold);text-decoration:underline;font:inherit;padding:0}
 .fp.korb{border-bottom:0;padding-top:0}
+.fp.off span{color:var(--muted)}
+.offHd{margin-top:calc(12px*var(--k));font-size:calc(13px*var(--k));color:var(--gold)}
+.offGrp{display:flex;align-items:center;justify-content:space-between;margin-top:calc(8px*var(--k));font-weight:600;font-size:calc(14.5px*var(--k))}
+.offGrp small{color:var(--muted);font-weight:400}
+.offGrp button{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--gold);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(12px*var(--k));font-size:calc(13px*var(--k))}
+.fp .ord{display:flex;flex-direction:column;gap:calc(2px*var(--k));flex:none}
+.fp .ord button{border:calc(1px*var(--k)) solid #3a3f58;background:transparent;color:var(--muted);border-radius:calc(6px*var(--k));width:calc(30px*var(--k));height:calc(22px*var(--k));font-size:calc(11px*var(--k));padding:0;line-height:1}
+.fp .ord button:disabled{opacity:.3}
+.planBar{display:flex;gap:calc(8px*var(--k));flex-wrap:wrap;justify-content:flex-start;margin:calc(4px*var(--k)) 0}
+.planBar button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(5px*var(--k)) calc(12px*var(--k));font-size:calc(13px*var(--k))}
 .fp.korb small{display:block}
 .row.korbPos{padding:calc(2px*var(--k)) 0 calc(6px*var(--k));font-size:calc(14px*var(--k));color:var(--muted)}
 .row.korbPos .seg button{font-size:calc(13px*var(--k));padding:calc(6px*var(--k)) calc(9px*var(--k))}
@@ -253,7 +263,8 @@ if(GO){ P.free=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Mat
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
 function availMin(){ if(P.free) return Infinity; if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
-if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; }
+if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; P.manual=false; P.ord=[]; }
+if(!P.ord) P.ord=[];
 const savePlan=()=>lsSet('plan-v1',GOTMP?Object.assign({},P,GOTMP):P);
 let DMX=null;   // {DM, index, day} = this week's booklet; DMX.byWk[<sunday>] = every archived booklet's index
 const WD=today.getDay(), CURWK=wkId();
@@ -302,7 +313,8 @@ function minchaTime(){ try{ const n=new Date(); return n.getTime()>=noonMs(n) &&
 const korbSaid=()=>getProgress('korbanot',isoDate(today))>=1;
 function korbOn(){ if(!minchaTime()||korbSaid()) return false; if(P.korb!=null&&P.korbDay===isoDate(today)) return !!P.korb; return getProgress('korbanot',isoDate(today))<1; }
 function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
-  const pri=open.filter(u=>u.g<=1&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
+  // manual: after "cancel all" – only what you ticked yourself
+  const priAll=open.filter(u=>u.g<=1&&!P.pin.includes(u.id)), pri=P.manual?[]:priAll.filter(u=>!P.skip.includes(u.id));
   const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
   const rest=open.filter(u=>(u.g===2||u.g===3)&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
   const wpm=pace(); let budget=availMin()*wpm, acc=0; const sel=[];
@@ -319,11 +331,14 @@ function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const left=()=>budget-acc;
   // 2) the time left goes to the first one that did not fit (part of it); only if all fit, to the rest of the booklet
   if(skipped){ if(left()>=3*wpm){ sel.push({u:skipped,w:left(),partial:true}); acc=budget; } }
-  else if(!P.free) for(const u of rest){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
+  else if(!P.free&&!P.manual) for(const u of rest){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
     else { if(left()>=3*wpm) sel.push({u,w:left(),partial:true}); break; } }
   const ord=first.concat(rest); sel.sort((x,y)=>ord.indexOf(x.u)-ord.indexOf(y.u));
+  // your own order (arrows): those you moved by your order, the rest after them in the usual order
+  if(P.ord.length){ const key=(s,i)=>{ const j=P.ord.indexOf(s.u.id); return j>=0?j:1000+i; }; const k=sel.map((s,i)=>[s,key(s,i)]).sort((a,b)=>a[1]-b[1]).map(a=>a[0]); sel.length=0; sel.push(...k); }
   if(KB){ if(P.korbPos==='start') sel.unshift(KB); else sel.push(KB); }
-  return {sel,all,open,KB}; }
+  const off=P.manual?priAll:priAll.filter(u=>P.skip.includes(u.id));
+  return {sel,all,open,KB,off}; }
 const label=u=>u.name+(u.shm?' <em>· פרשת '+((shnayimRefs(0,today)||{}).he||'')+'</em>':u.mincha?' <em>· אחרי הקרבנות</em>':u.korb?(P.korbPos==='start'?' <em>· קודם, ואז לימוד</em>':' <em>· בסוף, לפני אשרי</em>'):u.d!=null?' <em>· '+(u.cur?dayTag(u.d):'יום '+WEEKDAYS[u.d]+' '+hebOf(u.dt).label)+'</em>':!u.cur&&u.sec?' <em>· מחוברת '+hebOf(weekStart(u.wk)).label+'</em>':u.sec?' <em>· מהחוברת</em>':'');
 function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.createElement('label'); d.className='fp'+(cls?' '+cls:'');
   d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
@@ -346,10 +361,28 @@ function renderFlow(){
   const setUntil=()=>{ if(ti.value&&(ti.value!==P.until||P.free)){ GOTMP=null; P.free=false; P.until=ti.value; savePlan(); renderFlow(); } }; ti.onchange=setUntil; ti.oninput=setUntil; ti.onblur=setUntil;
   if(P.free){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי הגבלת זמן – כל מה שנשאר מחת״ת ורמב״ם, ואני אגיד לך מתי תסיים'; tb.appendChild(l); }
   else if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent='עד '+P.until+' – יש לך '+fmtMin(a); tb.appendChild(l); }
-  const {sel,all,open,KB}=plan(); const box=$('plan'); box.innerHTML='';
+  const {sel,all,open,KB,off}=plan(); const box=$('plan'); box.innerHTML='';
+  const studySel=sel.filter(s=>!s.u.korb&&!s.u.mincha);
+  { const bar=document.createElement('div'); bar.className='planBar';
+    if(studySel.length) bar.insertAdjacentHTML('beforeend','<button id="cancelAll">✕ בטל הכל</button>');
+    if(P.manual||P.skip.length||P.ord.length||P.pin.length) bar.insertAdjacentHTML('beforeend','<button id="autoPlan">↺ חזרה לתוכנית הרגילה</button>');
+    if(bar.children.length) box.appendChild(bar);
+    if($('cancelAll')) $('cancelAll').onclick=()=>{ P.manual=true; P.pin=[]; P.skip=[]; P.ord=[]; if(KB){ P.korb=false; P.korbDay=isoDate(today); } savePlan(); renderFlow(); };
+    if($('autoPlan')) $('autoPlan').onclick=()=>{ P.manual=false; P.pin=[]; P.skip=[]; P.ord=[]; savePlan(); renderFlow(); }; }
+  const move=(id,d)=>{ const ids=studySel.map(s=>s.u.id), i=ids.indexOf(id), j=i+d; if(i<0||j<0||j>=ids.length) return; [ids[i],ids[j]]=[ids[j],ids[i]]; P.ord=ids; savePlan(); renderFlow(); };
   sel.forEach(s=>{ const u=s.u;
     row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך ('+Math.round(u.f*100)+'% נלמד)':''),
-      u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; P.korbDay=isoDate(today); savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':''); });
+      u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; P.korbDay=isoDate(today); savePlan(); renderFlow(); return; } if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':'');
+    if(!u.korb&&!u.mincha&&studySel.length>1){ const k=studySel.indexOf(s), o=document.createElement('div'); o.className='ord';
+      o.innerHTML='<button type="button" aria-label="למעלה"'+(k===0?' disabled':'')+'>▲</button><button type="button" aria-label="למטה"'+(k===studySel.length-1?' disabled':'')+'>▼</button>';
+      const [up,dn]=o.querySelectorAll('button'); up.onclick=e=>{ e.preventDefault(); move(u.id,-1); }; dn.onclick=e=>{ e.preventDefault(); move(u.id,1); };
+      const r=box.lastElementChild; r.insertBefore(o,r.querySelector('small')); } });
+  // not in the plan now – tick to bring it back
+  const bring=ids=>{ ids.forEach(id=>{ if(P.manual){ if(!P.pin.includes(id)) P.pin.push(id); } else P.skip=P.skip.filter(x=>x!==id); }); savePlan(); renderFlow(); };
+  const GK=u=>u.shm?'שניים מקרא':u.name, groups=new Map(); off.forEach(u=>{ const k=GK(u); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(u); });
+  if(off.length){ const t=document.createElement('div'); t.className='offHd'; t.textContent=P.manual?'לבחירה:':'הורדת מהתוכנית:'; box.appendChild(t); }
+  groups.forEach((L,k)=>{ if(L.length>1){ const g=document.createElement('div'); g.className='offGrp'; g.innerHTML='<span>'+k+' <small>('+L.length+' · כ־'+fmtMin(mm(L.reduce((a,u)=>a+u.rem,0)))+')</small></span><button type="button">+ כולם</button>'; g.querySelector('button').onclick=()=>bring(L.map(u=>u.id)); box.appendChild(g); }
+    L.forEach(u=>row(box,label(u),'כ־'+fmtMin(mm(u.rem))+(u.f>0?' · המשך':''),null,null,false,()=>bring([u.id]),'off')); });
   // today's lessons already done: shown (greyed) so it's clear why they are not in the plan
   all.filter(u=>u.g===0&&u.f>=1).forEach(u=>row(box,label(u),'✓ נלמד היום','בטל',()=>{ wkSet(u.id,0,true); const a=u.id.split(':'); if(a[0]==='teh') setProgress('tehillim',T.key,0); if(a[0]==='chu') setProgress('chumash',isoDate(today),0); if(a[0]==='tan') setProgress('tanya',isoDate(today),0); renderFlow(); render(); },null,null,'done'));
   if(P.skip.length&&sel.length){ const d=document.createElement('div'); d.className='hint'; d.style.marginTop='6px'; d.innerHTML='הורדת '+(P.skip.length===1?'שיעור אחד':P.skip.length+' שיעורים')+' מהתוכנית להיום. <button class="restore">החזר אותם</button>'; d.querySelector('button').onclick=()=>{ P.skip=[]; savePlan(); renderFlow(); }; box.appendChild(d); }
@@ -357,7 +390,7 @@ function renderFlow(){
   $('startFlow').disabled=!sel.length;
   const studyN=sel.filter(s=>!s.u.korb&&!s.u.mincha).length;
   const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
-  $('flowSum').innerHTML=(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(availMin()<3?'אין מספיק זמן – בחר זמן ארוך יותר.':P.skip.length?'הורדת את השיעורים מהתוכנית. <button class="restore" id="restore">החזר את כולם</button>':open.length?'אין שיעור שנכנס בזמן הזה – בחר זמן ארוך יותר.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
+  $('flowSum').innerHTML=P.manual&&!studyN?'סמן ✓ ליד מה שאתה רוצה ללמוד עכשיו, וסדר בחצים ▲▼':(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(availMin()<3?'אין מספיק זמן – בחר זמן ארוך יותר.':P.skip.length?'הורדת את השיעורים מהתוכנית. <button class="restore" id="restore">החזר את כולם</button>':open.length?'אין שיעור שנכנס בזמן הזה – בחר זמן ארוך יותר.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
     'התוכנית: <b>'+fmtMin(mm(tot))+'</b>'+(P.free?'':' מתוך '+fmtMin(availMin()))+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>'+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
     (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
   if($('restore')) $('restore').onclick=()=>{ P.skip=[]; P.pin=[]; savePlan(); renderFlow(); };
@@ -375,7 +408,7 @@ function renderFlow(){
   if($('allDone')) $('allDone').onclick=()=>{ if(confirm('לסמן את כל '+missed.length+' השיעורים מהימים הקודמים כנלמדו?')){ missed.forEach(u=>wkSet(u.id,1,true)); renderFlow(); } };
   // add list
   const al=$('addList'); al.innerHTML=''; const inSel=new Set(sel.map(s=>s.u.id));
-  open.filter(u=>!inSel.has(u.id)).forEach(u=>row(al,label(u),'כ־'+fmtMin(mm(u.rem))+(u.f>0?' · המשך':''),'+ הוסף',()=>{ P.skip=P.skip.filter(x=>x!==u.id); if(!P.pin.includes(u.id)) P.pin.push(u.id); savePlan(); renderFlow(); }));
+  const inOff=new Set(off.map(u=>u.id)); open.filter(u=>!inSel.has(u.id)&&!inOff.has(u.id)).forEach(u=>row(al,label(u),'כ־'+fmtMin(mm(u.rem))+(u.f>0?' · המשך':''),'+ הוסף',()=>{ P.skip=P.skip.filter(x=>x!==u.id); if(!P.pin.includes(u.id)) P.pin.push(u.id); savePlan(); renderFlow(); }));
   if(!al.children.length) al.innerHTML='<div class="hint">אין עוד מה להוסיף.</div>';
   const dn=all.filter(u=>u.f>=1&&u.cur), dl=$('doneList'); dl.innerHTML=''; $('doneSum').textContent='נלמד השבוע ('+dn.length+')';
   dn.forEach(u=>row(dl,label(u),'✓','בטל',()=>{ wkSet(u.id,0,true); renderFlow(); }));
