@@ -73,6 +73,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
     <div class="clock" id="clockBox"><b id="clock">--:--</b><span id="clockLbl"></span></div>
   </div>
   <div class="bar"><i id="fill"></i></div>
+  <div class="sub" id="overall" style="max-width:calc(620px*var(--k));margin:calc(6px*var(--k)) auto 0"></div>
 </header>
 <main id="list"><div class="msg">טוען…</div></main>
 <nav class="dock"><div class="dock-in">
@@ -211,7 +212,13 @@ function tick(){ const tot=totalMs(), left=leftNow(tot);
   const allDone=S.items.every(it=>it.st);
   $('play').textContent=allDone?'חזרה למסך הבית':S.since?'⏸ השהה':(tot?'המשך ▶':'התחל ▶'); $('play').classList.toggle('run',!!S.since);
   const ce=document.querySelector('.it.cur .t'); if(ce) ce.textContent=mmss(itemMs(S.cur));
-  $('sub').textContent='זמן שלמדת עכשיו: '+fmtMin(tot/6e4); }
+  $('sub').textContent='זמן שלמדת עכשיו: '+fmtMin(tot/6e4);
+  // the whole plan, not only the current piece: percent by words, pieces done, and units by kind
+  const OV={}; let ww=0, wd=0, dn=0, n=0;
+  S.items.forEach(it=>{ const I=INFO[it.id]; if(!I) return; n++; const a=it.f0, g=goalOf(it,I)||1, c=it.st==='done'?g:it.st==='part'?Math.min(g,it.f||a):a;
+    if(it.st==='done') dn++; const IW=+I.W||700; ww+=IW*(g-a); wd+=IW*(c-a);
+    if(I.kind&&I.pts&&I.pts.length){ const k=UNITPL[I.kind]; OV[k]=OV[k]||[0,0]; OV[k][0]+=unitsIn(I,a,c>=0.999?1.01:c); OV[k][1]+=unitsIn(I,a,g>=0.999?1.01:g); } });
+  $('overall').style.display=n<2?'none':''; if(n>=2) $('overall').innerHTML='בסך הכל: <b>'+Math.round(ww?wd/ww*100:0)+'%</b> · '+dn+'/'+n+' חלקים'+Object.entries(OV).map(([k,v])=>' · '+Math.min(v[0],v[1])+'/'+v[1]+' '+k).join(''); }
 $('play').onclick=()=>{ if(S.items.every(it=>it.st)){ location.href='./'; return; } if(S.since) stopRun(); else startRun(); save(); tick(); };
 setInterval(tick,1000);
 addEventListener('pagehide',save); document.addEventListener('visibilitychange',()=>{ save(); tick(); });

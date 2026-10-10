@@ -49,6 +49,8 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 #scroller{padding-bottom:calc(var(--dockH,calc(76px*var(--k))) + 55vh)}
 #doc{margin:0 auto;width:min(100%, var(--pw))}
 .t{background:var(--paper);color:var(--text);font-family:var(--serif);padding:0 calc(20px*var(--k))}
+.t.learned{opacity:.5}
+.t.resume{font-family:var(--ui);font-size:calc(13px*var(--k));color:var(--gold);text-align:center;padding:calc(10px*var(--k)) 0;border-top:calc(1px*var(--k)) dashed var(--gold);margin-top:calc(8px*var(--k))}
 .t.head{padding-top:calc(26px*var(--k));padding-bottom:calc(8px*var(--k));text-align:center}
 .t.head h3{font-size:calc(var(--fs) * 1.2);margin:0;font-weight:700}
 .t.head small{display:block;font-family:var(--ui);font-size:calc(13px*var(--k));color:var(--textmuted);margin-top:calc(2px*var(--k))}
@@ -130,6 +132,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
   </div>
   <div class="bar" id="bar"><div class="fill" id="fill"></div></div>
   <div class="eta"><span id="left"></span><span id="pace"></span></div>
+  <div class="eta" id="overallRow" style="padding-top:0"><span id="overall"></span></div>
 </header>
 <div class="shade" id="shade"></div>
 <div class="line" id="line"><span class="tab">כאן</span></div>
@@ -215,12 +218,15 @@ function dmW(){ return Math.min(innerWidth,900*K)*(DMV.zoom||1.6); }
 const dmIO=new IntersectionObserver(es=>es.forEach(e=>{ const el=e.target; if(e.isIntersecting){ if(!el._c){ const c=document.createElement('canvas'); c.style.width='100%'; el._c=c; el.firstChild.firstChild.appendChild(c); DMmod.renderSlice(el._sl,el._sl._pc,c).catch(()=>{}); } } else if(el._c){ el._c.remove(); el._c=null; } }),{rootMargin:'1800px 0px'});
 /* build */
 let B=[], tops=[], hts=[], TOTAL=1, PB=[], ready=false, curPos=0;
-function add(cls,html,w,mark,part){ const el=document.createElement('div'); el.className='t '+cls; el.innerHTML=html; $('doc').appendChild(el); B.push({el,w:Math.max(1,w),mark,part}); }
+// raw: text already learned – shown above the resume point so you can scroll back, but (almost) no weight in time / progress
+function add(cls,html,w,mark,part,raw){ const el=document.createElement('div'); el.className='t '+cls; el.innerHTML=html; $('doc').appendChild(el); B.push({el,w:raw?0.01:Math.max(1,w),mark,part}); }
+function addSl(b){ if(!b.sl) return; const el=B[B.length-1].el; el._sl=b.sl; const bx=DMmod.sliceBox(b.sl,dmW(),Math.min(innerWidth,600*K)); b.sl._pc=bx.pageCss; el.innerHTML='<div class="dmx"><div style="width:'+bx.w+'px;height:'+bx.h+'px;margin-left:auto"></div></div>'; dmIO.observe(el); }
+let RESUME0=null;
 let GOAL=1;
 async function load(){
   $('doc').innerHTML='<div class="t msg">טוען…</div>';
   const res=await Promise.all(UNITS.map(u=>loadUnit(u.id).then(r=>({u,r})).catch(e=>({u,err:e}))));
-  $('doc').innerHTML=''; B=[]; PB=[]; let goalAt=null;
+  $('doc').innerHTML=''; B=[]; PB=[]; RESUME0=null; let goalAt=null;
   res.forEach(({u,r,err},ui)=>{ const p=u.id, start=B.length; const more=ui<res.length-1; let cut=false;
     if(err){ add('part',NAMES[p],1,NAMES[p],p); add('msg','לא הצלחתי לטעון את '+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div>',1,NAMES[p],p); PB.push({p,start,end:B.length,err:true,S:0,W:1}); return; }
     const W=r.blocks.reduce((a,b)=>a+Math.max(1,b.w),0); const [pb,pw]=splitWk(p), a=pb.split(':');
@@ -228,27 +234,29 @@ async function load(){
     // skip what was already learned this week
     const f0=p==='korb'?0:wkFrac(p); let S=0, k=0; while(k<r.blocks.length-1 && S+Math.max(1,r.blocks[k].w)<=f0*W){ S+=Math.max(1,r.blocks[k].w); k++; }
     add('part',(r.title||NAMES[p])+(S>0?' <small style="font-family:var(--ui);font-size:.65em;color:var(--muted)">· המשך</small>':''),1,NAMES[p],p);
+    // what was already learned: shown dimmed, so you can scroll back to it
+    if(k>0){ r.blocks.slice(0,k).forEach(b=>{ add(b.cls+' learned',b.html,b.w,b.mark,p,true); addSl(b); }); add('resume','↑ נלמד כבר · ממשיכים מכאן ↓',0,NAMES[p],p,true); }
+    const rs=B.length; if(RESUME0==null) RESUME0=rs;
     let got=0; if(u.end!=null) u.plan=Math.max(1,u.end*W-S);
-    r.blocks.slice(k).forEach(b=>{ if(cut) return; add(b.cls,b.html,b.w,b.mark,p); got+=Math.max(1,b.w);
-      if(b.sl){ const el=B[B.length-1].el; el._sl=b.sl; const bx=DMmod.sliceBox(b.sl,dmW(),Math.min(innerWidth,600*K)); b.sl._pc=bx.pageCss; el.innerHTML='<div class="dmx"><div style="width:'+bx.w+'px;height:'+bx.h+'px;margin-left:auto"></div></div>'; dmIO.observe(el); }
+    r.blocks.slice(k).forEach(b=>{ if(cut) return; add(b.cls,b.html,b.w,b.mark,p); got+=Math.max(1,b.w); addSl(b);
       if(u.plan && goalAt==null && got>=u.plan){ if(more){ cut=true; add('goal','<b>עד כאן לעכשיו</b>בפעם הבאה תמשיך מכאן. ממשיכים ל'+NAMES[res[ui+1].u.id]+'.',1,'יעד',p); } else { goalAt=B.length; add('goal','<b>כאן מסתיים הזמן שתכננת</b>אפשר לעצור כאן – בפעם הבאה תמשיך מכאן. או להמשיך הלאה.',1,'יעד',p); } } });
     // counted units of this part (verses / psalms / paragraphs / pages) – including what was already learned before
     const UC=['ps','par','dmsl'], allU=r.blocks.filter(b=>UC.includes(b.cls)), isPg=allU.some(b=>b.sl), shown=[];
-    for(let i=start;i<B.length;i++) if(UC.some(c=>B[i].el.classList.contains(c))) shown.push(i);
+    for(let i=rs;i<B.length;i++) if(UC.some(c=>B[i].el.classList.contains(c))) shown.push(i);
     let ut, us, uix=[], uabs=null;
     if(r.units){ const E=r.units.ends.map(f=>f*W); ut=E.length; us=E.filter(e=>e<=S+0.5).length; uabs={base:start,S,E:E.filter(e=>e>S+0.5)}; }
     else if(isPg){ const pages=[...new Set(allU.map(b=>b.sl.p))]; const last={}; shown.forEach(i=>{ const sp=B[i].el._sl&&B[i].el._sl.p; if(sp!=null) last[sp]=[i,1]; }); ut=pages.length; uix=Object.values(last).sort((a,b)=>a[0]-b[0]); us=pages.filter(x=>!(x in last)&&x<Math.min(...Object.keys(last).map(Number))).length; }
     else { const nv=b=>b.nv||1; ut=allU.reduce((a,b)=>a+nv(b),0); us=r.blocks.slice(0,k).filter(b=>UC.includes(b.cls)).reduce((a,b)=>a+nv(b),0); const sh=r.blocks.slice(k).filter(b=>UC.includes(b.cls)); uix=shown.map((i,j)=>[i,sh[j]?nv(sh[j]):1]); }
     const un=r.units?r.units.name:a[0]==='chu'||a[0]==='shm'?'פסוקים':a[0]==='teh'?'פסוקים':a[0]==='tan'?'קטעים':a[0]==='korb'?'חלקים':isPg?'עמודים':'';
-    PB.push({p,start,end:B.length,S,W,G:got,ut,us,ui:uix,uabs,un}); });
+    PB.push({p,start,rs,end:B.length,S,W,G:got,ut,us,ui:uix,uabs,un}); });
   add('end','<b>סיום הלימוד</b><a href="./">חזרה למסך הבית</a>',2,'סיום',null);
   let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
-  PB.forEach(x=>{ x.a=B[x.start].cum+1; x.z=B[x.end-1].cum+B[x.end-1].w; });
-  PB.forEach(x=>{ if(x.uabs){ const b0=B[x.uabs.base].cum+1; x.ends=x.uabs.E.map(e=>b0+(e-x.uabs.S)); } else x.ends=(x.ui||[]).flatMap(([i,n])=>Array.from({length:n},(_,j)=>B[i].cum+B[i].w*(j+1)/n)); });
+  PB.forEach(x=>{ x.a=x.rs!=null?B[x.rs].cum:B[x.start].cum+1; x.z=B[x.end-1].cum+B[x.end-1].w; });
+  PB.forEach(x=>{ if(x.uabs){ const b0=B[x.rs].cum; x.ends=x.uabs.E.map(e=>b0+(e-x.uabs.S)); } else x.ends=(x.ui||[]).flatMap(([i,n])=>Array.from({length:n},(_,j)=>B[i].cum+B[i].w*(j+1)/n)); });
   GOAL=goalAt!=null?B[goalAt].cum:TOTAL-2;
   const bar=$('bar'); PB.slice(1).forEach(x=>{ const t=document.createElement('div'); t.className='tick'; t.style.right=(x.a/TOTAL*100)+'%'; bar.appendChild(t); });
   if(goalAt!=null){ const t=document.createElement('div'); t.className='tick goal'; t.style.right=(GOAL/TOTAL*100)+'%'; bar.appendChild(t); }
-  measure(); scrollToPos(0); ready=true; if(fit) applyFit(); update(); }
+  measure(); scrollToPos(RESUME0!=null&&RESUME0<B.length&&B[RESUME0].el.previousElementSibling&&B[RESUME0].el.previousElementSibling.classList.contains('resume')?B[RESUME0].cum:0); ready=true; if(fit) applyFit(); update(); }
 
 /* geometry */
 function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight);
@@ -299,13 +307,16 @@ function showOffer(m){ const d=document.createElement('div'); d.className='offer
 function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; $('clockLbl').textContent=t0?'למדת '+mmss(Date.now()-t0):'שעת סיום משוערת'; } else { $('clock').textContent=mmss(lm); $('clockLbl').textContent=UNTIL?(lm>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):!t0?'השעון יתחיל בלחיצה על ▶':(lm>=0?'נותרו מתוך '+BUDGET+' דק׳':'עבר הזמן שהגדרת'); }
   if(!ready) return;
   const p=curPos; checkStops(p); $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
-  const box=$('parts'); box.innerHTML='';
+  const box=$('parts'); box.innerHTML=''; const OV={}; let ovDone=0, ovN=0;
   PB.forEach(x=>{ const i=document.createElement('i'); const fr=Math.max(0,Math.min(1,(p-x.a)/Math.max(1,x.z-x.a))); const uf=x.err?0:Math.min(1,(x.S+fr*(x.G!=null?x.G:x.W-x.S))/x.W);
-    const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; const cn=x.ends?Math.min(x.ut,x.us+x.ends.filter(e=>e<=p+0.5).length):0; i.textContent=NAMES[x.p]+(dn?' ✓':x.ut?' '+(p>=x.a-1?cn:x.us)+'/'+x.ut:''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); box.appendChild(i);
+    const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; const cn=x.ends?Math.min(x.ut,x.us+x.ends.filter(e=>e<=p+0.5).length):0; if(!x.err&&x.p!=='mincha'){ ovN++; if(dn) ovDone++; if(x.ut){ const k=x.un||''; OV[k]=OV[k]||[0,0]; OV[k][0]+=dn?x.ut:(p>=x.a-1?cn:x.us); OV[k][1]+=x.ut; } }
+    i.textContent=NAMES[x.p]+(dn?' ✓':x.ut?' '+(p>=x.a-1?cn:x.us)+'/'+x.ut:''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); box.appendChild(i);
     if(!x.err && x.p!=='mincha' && p>=x.a-0.5){ if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else wkSet(x.p,v);
       const [xb,xw]=splitWk(x.p), a=xw===CURWK?xb.split(':'):['']; if(a[0]==='chu'&&+a[1]===WD) setProgress('chumash',isoDate(today),v,v>=1?x.ut:cn,x.ut,x.un); if(a[0]==='tan'&&+a[1]===WD) setProgress('tanya',isoDate(today),v,v>=1?x.ut:cn,x.ut,x.un);
       if(a[0]==='teh'&&+a[1]===T.day) setProgress('tehillim',T.key,v,v>=1?x.ut:cn,x.ut,x.un); } });
   const tgt=p<GOAL-1?GOAL:TOTAL, lw=Math.max(0,tgt-p), need=lw/wpm;
+  // the whole session, not only the current piece
+  $('overallRow').style.display=ovN<2?'none':''; if(ovN>=2) $('overall').innerHTML='בסך הכל: <b>'+Math.round(Math.min(1,p/Math.max(1,tgt))*100)+'%</b> · '+ovDone+'/'+ovN+' חלקים'+Object.entries(OV).map(([k,v])=>' · '+Math.min(v[0],v[1])+'/'+v[1]+(k?' '+k:'')).join('');
   const curP=PB.find(x=>p>=x.a-1&&p<x.z), curTxt=curP&&curP.ut?' · '+NAMES[curP.p]+': '+progTxt(Math.min(1,(curP.us+curP.ends.filter(e=>e<=p+0.5).length)/curP.ut),curP.us+curP.ends.filter(e=>e<=p+0.5).length,curP.ut,curP.un):'';
   $('left').innerHTML=TOTAL-p<3?'<b>✓ סיימת</b>':(tgt===GOAL&&GOAL<TOTAL-2?'עד היעד ':'נשאר ')+'כ־<b>'+fmtMin(need)+'</b> בקצב הזה'+curTxt;
   if(FREE){ const fin=TOTAL-p<3; $('clock').textContent=fin?'✓':clockIn(need+(MINCHA&&!minchaDone?MINCHA:0)); $('clockLbl').textContent=fin?'סיימת'+(t0?' · '+mmss(Date.now()-t0):''):(t0?'סיום משוער · למדת '+mmss(Date.now()-t0):'שעת סיום משוערת בקצב הזה'); $('pace').innerHTML=''; $('spd').textContent=Math.round(wpm); return; }
