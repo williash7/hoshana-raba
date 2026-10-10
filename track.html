@@ -79,7 +79,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
   <button class="play" id="play">התחל ▶</button>
   <a class="home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
 </div></nav>
-<script src="common.js?v=8916f726"></script>
+<script src="common.js?v=f6d9e6a2"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
 computeK();
@@ -87,7 +87,8 @@ TW={"cw": [57, 77, 63, 68, 98, 74, 124, 66, 150, 147, 62, 72, 48, 64, 44, 78, 11
 const Q=new URLSearchParams(location.search);
 const BUDGET=Math.max(1,+(Q.get('min')||30));
 const UNTIL=Q.get('until'), UNTILMS=UNTIL?(()=>{ const [h,m]=UNTIL.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); })():null;
-const leftNow=tot=>UNTILMS?UNTILMS-Date.now():BUDGET*6e4-tot;
+const FREE=Q.get('free')==='1'&&!UNTIL;   // no time limit – show when you will finish
+const leftNow=tot=>FREE?0:UNTILMS?UNTILMS-Date.now():BUDGET*6e4-tot;
 const today=new Date(); today.setHours(12,0,0,0);
 const WD=today.getDay(), T=tehToday();
 const dateOf=d=>{ const x=new Date(today); x.setDate(x.getDate()-(WD-d)); return x; };
@@ -171,7 +172,7 @@ function render(){ const box=$('list'); box.innerHTML='';
     const P=unitPace(); const pc=Object.keys(UNITNAME).filter(k=>P[k]).map(k=>UNITNAME[k]+' – '+(P[k]>=60?Math.floor(P[k]/60)+':'+String(P[k]%60).padStart(2,'0')+' דק׳':P[k]+' שנ׳')).join(' · ');
     s.innerHTML='<h3>סיום ✓</h3>למדת <b>'+fmtMin(tot/6e4)+'</b> · '+[dn?(dn===1?'חלק אחד הושלם':dn+' חלקים הושלמו'):'', S.items.length>dn?(S.items.length-dn===1?'חלק אחד יימשך':(S.items.length-dn)+' חלקים יימשכו')+' בפעם הבאה מהמקום שעצרת':''].filter(Boolean).join(', ')+'.<br>זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b>'+
       (pc?'<br><span style="color:var(--muted);font-size:.9em">הקצב שלך בממוצע: '+pc+'. התוכניות הבאות יחושבו לפי זה.</span>':'');
-    const lm=leftNow(tot); if(lm>=2.5*6e4){ const m=Math.floor(lm/6e4); const o=document.createElement('div'); o.className='sum'; o.style.borderColor='var(--gold)';
+    const lm=leftNow(tot); if(!FREE&&lm>=2.5*6e4){ const m=Math.floor(lm/6e4); const o=document.createElement('div'); o.className='sum'; o.style.borderColor='var(--gold)';
       o.innerHTML='סיימת לפני הזמן! נשארו עוד <b style="color:var(--gold)">'+m+' דק׳</b>. תרצה ללמוד עוד קטע?<div class="acts"><button class="ok">כן, תכין לי עוד</button></div>';
       o.querySelector('.ok').onclick=()=>{ location.href='index.html?go=1&min='+m+(UNTIL?'&until='+UNTIL:''); }; box.appendChild(s); box.appendChild(o); } else box.appendChild(s); }
   tick(); }
@@ -200,10 +201,13 @@ function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; s
   if(it.id==='korb') setProgress('korbanot',isoDate(today),it.f);
   pick=-1; pickSl=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
 const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); const h=Math.floor(s/3600); return (neg?'-':'')+(h?h+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0'); };
+// minutes still to learn, by the estimate of each open item (the current one minus the time already spent on it)
+function remainMin(){ let m=0; S.items.forEach((it,i)=>{ if(it.st) return; const I=INFO[it.id]; if(!I) return; const g=goalOf(it,I)||1; m+=Math.max(i===S.cur?0.5:0,estimate(I,it.f0,g)-(i===S.cur?itemMs(i)/6e4:0)); }); return m; }
 function tick(){ const tot=totalMs(), left=leftNow(tot);
-  $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);
+  if(FREE){ const rm=remainMin(), dn=S.items.every(it=>it.st); $('clock').textContent=dn?'✓':clockIn(rm); $('clockBox').classList.remove('over'); $('clockLbl').textContent=dn?'סיימת':'שעת סיום משוערת · עוד כ־'+fmtMin(rm); $('fill').style.width=(tot+rm*6e4?Math.min(100,tot/(tot+rm*6e4)*100):0)+'%'; }
+  else { $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);
   $('clockLbl').textContent=UNTIL?(left>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):left>=0?'נותרו מתוך '+fmtMin(BUDGET):'עבר הזמן שתכננת';
-  $('fill').style.width=Math.min(100,tot/(BUDGET*6e4)*100)+'%';
+  $('fill').style.width=Math.min(100,tot/(BUDGET*6e4)*100)+'%'; }
   const allDone=S.items.every(it=>it.st);
   $('play').textContent=allDone?'חזרה למסך הבית':S.since?'⏸ השהה':(tot?'המשך ▶':'התחל ▶'); $('play').classList.toggle('run',!!S.since);
   const ce=document.querySelector('.it.cur .t'); if(ce) ce.textContent=mmss(itemMs(S.cur));
@@ -214,7 +218,7 @@ addEventListener('pagehide',save); document.addEventListener('visibilitychange',
 
 /* ---------- load ---------- */
 (async()=>{
-  try{ DM=await import('./dm.js?v=8916f726'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
+  try{ DM=await import('./dm.js?v=f6d9e6a2'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
     for(const w of new Set(S.items.map(it=>splitWk(it.id)[1]).filter(w=>w!==CURWK))){ const b=await DM.loadStored(null,w); if(b) IDXW[w]=b.index; } }catch(e){}
   S.items.forEach(it=>{ INFO[it.id]=info(it.id); });
   if(!S.items.length){ $('list').innerHTML='<div class="msg">אין מה ללמוד בתוכנית. <a href="./" style="color:var(--gold)">חזרה למסך הבית</a></div>'; return; }

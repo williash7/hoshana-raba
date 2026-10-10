@@ -144,6 +144,8 @@ function learnUnitPace(kind,units,ms){ if(!kind||units<2||ms<60000) return; cons
 function estMinPrint(words,kind,units){ const P=unitPace(); if(kind&&P[kind]&&units) return units*P[kind]/60; return words/printWpm(); }
 function weekTime(){ const W=lsGet('time-v1',null); return W&&W.wk===wkId()?W.ms:0; }
 function addWeekTime(ms){ if(!(ms>0)) return; lsSet('time-v1',{wk:wkId(),ms:weekTime()+ms}); }
+// clock time after m minutes from now – "20:34"
+function clockIn(m){ const d=new Date(Date.now()+Math.max(0,m)*6e4); return d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'); }
 function fmtMin(m){ m=Math.round(m); if(m<1) return 'פחות מדקה'; if(m<60) return m+' דק׳'; return Math.floor(m/60)+' שע׳'+(m%60?' ו־'+(m%60)+' דק׳':''); }
 
 /* parts for the continuous session: each returns {title, blocks:[{cls,html,w,mark}]} */
