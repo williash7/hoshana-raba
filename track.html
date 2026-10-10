@@ -80,7 +80,7 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
   <button class="play" id="play">התחל ▶</button>
   <a class="home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
 </div></nav>
-<script src="common.js?v=f6d9e6a2"></script>
+<script src="common.js?v=3d57e250"></script>
 <script type="module">
 const $=id=>document.getElementById(id);
 computeK();
@@ -225,7 +225,7 @@ addEventListener('pagehide',save); document.addEventListener('visibilitychange',
 
 /* ---------- load ---------- */
 (async()=>{
-  try{ DM=await import('./dm.js?v=f6d9e6a2'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
+  try{ DM=await import('./dm.js?v=3d57e250'); const m=await DM.loadStored(); if(m){ IDX=m.index; IDAY=m.wk===CURWK?DM.dayForLabel(IDX,hebOf(today).label):-1; }
     for(const w of new Set(S.items.map(it=>splitWk(it.id)[1]).filter(w=>w!==CURWK))){ const b=await DM.loadStored(null,w); if(b) IDXW[w]=b.index; } }catch(e){}
   S.items.forEach(it=>{ INFO[it.id]=info(it.id); });
   if(!S.items.length){ $('list').innerHTML='<div class="msg">אין מה ללמוד בתוכנית. <a href="./" style="color:var(--gold)">חזרה למסך הבית</a></div>'; return; }

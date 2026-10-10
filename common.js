@@ -210,6 +210,11 @@ async function partKorbanot(){ const txt=await sefText('Weekday Siddur Chabad, M
 /* Tanya Yomi: Sefaria's calendar gives only where each day's portion STARTS (e.g. "…Iggeret HaKodesh 24:1"),
    so the portion runs from today's start up to tomorrow's start */
 const splitRef=r=>{ const m=String(r).match(/^(.*?)\s(\d+)(?::(\d+))?$/); return m?{book:m[1],ch:+m[2],seg:m[3]?+m[3]:1}:null; };
+// Hebrew name of a Tanya Yomi calendar item (Sefaria sometimes gives only the English ref)
+function tanyaHe(it){ const he=(it.displayValue&&it.displayValue.he)||it.heRef||''; if(/[א-ת]/.test(he)) return he.replace(/^תניא,?\s*/,'');
+  const P={'Likkutei Amarim':'ליקוטי אמרים','Shaar HaYichud VehaEmunah':'שער היחוד והאמונה','Iggeret HaTeshuvah':'אגרת התשובה','Iggeret HaKodesh':'אגרת הקודש','Kuntres Acharon':'קונטרס אחרון'};
+  const m=String(it.ref||'').match(/;\s*([^0-9]+?)\s+(\d+)(?::(\d+))?/); if(!m) return it.ref||''; const name=Object.keys(P).find(k=>m[1].includes(k));
+  return (name?P[name]:m[1])+(name==='Likkutei Amarim'?' פרק ':' ')+gem(+m[2]); }
 async function tanyaStart(date){ const cal=await sefCalendar(date); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(!it) throw new Error('no tanya'); return it; }
 async function chapSegs(book,ch){ const j=await sefText(book+' '+ch,'hebrew'); return {segs:flat(j.versions&&j.versions[0]&&j.versions[0].text), he:j.heRef||''}; }
 async function tanyaPortion(date){ const it=await tanyaStart(date);
