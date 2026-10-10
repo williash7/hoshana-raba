@@ -388,6 +388,8 @@ requestAnimationFrame(()=>{ measure(); scrollToPos(D.pos); ready=true; update();
   const fix=()=>{ if(!playing){ const p=D.pos; measure(); scrollToPos(p); D.pos=p; } }; setTimeout(fix,300); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fix);
   if(D.pos>3) toast('ממשיכים מאיפה שעצרת'); });
 </script>
+<script src="hdr.js?v=439b4687"></script>
+<script>collapsibleTop({ids:['curCh','pct','left']});</script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
 </html>

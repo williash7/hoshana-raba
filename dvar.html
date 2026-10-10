@@ -155,9 +155,9 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 <div class="toast" id="toast"></div>
 <script>window.onerror=function(m,src,l){ var d=document.getElementById('doc'); if(d) d.innerHTML='<div class="t msg">שגיאה בטעינת הדף<div class="dbg">'+String(m).replace(/[<>&]/g,'')+' ('+String(src||'').split('/').pop()+':'+l+')</div></div>'; };</script>
-<script src="common.js?v=3d57e250"></script>
+<script src="common.js?v=439b4687"></script>
 <script type="module">
-import * as DM from './dm.js?v=3d57e250';
+import * as DM from './dm.js?v=439b4687';
 const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const HOME=lsGet('home-v1',{});
@@ -275,6 +275,8 @@ window._dv=()=>({TODAYDAY,DAY,subj:V.subj,n:B.length,TOTAL,IDX});
 (async()=>{ $('doc').innerHTML='<div class="empty"><h2>טוען את החוברת…</h2><div class="prog" id="prog"><i></i></div></div>'; try{ META=await DM.loadStored(f=>{ const i=document.querySelector('#prog i'); if(i) i.style.width=Math.round(f*100)+'%'; }); }catch(e){}
   if(!META){ emptyState(''); return; } IDX=META.index; afterLoad(false); })();
 </script>
+<script src="hdr.js?v=439b4687"></script>
+<script>collapsibleTop({ids:['cur','pct','left']});</script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
 </html>

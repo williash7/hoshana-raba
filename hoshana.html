@@ -511,6 +511,8 @@ requestAnimationFrame(()=>{ const p=S.pos; measure(); scrollToPos(p); S.pos=p; l
 if(S.auto) applyAutoPace();
 if(S.loc==='gps' || S.geoLon==null) setTimeout(()=>locate(true),1200);
 </script>
+<script src="hdr.js?v=439b4687"></script>
+<script>collapsibleTop({ids:['secName','pct','left'],clock:'cd'});</script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
 </html>
