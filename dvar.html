@@ -155,9 +155,9 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <input type="file" id="file" accept="application/pdf,.pdf" hidden>
 <div class="toast" id="toast"></div>
 <script>window.onerror=function(m,src,l){ var d=document.getElementById('doc'); if(d) d.innerHTML='<div class="t msg">שגיאה בטעינת הדף<div class="dbg">'+String(m).replace(/[<>&]/g,'')+' ('+String(src||'').split('/').pop()+':'+l+')</div></div>'; };</script>
-<script src="common.js?v=439b4687"></script>
+<script src="common.js?v=5b6e3b02"></script>
 <script type="module">
-import * as DM from './dm.js?v=439b4687';
+import * as DM from './dm.js?v=5b6e3b02';
 const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const HOME=lsGet('home-v1',{});
@@ -189,8 +189,8 @@ async function autoLoad(){ try{ toast('מנסה להוריד…'); const buf=awa
 $('more').onclick=()=>{ if(confirm('לטעון חוברת חדשה? החוברות הקודמות יישארו בארכיון עד שתסיים ללמוד אותן.')) emptyState(''); };
 
 function afterLoad(fresh){
-  TODAYDAY=META.wk===wkId()?DM.dayForLabel(IDX,todayLbl):-1; bookTabs();
-  const L=IDX.dayLabels||[]; $('week').textContent=(L[0]&&L[6]?L[0].replace(/^יום ראשון\s*/,'')+' – '+L[6].replace(/^שבת קודש\s*/,''):(META.name||''));
+  TODAYDAY=META.wk===wkId()?new Date().getDay():-1; bookTabs();
+  const L=IDX.dayLabels||[]; { const s=weekStart(META.wk), e=new Date(s); e.setDate(e.getDate()+6); $('week').textContent=hebOf(s).label+' – '+hebOf(e).label; }
   if(TODAYDAY<0){ if(META.wk>=wkId()) toast('החוברת שטעונה אינה של השבוע הנוכחי'); DAY=Math.min(DAY,6); } else DAY=TODAYDAY;
   if(V.subj!=='more' && !IDX.subjects[V.subj]) V.subj=Object.keys(IDX.subjects)[0];
   tabs(); show(); if(fresh) toast('החוברת נטענה ✓'); }
@@ -276,7 +276,7 @@ window._dv=()=>({TODAYDAY,DAY,subj:V.subj,n:B.length,TOTAL,IDX});
 (async()=>{ $('doc').innerHTML='<div class="empty"><h2>טוען את החוברת…</h2><div class="prog" id="prog"><i></i></div></div>'; try{ META=await DM.loadStored(f=>{ const i=document.querySelector('#prog i'); if(i) i.style.width=Math.round(f*100)+'%'; }); }catch(e){}
   if(!META){ emptyState(''); return; } IDX=META.index; afterLoad(false); })();
 </script>
-<script src="hdr.js?v=439b4687"></script>
+<script src="hdr.js?v=5b6e3b02"></script>
 <script>collapsibleTop({ids:['cur','pct','left']});</script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>

@@ -18,7 +18,7 @@ export const DAYNAMES=['ראשון','שני','שלישי','רביעי','חמיש
 const DAYW=[['ראשון'],['שני'],['שלישי'],['רביעי'],['חמישי'],['שישי','ששי'],['שבת']];
 const norm=s=>s.replace(/[‎‏‪-‮"'״׳`]/g,'').replace(/\s+/g,'');
 const HEAD=56, FOOT=26;
-const IDXV=9;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
+const IDXV=10;   // bump when the index format changes, so stored booklets are re-indexed   // running header / footer heights in PDF points
 
 /* legacy Hebrew fonts: letters stored as cp1255 bytes shown as Latin-1 or Mac-Roman characters */
 const MACR='ÄÅÇÉÑÖÜáàâäãåçéèêëíìîïñóòôöõúùûü†°¢£§•¶ß®©™´¨≠ÆØ∞±≤≥¥µ∂∑∏π∫ªºΩæø¿¡¬√ƒ≈∆«»…\xa0ÀÃÕŒœ–—“”‘’÷◊ÿŸ⁄€‹›ﬁﬂ‡·‚„‰ÂÊÁËÈÍÎÏÌÓÔ\uf8ffÒÚÛÙıˆ˜¯˘˙˚¸˝˛ˇ';
@@ -161,13 +161,16 @@ async function buildIndex(doc, onProgress){
       const ds=Object.keys(byDay).map(Number).sort((a,b)=>a-b);
       ds.forEach((dd,i)=>{ const m=byDay[dd], nx=byDay[ds[i+1]];
         days[dd]={from:{p:m.p,y:m.y,col:m.col}, to:nx?{p:nx.p,y:nx.y,col:nx.col}:{p:last,y:null,col:'F'}, label:m.label}; });
+      // Sunday without its own heading (e.g. Rosh Chodesh, or the heading sits at the very top of the page): from the start of the subject up to Monday
+      const od=o=>o.p*100000+(o.col==='L'?50000:0)+(o.y||0);
+      if(!days[0] && days[1] && od({p:first,y:HEAD,col:'F'})<od(days[1].from)-40) days[0]={from:{p:first,y:HEAD,col:'F'}, to:{p:days[1].from.p,y:days[1].from.y,col:days[1].from.col}, label:null, nomark:true};
       // a combined day (e.g. Friday–Shabbat) without its own marker: reuse the neighbour's range
       for(let d=0;d<7;d++){ if(!days[d]){ const n=days[d+1]||days[d-1]; if(n) days[d]=Object.assign({},n,{shared:true}); } }
     }
     index.subjects[S.id]={first,last,days};
   });
   // week label from the chumash / first markers
-  const lab=[]; for(const s of Object.values(index.subjects)) for(let d=0;d<7;d++){ const L=s.days[d]&&s.days[d].label; if(L&&!lab[d]) lab[d]=L; }
+  const lab=[]; for(const s of Object.values(index.subjects)) for(let d=0;d<7;d++){ const L=s.days[d]&&!s.days[d].shared&&s.days[d].label; if(L&&!lab[d]) lab[d]=L; }
   index.dayLabels=lab; index.v=IDXV;
   // weekly (not daily) sections: group the remaining pages by their running header
   const secs=[]; const key=s=>(s||'').replace(/^[\/\s]+/,'').split(/[\s\-–.\/]+/).filter(Boolean)[0]||'';
@@ -240,9 +243,10 @@ export async function tryDownload(url){ const r=await fetch(url,{cache:'no-store
 
 /* which weekday column matches today's Hebrew date label (e.g. כ"ג תשרי) */
 /* today's portion summary for the home screen */
-export function todayInfo(index, hebLabel){ const d=dayForLabel(index,hebLabel); if(d<0) return null; const out={};
+export function todayInfo(index, hebLabel, day){ const d=day!=null&&day>=0?day:dayForLabel(index,hebLabel); if(d<0) return null; const out={};
   SUBJECTS.forEach(S=>{ if(!index.subjects[S.id]) return; const sl=slices(index,S.id,d); if(sl.length) out[S.id]={name:S.name, words:sl.reduce((a,b)=>a+b.words,0), pages:sl.length}; });
   return {day:d, subjects:out}; }
+export function dayToday(index, wk, curWk, date){ if(wk&&curWk&&wk===curWk) return (date||new Date()).getDay(); return dayForLabel(index, globalThis.hebOf(date||new Date()).label); }
 export function dayForLabel(index, hebLabel){ const n=norm(hebLabel); const L=index.dayLabels||[]; for(let d=0;d<7;d++){ if(L[d] && norm(L[d]).includes(n)) return d; } return -1; }
 
 /* list of page slices for a subject/day: [{p, y0, y1, w, h, words}] (PDF units) */
