@@ -43,6 +43,12 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) ca
 .it .where{margin:calc(8px*var(--k)) 0 0;font-size:calc(15px*var(--k));line-height:1.55}
 .it .where b{color:var(--gold);font-weight:600}
 .it .est{font-size:calc(13px*var(--k));color:var(--muted);margin-top:calc(4px*var(--k))}
+.it.dropped{opacity:.6}
+.it .back{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--gold);border-radius:calc(12px*var(--k));padding:calc(1px*var(--k)) calc(10px*var(--k));font-size:calc(12px*var(--k))}
+.planNote{position:fixed;left:calc(12px*var(--k));right:calc(12px*var(--k));bottom:calc(90px*var(--k));z-index:30;background:var(--night);color:var(--ink);border:calc(1.5px*var(--k)) solid var(--gold);border-radius:calc(16px*var(--k));padding:calc(14px*var(--k));text-align:center;font-size:calc(15px*var(--k));box-shadow:0 6px 24px #0008}
+.planNote b{color:var(--gold)}
+.planNote div{display:flex;gap:calc(8px*var(--k));justify-content:center;margin-top:calc(10px*var(--k))}
+.planNote button{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(6px*var(--k)) calc(14px*var(--k))}
 .it.cur{border-color:var(--gold);background:#262a40}
 .it.cur .n{background:var(--gold);color:#241c08}
 .it.cur .t{color:var(--gold);font-size:calc(20px*var(--k));font-weight:700}
@@ -152,11 +158,13 @@ let pick=-1, pickSl=-1;
 function render(){ const box=$('list'); box.innerHTML='';
   S.items.forEach((it,i)=>{ const I=INFO[it.id]; const d=document.createElement('div');
     const done=it.st==='done', part=it.st==='part', cur=i===S.cur&&!done&&!part;
-    d.className='it'+(cur?' cur':'')+(done?' done':'')+(part?' part':'');
+    const drop=!!it.drop&&!done&&!part;
+    d.className='it'+(cur?' cur':'')+(done?' done':'')+(part?' part':'')+(drop?' dropped':'');
     const goalF=goalOf(it,I); let est;
     const nU=unitsIn(I,it.f0,goalF||1), uTxt=I.kind&&nU?' · '+nU+' '+(nU===1?UNITNAME[I.kind]:UNITPL[I.kind]):'';
     if(goalF){ est='מתוכנן: כ־'+fmtMin(estimate(I,it.f0,goalF))+' (חלק)'+uTxt; const g=posAt(I,goalF-0.001); if(g) est+=' – עד בערך '+g; }
     else est='משוער: כ־'+fmtMin(estimate(I,it.f0,1))+uTxt;
+    if(drop) est='<span style="color:var(--gold)">ירד מהתוכנית – בקצב הזה לא נכנס בזמן</span> <button class="back">החזר</button><br>'+est;
     let where=I.where||''; if(it.f0>0&&!done) where+='<br><span style="color:var(--muted)">נלמד עד כה: '+cntTxt(I,it.f0)+'</span>'; if(it.f0>0&&!done){ const s=I.sl?resumeAt(I,it.f0):null; where+=s?'<br>המשך מ־<b>'+s+'</b>':'<br>המשך מהמקום שעצרת ('+Math.round(it.f0*100)+'%)'; }
     const tm=itemMs(i);
     d.innerHTML='<div class="hd"><div class="n">'+(done?'✓':part?'½':gem(i+1))+'</div><h2>'+I.name+(I.tag?' <em>· '+I.tag+'</em>':'')+'</h2><div class="t">'+(tm||cur?mmss(tm):'')+'</div></div>'+
@@ -167,9 +175,10 @@ function render(){ const box=$('list'); box.innerHTML='';
       ac.querySelector('.st').onclick=()=>{ pick=pick===i?-1:i; pickSl=-1; render(); };
       ac.querySelector('.sk').onclick=()=>{ const r=!!S.since; stopRun(); S.cur=next(i); pick=-1; if(r) startRun(); save(); render(); };
       if(pick===i) d.appendChild(picker(i,it,I,goalF)); }
-    else if(!done&&!part){ d.onclick=()=>{ const r=!!S.since; stopRun(); S.cur=i; pick=-1; if(r) startRun(); save(); render(); }; d.style.cursor='pointer'; }
+    if(drop) d.querySelector('.back').onclick=e=>{ e.stopPropagation(); it.drop=false; it.keep=true; save(); render(); };
+    if(!cur&&!done&&!part){ d.onclick=()=>{ const r=!!S.since; stopRun(); it.drop=false; S.cur=i; pick=-1; if(r) startRun(); save(); render(); }; d.style.cursor='pointer'; }
     box.appendChild(d); });
-  if(S.items.every(it=>it.st)){ const tot=totalMs(), dn=S.items.filter(it=>it.st==='done').length; const s=document.createElement('div'); s.className='sum';
+  if(allFin()){ const tot=totalMs(), dn=S.items.filter(it=>it.st==='done').length; const s=document.createElement('div'); s.className='sum';
     const P=unitPace(); const pc=Object.keys(UNITNAME).filter(k=>P[k]).map(k=>UNITNAME[k]+' – '+(P[k]>=60?Math.floor(P[k]/60)+':'+String(P[k]%60).padStart(2,'0')+' דק׳':P[k]+' שנ׳')).join(' · ');
     s.innerHTML='<h3>סיום ✓</h3>למדת <b>'+fmtMin(tot/6e4)+'</b> · '+[dn?(dn===1?'חלק אחד הושלם':dn+' חלקים הושלמו'):'', S.items.length>dn?(S.items.length-dn===1?'חלק אחד יימשך':(S.items.length-dn)+' חלקים יימשכו')+' בפעם הבאה מהמקום שעצרת':''].filter(Boolean).join(', ')+'.<br>זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b>'+
       (pc?'<br><span style="color:var(--muted);font-size:.9em">הקצב שלך בממוצע: '+pc+'. התוכניות הבאות יחושבו לפי זה.</span>':'');
@@ -194,7 +203,8 @@ function picker(i,it,I,goalF){ const pg=document.createElement('div'); pg.classN
       const b=btn(I.kind==='p'?'פסוק '+p.label:p.label,()=>finish(i,f)); b.style.minWidth='calc(42px*var(--k))'; }); }
   else { note('עמ׳ '+plab(I.sl[pickSl])+' – כמה מהעמוד?'); [[0.25,'רבע'],[0.5,'חצי'],[0.75,'שלושה רבעים'],[1,'כולו']].forEach(([x,t])=>{ const f=sg.a+(sg.b-sg.a)*x; if(f>it.f0+0.001) btn(t,()=>finish(i,f)); }); }
   return pg; }
-const next=i=>{ for(let k=1;k<=S.items.length;k++){ const j=(i+k)%S.items.length; if(!S.items[j].st) return j; } return i; };
+const next=i=>{ for(let k=1;k<=S.items.length;k++){ const j=(i+k)%S.items.length; if(!S.items[j].st&&!S.items[j].drop) return j; } return i; };
+function allFin(){ return S.items.every(it=>it.st||it.drop); }
 function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; stopRun();
   it.f=Math.max(it.f0,f); it.st=f>=0.999?'done':'part'; wkSet(it.id,it.f,true);
   if(I.kind) learnUnitPace(I.kind, unitsIn(I,it.f0,it.f>=0.999?1.01:it.f), it.ms); else learnPrintWpm((it.f-it.f0)*I.W, it.ms);
@@ -203,13 +213,30 @@ function finish(i,f){ const it=S.items[i], I=INFO[it.id]; const run=!!S.since; s
   pick=-1; pickSl=-1; S.cur=next(i); if(run && f>=0.999 && !S.items[S.cur].st) startRun(); save(); render(); }
 const mmss=ms=>{ const neg=ms<0; ms=Math.abs(ms); const s=Math.floor(ms/1000); const h=Math.floor(s/3600); return (neg?'-':'')+(h?h+':'+String(Math.floor(s/60)%60).padStart(2,'0'):Math.floor(s/60))+':'+String(s%60).padStart(2,'0'); };
 // minutes still to learn, by the estimate of each open item (the current one minus the time already spent on it)
-function remainMin(){ let m=0; S.items.forEach((it,i)=>{ if(it.st) return; const I=INFO[it.id]; if(!I) return; const g=goalOf(it,I)||1; m+=Math.max(i===S.cur?0.5:0,estimate(I,it.f0,g)-(i===S.cur?itemMs(i)/6e4:0)); }); return m; }
+// how much slower / faster than the estimate you are in this session (from what you already finished)
+function paceK(){ let act=0, est=0; S.items.forEach(it=>{ if(!it.st||it.ms<30000) return; const I=INFO[it.id]; if(!I) return; act+=it.ms/6e4; est+=estimate(I,it.f0,it.f||it.f0); }); return est>1?Math.max(0.4,Math.min(3,act/est)):1; }
+function itemLeft(it,i,k){ const I=INFO[it.id]; if(!I) return 0; const g=goalOf(it,I)||1; return Math.max(i===S.cur?0.5:0,estimate(I,it.f0,g)*k-(i===S.cur?itemMs(i)/6e4:0)); }
+function remainMin(){ const k=paceK(); let m=0; S.items.forEach((it,i)=>{ if(it.st||it.drop) return; m+=itemLeft(it,i,k); }); return m; }
+// keep the plan inside the time: drop the last lesson when you are slower, bring it back (or offer more) when faster
+const MORE=(Q.get('more')||'').split(',').filter(Boolean); let planT=0; const moreAsked=new Set();
+function note(html,btns,ms){ document.querySelectorAll('.planNote').forEach(e=>e.remove()); const d=document.createElement('div'); d.className='planNote'; d.innerHTML=html+(btns&&btns.length?'<div>'+btns.map(b=>'<button>'+b[0]+'</button>').join('')+'</div>':'');
+  (btns||[]).forEach((b,i)=>d.querySelectorAll('button')[i].onclick=()=>{ d.remove(); b[1]&&b[1](); }); document.body.appendChild(d); if(ms) setTimeout(()=>d.remove(),ms); }
+function replan(){ if(FREE||!S.since||allFin()||Date.now()-planT<45000) return; const tot=totalMs(); if(tot<60000) return;
+  const avail=leftNow(tot)/6e4, need=remainMin(), k=paceK();
+  if(need>avail+1.5){ let c=-1; S.items.forEach((it,i)=>{ if(!it.st&&!it.drop&&!it.keep&&i!==S.cur&&!(it.id==='korb')) c=i; }); if(c<0) return;
+    const it=S.items[c]; it.drop=true; planT=Date.now(); save(); render();
+    note('בקצב הזה לא תספיק את הכל בזמן – <b>'+INFO[it.id].name+'</b> ירד מהתוכנית.',[['השאר בכל זאת',()=>{ it.drop=false; it.keep=true; save(); render(); }],['בסדר',null]],15000); return; }
+  const di=S.items.findIndex(it=>it.drop&&!it.st);
+  if(di>=0){ if(need+itemLeft(S.items[di],di,k)<=avail-0.5){ S.items[di].drop=false; planT=Date.now(); save(); render(); note('בקצב הזה תספיק גם את <b>'+INFO[S.items[di].id].name+'</b> – הוא חזר לתוכנית ✓',[['אישור',null]],10000); } return; }
+  const m=MORE.find(id=>!moreAsked.has(id)&&!S.items.some(it=>it.id===id)); if(m&&avail-need>=4){ moreAsked.add(m); planT=Date.now(); const I=info(m);
+    note('בקצב הזה יישארו לך כ־<b>'+Math.round(avail-need)+' דק׳</b>. להוסיף גם את <b>'+I.name+(I.tag?' ('+I.tag+')':'')+'</b>?',[['כן, הוסף',()=>{ INFO[m]=I; S.items.push({id:m,plan:null,end:null,f0:wkFrac(m),f:null,ms:0,st:''}); save(); render(); }],['לא, תודה',null]]); } }
+setInterval(replan,5000);
 function tick(){ const tot=totalMs(), left=leftNow(tot);
-  if(FREE){ const rm=remainMin(), dn=S.items.every(it=>it.st); $('clock').textContent=dn?'✓':clockIn(rm); $('clockBox').classList.remove('over'); $('clockLbl').textContent=dn?'סיימת':'שעת סיום משוערת · עוד כ־'+fmtMin(rm); $('fill').style.width=(tot+rm*6e4?Math.min(100,tot/(tot+rm*6e4)*100):0)+'%'; }
+  if(FREE){ const rm=remainMin(), dn=allFin(); $('clock').textContent=dn?'✓':clockIn(rm); $('clockBox').classList.remove('over'); $('clockLbl').textContent=dn?'סיימת':'שעת סיום משוערת · עוד כ־'+fmtMin(rm); $('fill').style.width=(tot+rm*6e4?Math.min(100,tot/(tot+rm*6e4)*100):0)+'%'; }
   else { $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);
   $('clockLbl').textContent=UNTIL?(left>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):left>=0?'נותרו מתוך '+fmtMin(BUDGET):'עבר הזמן שתכננת';
   $('fill').style.width=Math.min(100,tot/(BUDGET*6e4)*100)+'%'; }
-  const allDone=S.items.every(it=>it.st);
+  const allDone=allFin();
   $('play').textContent=allDone?'חזרה למסך הבית':S.since?'⏸ השהה':(tot?'המשך ▶':'התחל ▶'); $('play').classList.toggle('run',!!S.since);
   const ce=document.querySelector('.it.cur .t'); if(ce) ce.textContent=mmss(itemMs(S.cur));
   $('sub').textContent='זמן שלמדת עכשיו: '+fmtMin(tot/6e4);
@@ -219,7 +246,7 @@ function tick(){ const tot=totalMs(), left=leftNow(tot);
     if(it.st==='done') dn++; const IW=+I.W||700; ww+=IW*(g-a); wd+=IW*(c-a);
     if(I.kind&&I.pts&&I.pts.length){ const k=UNITPL[I.kind]; OV[k]=OV[k]||[0,0]; OV[k][0]+=unitsIn(I,a,c>=0.999?1.01:c); OV[k][1]+=unitsIn(I,a,g>=0.999?1.01:g); } });
   $('overall').style.display=n<2?'none':''; if(n>=2) $('overall').innerHTML='בסך הכל: <b>'+Math.round(ww?wd/ww*100:0)+'%</b> · '+dn+'/'+n+' חלקים'+Object.entries(OV).map(([k,v])=>' · '+Math.min(v[0],v[1])+'/'+v[1]+' '+k).join(''); }
-$('play').onclick=()=>{ if(S.items.every(it=>it.st)){ location.href='./'; return; } if(S.since) stopRun(); else startRun(); save(); tick(); };
+$('play').onclick=()=>{ if(allFin()){ location.href='./'; return; } if(S.since) stopRun(); else startRun(); save(); tick(); };
 setInterval(tick,1000);
 addEventListener('pagehide',save); document.addEventListener('visibilitychange',()=>{ save(); tick(); });
 
