@@ -351,6 +351,9 @@ const label=u=>u.name+(u.shm?' <em>· פרשת '+((shnayimRefs(0,today)||{}).he|
 function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.createElement('label'); d.className='fp'+(cls?' '+cls:'');
   d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
   if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
+// lessons that didn't fit – the session offers them if you turn out faster
+function moreIds(sel,off){ if(P.manual) return ''; const inSel=new Set(sel.map(s=>s.u.id)), offS=new Set(off.map(u=>u.id)); const all=catalog().filter(u=>u.f<1&&!inSel.has(u.id)&&!offS.has(u.id)&&u.g<=3);
+  all.sort((a,b)=>(a.g<=1?0:a.g)-(b.g<=1?0:b.g)); const L=all.slice(0,6).map(u=>u.id); return L.length?'&more='+L.join(','):''; }
 function renderFlow(){
   $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; P.korbDay=isoDate(today); savePlan(); renderFlow(); };
   $('korbOn').closest('label').style.display=minchaTime()&&!korbSaid()?'':'none'; $('korbPosRow').style.display=korbOn()?'':'none';
@@ -402,7 +405,7 @@ function renderFlow(){
     'התוכנית: <b>'+fmtMin(mm(tot))+'</b>'+(P.free?'':' מתוך '+fmtMin(availMin()))+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>'+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
     (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
   if($('restore')) $('restore').onclick=()=>{ P.skip=[]; P.pin=[]; savePlan(); renderFlow(); };
-  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+(P.free?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&!P.free?'&until='+P.until:''); };
+  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+(P.free?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&!P.free?'&until='+P.until:'')+(P.free?'':moreIds(sel,off)); };
   // weekly status
   cleanArchive(all);
   const core=all.filter(u=>u.g<=1&&u.cur), cd=core.filter(u=>u.f>=1).length, missed=all.filter(u=>u.g===1&&u.f<1&&u.cur), pastL=all.filter(u=>!u.cur&&u.g<=1&&u.f<1), pastOpen=pastL.length;

@@ -120,6 +120,8 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .t.pause b{display:block;font-family:var(--serif);font-size:calc(22px*var(--k));color:var(--gold);margin-bottom:calc(4px*var(--k))}
 .backBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH,76px) + calc(10px*var(--k)));z-index:25;background:var(--gold);color:#241c08;border:0;border-radius:calc(20px*var(--k));padding:calc(9px*var(--k)) calc(18px*var(--k));font-size:calc(14px*var(--k));font-weight:600;box-shadow:0 4px 16px #0007}
 .backBtn[hidden]{display:none}
+.t.part.dropped{opacity:.55}
+.dropTag{font-family:var(--ui);font-size:calc(12.5px*var(--k));color:var(--gold);margin-top:calc(4px*var(--k))}
 .offer{position:fixed;left:calc(12px*var(--k));right:calc(12px*var(--k));bottom:calc(var(--dockH,76px) + calc(10px*var(--k)));z-index:30;background:var(--night);color:var(--ink);border:calc(1.5px*var(--k)) solid var(--gold);border-radius:calc(16px*var(--k));padding:calc(14px*var(--k));text-align:center;font-size:calc(15px*var(--k));box-shadow:0 6px 24px #0008}
 .offer b{color:var(--gold)}
 .offer div{display:flex;gap:calc(8px*var(--k));margin-top:calc(10px*var(--k))}
@@ -236,11 +238,13 @@ let B=[], tops=[], hts=[], TOTAL=1, PB=[], ready=false, curPos=0;
 function add(cls,html,w,mark,part,raw){ const el=document.createElement('div'); el.className='t '+cls; el.innerHTML=html; $('doc').appendChild(el); B.push({el,w:raw?0.01:Math.max(1,w),mark,part}); }
 function addSl(b){ if(!b.sl) return; const el=B[B.length-1].el; el._sl=b.sl; const bx=DMmod.sliceBox(b.sl,dmW(),Math.min(innerWidth,600*K)); b.sl._pc=bx.pageCss; el.innerHTML='<div class="dmx"><div style="width:'+bx.w+'px;height:'+bx.h+'px;margin-left:auto"></div></div>'; dmIO.observe(el); }
 let RESUME0=null;
-let GOAL=1;
-async function load(){
-  $('doc').innerHTML='<div class="t msg">טוען…</div>';
+let GOAL=1, GOAL0=1; const DROP=new Set(), KEEP=new Set();
+// more lessons from the plan that didn't fit – offered if you turn out faster
+const MORE=(Q.get('more')||'').split(',').filter(Boolean);
+async function load(keepPos){
+  if(keepPos==null) $('doc').innerHTML='<div class="t msg">טוען…</div>';
   const res=await Promise.all(UNITS.map(u=>loadUnit(u.id).then(r=>({u,r})).catch(e=>({u,err:e}))));
-  $('doc').innerHTML=''; B=[]; PB=[]; RESUME0=null; let goalAt=null;
+  ready=false; $('doc').innerHTML=''; B=[]; PB=[]; RESUME0=null; let goalAt=null;
   res.forEach(({u,r,err},ui)=>{ const p=u.id, start=B.length; const more=ui<res.length-1; let cut=false;
     if(err){ add('part',NAMES[p],1,NAMES[p],p); add('msg','לא הצלחתי לטעון את '+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div>',1,NAMES[p],p); PB.push({p,start,end:B.length,err:true,S:0,W:1}); return; }
     const W=r.blocks.reduce((a,b)=>a+Math.max(1,b.w),0); const [pb,pw]=splitWk(p), a=pb.split(':');
@@ -267,10 +271,10 @@ async function load(){
   let acc=0; B.forEach(b=>{b.cum=acc; acc+=b.w;}); TOTAL=acc;
   PB.forEach(x=>{ x.a=B[x.start].cum+1; x.rsC=x.rs!=null?B[x.rs].cum:x.a; x.z=B[x.end-1].cum+B[x.end-1].w; });
   PB.forEach(x=>{ if(x.uabs){ const b0=x.a; x.ends=x.uabs.E.map(e=>b0+e); } else x.ends=(x.ui||[]).flatMap(([i,n])=>Array.from({length:n},(_,j)=>B[i].cum+B[i].w*(j+1)/n)); });
-  GOAL=goalAt!=null?B[goalAt].cum:TOTAL-2;
-  const bar=$('bar'); PB.slice(1).forEach(x=>{ const t=document.createElement('div'); t.className='tick'; t.style.right=(x.a/TOTAL*100)+'%'; bar.appendChild(t); });
-  if(goalAt!=null){ const t=document.createElement('div'); t.className='tick goal'; t.style.right=(GOAL/TOTAL*100)+'%'; bar.appendChild(t); }
-  measure(); scrollToPos(RESUME0!=null&&RESUME0<B.length&&B[RESUME0].el.previousElementSibling&&B[RESUME0].el.previousElementSibling.classList.contains('resume')?B[RESUME0].cum:0); ready=true; maxPos=curPos; if(fit) applyFit(); update(); }
+  GOAL0=goalAt!=null?B[goalAt].cum:TOTAL-2;
+  const bar=$('bar'); bar.querySelectorAll('.tick').forEach(t=>t.remove()); PB.slice(1).forEach(x=>{ const t=document.createElement('div'); t.className='tick'; t.style.right=(x.a/TOTAL*100)+'%'; bar.appendChild(t); });
+  setGoal();
+  measure(); if(keepPos!=null){ scrollToPos(keepPos); ready=true; update(); return; } scrollToPos(RESUME0!=null&&RESUME0<B.length&&B[RESUME0].el.previousElementSibling&&B[RESUME0].el.previousElementSibling.classList.contains('resume')?B[RESUME0].cum:0); ready=true; maxPos=curPos; if(fit) applyFit(); update(); }
 
 /* geometry */
 let PXW=0;   // typical pixels per word of the text – headings never scroll much faster than text
@@ -288,6 +292,24 @@ let minchaDone=false, minchaMs=0, minchaAt=null;  // time spent in Mincha is not
 const leftMs=()=>UNTILMS?UNTILMS-Date.now():BUDGET*6e4-(t0?Date.now()-t0:0);
 const readLeftMs=()=>leftMs()-(MINCHA&&!minchaDone?MINCHA*6e4:0);
 // words still to learn: from where you are, and in later pieces only what was not learned yet
+// the goal: the planned end, or the end of the last lesson still in the plan
+function setGoal(){ GOAL=GOAL0; PB.forEach(x=>{ if(DROP.has(x.p)) GOAL=Math.min(GOAL,x.a-1); });
+  PB.forEach(x=>{ const h=B[x.start]&&B[x.start].el; if(!h) return; h.classList.toggle('dropped',DROP.has(x.p)); let s=h.querySelector('.dropTag'); if(DROP.has(x.p)&&!s){ s=document.createElement('div'); s.className='dropTag'; s.textContent='ירד מהתוכנית – בקצב הזה לא נכנס בזמן'; h.appendChild(s); } else if(!DROP.has(x.p)&&s) s.remove(); });
+  const bar=$('bar'); bar.querySelectorAll('.tick.goal').forEach(t=>t.remove()); if(GOAL<TOTAL-2){ const t=document.createElement('div'); t.className='tick goal'; t.style.right=(GOAL/TOTAL*100)+'%'; bar.appendChild(t); } }
+// keep the plan inside the time: drop the last lesson when you are slower, bring it back (or offer more) when faster
+let planT=0, moreAsked=new Set();
+function note(html,btns,ms){ document.querySelectorAll('.offer.plan').forEach(e=>e.remove()); const d=document.createElement('div'); d.className='offer plan'; d.innerHTML=html+(btns&&btns.length?'<div>'+btns.map(b=>'<button>'+b[0]+'</button>').join('')+'</div>':'');
+  (btns||[]).forEach((b,i)=>d.querySelectorAll('button')[i].onclick=()=>{ d.remove(); b[1]&&b[1](); }); document.body.appendChild(d); if(ms) setTimeout(()=>d.remove(),ms); }
+function replan(){ if(!ready||FREE||fit||!t0||TOTAL-curPos<3||Date.now()-planT<45000) return;
+  const avail=readLeftMs()/6e4, need=remW(curPos)/wpm, live=PB.filter(x=>!x.err&&x.p!=='mincha'&&x.p!=='korb');
+  if(need>avail+1.5){ const c=live.filter(x=>!DROP.has(x.p)&&!KEEP.has(x.p)&&x.a-1>curPos+5&&x.a-1<GOAL0).pop(); if(!c) return;
+    DROP.add(c.p); setGoal(); planT=Date.now(); update();
+    note('בקצב הזה לא תספיק את הכל בזמן – <b>'+NAMES[c.p]+'</b> ירד מהתוכנית.',[['השאר בכל זאת',()=>{ DROP.delete(c.p); KEEP.add(c.p); setGoal(); update(); }],['בסדר',null]],15000); return; }
+  const dr=live.filter(x=>DROP.has(x.p)).sort((a,b)=>a.a-b.a)[0];
+  if(dr){ const extra=Math.max(0,dr.z-Math.max(dr.rsC,curPos))/wpm; if(need+extra<=avail-0.5){ DROP.delete(dr.p); setGoal(); planT=Date.now(); update(); note('בקצב הזה תספיק גם את <b>'+NAMES[dr.p]+'</b> – הוא חזר לתוכנית ✓',[['אישור',null]],10000); } return; }
+  const m=MORE.find(id=>!moreAsked.has(id)); if(m&&avail-need>=4){ moreAsked.add(m); planT=Date.now();
+    note('בקצב הזה יישארו לך כ־<b>'+Math.round(avail-need)+' דק׳</b>. להוסיף גם את <b>'+uName(m)+'</b>?',[['כן, הוסף',async()=>{ const p=curPos; UNITS.push({id:m,end:null,plan:null}); NAMES[m]=uName(m); await load(p); toast('נוסף לתוכנית ✓'); }],['לא, תודה',null]]); } }
+setInterval(replan,5000);
 function remW(p){ const tgt=p<GOAL-1?GOAL:TOTAL; let r=0; PB.forEach(x=>{ if(x.err) return; r+=Math.max(0,Math.min(x.z,tgt)-(p>=x.a-1?p:x.rsC)); }); return r; }
 let maxPos=0;
 function applyFit(){ if(!ready) return; const lw=Math.max(1,remW(curPos)), lm=readLeftMs()/6e4; if(lm<=0.2) return; wpm=Math.max(20,Math.min(400,lw/lm)); $('spd').textContent=Math.round(wpm); }
