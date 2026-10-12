@@ -210,7 +210,11 @@ const T=tehToday(), today=new Date(); today.setHours(12,0,0,0);
 const hs=T.heb;
 function season(){ if(hs.men!=='Tishri') return 0; if(hs.day===20) return 1; if(hs.day===21 && (T.night||new Date().getHours()<10)) return 2; return 0; }
 let tanyaLabel='כ״ף ';
-function info(k){
+// card progress: the furthest of what this screen saved and what was learned anywhere this week (plans, sessions, printed booklet)
+function best(pct,pi,id){ const f=wkFrac(id); if(!(f>(pct||0)+0.005)) return {pct,pi}; const t=pi&&pi.t; return {pct:f, pi:t?Object.assign({},pi,{pct:f,n:f>=1?t:Math.round(f*t)}):null}; }
+function info(k){ const r=info0(k); if(!r) return r;
+  const id=k==='tehillim'?'teh:'+T.day:k==='chumash'?'chu:'+today.getDay():k==='tanya'?'tan:'+today.getDay():null; if(id&&r.pct!=null){ const b=best(r.pct,r.pi,id); r.pct=b.pct; r.pi=b.pi; } return r; }
+function info0(k){
   if(k==='tehillim'){ const pct=getProgress('tehillim',T.key); return {what:'יום '+gq(T.day)+' לחודש · מזמורים '+T.range, pct, pi:getProgressInfo('tehillim',T.key)}; }
   if(k==='chumash'){ const c=chumashFor(today,!!H.diaspora); return {what:c?'פרשת '+c.he+' · '+c.aliyahName:'—', pct:getProgress('chumash',isoDate(today)), pi:getProgressInfo('chumash',isoDate(today))}; }
   if(k==='rambam'){ const id='dm:'+rmbSubj()+':'+today.getDay(), f=wkFrac(id); return {what:(rmbSubj()==='rambam1'?'פרק אחד':'ג׳ פרקים')+' · '+rambamText, pct:f, pi:f>=1?null:null}; }
