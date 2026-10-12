@@ -385,9 +385,13 @@ setInterval(()=>{ const h=hebInfo(); if(h.key!==H.key||h.night!==H.night){ const
 root.style.setProperty('--fs',(D.fs*K)+'px'); root.style.setProperty('--pw',(560*K)+'px'); $('spd').textContent=D.mpp.toFixed(1);
 if(D.date!==H.key || !D.day){ D.date=H.key; D.day=today(); D.pos=0; }
 build(); renderSeason();
-requestAnimationFrame(()=>{ measure(); scrollToPos(D.pos); ready=true; update();
+// what you already said elsewhere (in a study plan / continuous session) counts here too
+function learnedFrac(){ let f=0; try{ const n=new Date(); n.setHours(12,0,0,0); n.setDate(n.getDate()-n.getDay()); const wk=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+    const T=JSON.parse(localStorage.getItem('track-v2')||'{}'); f=Math.max(f,((T[wk]||{})['teh:'+D.day])||0);
+    const P=JSON.parse(localStorage.getItem('progress-v1')||'{}').tehillim; if(P&&P.key===H.key+':'+D.day) f=Math.max(f,P.pct||0); }catch(e){} return f; }
+requestAnimationFrame(()=>{ measure(); { const f=learnedFrac(); if(f>0&&f*TOTAL>D.pos+3) D.pos=f>=0.98?Math.max(0,TOTAL-3):f*TOTAL; } scrollToPos(D.pos); ready=true; update();
   const fix=()=>{ if(!playing){ const p=D.pos; measure(); scrollToPos(p); D.pos=p; } }; setTimeout(fix,300); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fix);
-  if(D.pos>3) toast('ממשיכים מאיפה שעצרת'); });
+  if(D.pos>=TOTAL-3.5) toast('כבר אמרת את התהילים של היום ✓'); else if(D.pos>3) toast('ממשיכים מאיפה שעצרת'); });
 </script>
 <script src="hdr.js?v=9cebd3cb"></script>
 <script>collapsibleTop({ids:['curCh','pct','left']});</script>
