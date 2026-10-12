@@ -265,10 +265,11 @@ function update(){ $('spd').textContent=wpm;
   const p=curPos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
   const left=Math.max(0,TOTAL-p);
   if(V.subj==='more'){ $('cur').textContent=(IDX.sections[V.sec]||{}).title||''; $('hdate').textContent='עוד בחוברת'; } else { $('cur').textContent=DM.SUBJECTS.find(s=>s.id===V.subj).name; $('hdate').textContent='יום '+DM.DAYNAMES[DAY]+(DAY===TODAYDAY?' (היום)':''); }
-  $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b>'; { const fin=left<2, n=UN?UN.ends.filter(e=>e<=done+0.002).length:0; $('pct').textContent=progTxt(fin?1:done,UN?(fin?UN.ends.length:n):0,UN?UN.ends.length:0,UN?UN.name:''); }
+  $('left').innerHTML=left<2?'<b>✓ סיימת</b>':'נשאר כ־<b>'+fmtMin(left/wpm)+'</b> · תסיים ב־<b>'+clockIn(left/wpm)+'</b>'; { const fin=left<2, n=UN?UN.ends.filter(e=>e<=done+0.002).length:0; $('pct').textContent=progTxt(fin?1:done,UN?(fin?UN.ends.length:n):0,UN?UN.ends.length:0,UN?UN.name:''); }
   if(DAY===TODAYDAY && V.subj!=='more') setProgress('dm-'+V.subj,isoDate(today),left<2?1:done);
   const past=META&&META.wk<wkId(); if(TODAYDAY>=0||past){ const sc=IDX.sections&&IDX.sections[V.sec]; const id=V.subj==='more'?(sc?'sec:'+(sc.key!=null?sc.key:sc.from):null):V.subj==='hayomyom'?'dm:hayomyom':(past||DAY<=TODAYDAY?'dm:'+V.subj+':'+DAY:null); if(id) wkSet(id+sfx(),left<2?1:done); } }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); V.pos[key()]=curPos; update(); },{passive:true});
+setInterval(()=>{ if(ready&&document.visibilityState==='visible') update(); },20000);   // keep the finish time current
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); show().then(()=>scrollToPos(p)); });
 

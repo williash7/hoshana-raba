@@ -237,12 +237,13 @@ function update(){ if(!ready){ $('fill').style.width='0%'; $('left').textContent
   const p=curPos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
   let cur=MARK[0]; MARK.forEach(x=>{ if(B[x.i].cum<=p+0.3) cur=x; }); $('cur').textContent=cur?(MOD==='chumash'&&!/^פרשת/.test(cur.label)?'פסוק '+cur.label:cur.label):'';
   const left=Math.max(0,TOTAL-p);
-  $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשאר כ־<b>'+Math.max(1,Math.round(left/wpm()))+' דק׳</b>';
+  $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשאר כ־<b>'+Math.max(1,Math.round(left/wpm()))+' דק׳</b> · תסיים ב־<b>'+clockIn(left/wpm())+'</b>';
   const U=MARK.filter(x=>!/^פרשת|^קרבנות$|^תניא$/.test(x.label)), un=U.filter(x=>B[x.i].cum+B[x.i].w<=p+0.5).length, ut=U.length, unit=MOD==='chumash'?'פסוקים':MOD==='tanya'?'קטעים':'חלקים';
   $('pct').textContent=progTxt(left<3?1:done,left<3?ut:un,ut,unit);
   if(off===0) setProgress(MOD,dkey(),left<3?1:done,left<3?ut:un,ut,unit);
   if(off<=0 && -off<=new Date().getDay()) wkSet((MOD==='chumash'?'chu:':'tan:')+dayDate().getDay(), left<3?1:done); }
 addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); D.pos[dkey()]=curPos; update(); },{passive:true});
+setInterval(()=>{ if(ready&&document.visibilityState==='visible') update(); },20000);   // keep the finish time current
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); root.style.setProperty('--fs',(D.fs*K)+'px'); root.style.setProperty('--pw',(600*K)+'px'); measure(); scrollToPos(p); });
 // keep only recent bookmarks

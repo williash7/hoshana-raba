@@ -369,13 +369,14 @@ let toastT; function toast(t){ const el=$('toast'); el.textContent=t; el.classLi
 function update(){ const p=D.pos, done=Math.min(1,p/TOTAL); $('fill').style.width=(done*100)+'%';
   let cur=CHB[0]; CHB.forEach(x=>{ if(B[x.i].cum<=p+0.5) cur=x; }); $('curCh').textContent='מזמור '+gem(cur.c)+(cur.who?' · '+cur.who:'');
   const left=Math.max(0,TOTAL-p), leftCh=CHB.filter(x=>B[x.i].cum>p+0.5).length;
-  $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשארו <b>'+(leftCh+1)+' מזמורים</b> (כ־'+Math.max(1,Math.round(left/wpm()))+' דק׳)';
+  $('left').innerHTML = left<3 ? '<b>✓ סיימת להיום</b>' : 'נשארו <b>'+(leftCh+1)+' מזמורים</b> (כ־'+Math.max(1,Math.round(left/wpm()))+' דק׳) · תסיים ב־<b>'+(d=>d.getHours()+':'+String(d.getMinutes()).padStart(2,'0'))(new Date(Date.now()+left/wpm()*6e4))+'</b>';
   const vt=CHB.reduce((a,x)=>a+(x.nv||0),0), cn=CHB.reduce((a,x)=>{ const b=B[x.i]; return a+(b.cum+b.w<=p+0.5?x.nv:b.cum<p?Math.floor((p-b.cum)/b.w*x.nv):0); },0); $('pct').textContent=progTxt(left<3?1:done,left<3?vt:cn,vt,'פסוקים');
   if(D.day===today()){ try{ const P=JSON.parse(localStorage.getItem('progress-v1')||'{}'); P.tehillim={key:H.key+':'+D.day,pct:left<3?1:Math.round(done*100)/100,n:left<3?vt:cn,t:vt,u:'פסוקים'}; localStorage.setItem('progress-v1',JSON.stringify(P)); }catch(e){} }
   try{ const n=new Date(); n.setHours(12,0,0,0); n.setDate(n.getDate()-n.getDay()); const wk=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); let T=JSON.parse(localStorage.getItem('track-v2')||'null'); if(!T){ T={}; const W=JSON.parse(localStorage.getItem('week-v1')||'null'); if(W&&W.u) T[W.wk]=W.u; } const u=T[wk]||{}; const f=left<3?1:Math.round(done*1000)/1000, id='teh:'+D.day; if(f>(u[id]||0)){ u[id]=f; T[wk]=u; localStorage.setItem('track-v2',JSON.stringify(T)); } }catch(e){}
   if(left<3 && !D.done[H.key+':'+D.day]){ D.done[H.key+':'+D.day]=1; save(); } }
 let ready=false;
 addEventListener('scroll',()=>{ if(!ready) return; D.pos=posFromScroll(); update(); },{passive:true});
+setInterval(()=>{ if(ready&&document.visibilityState==='visible') update(); },20000);   // keep the finish time current
 setInterval(save,3000); addEventListener('pagehide',save);
 addEventListener('resize',()=>{ if(!ready) return; const p=D.pos; computeK(); root.style.setProperty('--fs',(D.fs*K)+'px'); root.style.setProperty('--pw',(560*K)+'px'); measure(); scrollToPos(p); D.pos=p; });
 // re-check the hebrew date every minute (sunset)
