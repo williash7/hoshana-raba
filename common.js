@@ -200,6 +200,26 @@ async function partShnayim(i,date){ if(i===7) return partHaftara(date); const R=
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('shm:'+wkId()+':'+i,W);
   return {title:'שניים מקרא – '+R.he+' – '+ALIYAH[i], blocks}; }
 
+/* Daily Rambam (3 chapters / 1 chapter) straight from Sefaria – no booklet needed */
+const RMB_TITLE={rambam3:'Daily Rambam (3 Chapters)',rambam1:'Daily Rambam'}, RMB_NAME={rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד'};
+// the day from which Rambam is offered without a booklet (so old weeks don't pile up)
+function rambamSince(){ let s=lsGet('rambam-since',null); if(!s){ s=isoDate(new Date()); lsSet('rambam-since',s); } return s; }
+async function rambamRef(subj,date){ const cal=await sefCalendar(date); const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en===RMB_TITLE[subj]); if(!it) throw new Error('no rambam');
+  return {refs:String(it.ref).split(/;\s*/).filter(Boolean), he:(it.displayValue&&it.displayValue.he)||it.heRef||it.ref}; }
+// Mishneh Torah text → [{ch,v,val}] for a whole chapter, a range of chapters, or a range inside a chapter
+function rmbHalachot(j){ const t=j.versions&&j.versions[0]&&j.versions[0].text; if(t==null) return []; const s=(j.sections||[]).map(Number), out=[]; const c0=s[0]||1, v0=s[1]||1;
+  if(Array.isArray(t)&&t.some(Array.isArray)) t.forEach((chap,ci)=>(Array.isArray(chap)?chap:[chap]).forEach((val,vi)=>out.push({ch:c0+ci,v:(ci===0?v0:1)+vi,val})));
+  else (Array.isArray(t)?t:[t]).forEach((val,vi)=>out.push({ch:c0,v:v0+vi,val}));
+  return out; }
+async function partRambam(subj,date){ const R=await rambamRef(subj,date); const data=await Promise.all(R.refs.map(r=>sefText(r,'hebrew')));
+  const blocks=[{cls:'head',html:'<h3>'+RMB_NAME[subj]+'</h3><small>'+R.he+'</small>',w:2,mark:RMB_NAME[subj]}];
+  data.forEach((j,ri)=>{ const book=String(j.heRef||'').replace(/^משנה תורה,?\s*/,'').replace(/\s+[א-ת׳״"']+(?:[-–][א-ת׳״"']+)?$/,''); let lastCh=null;
+    rmbHalachot(j).forEach(x=>{ let h=''; if(x.ch!==lastCh){ h+='<span class="ch">'+(book?book+' – ':'')+'פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
+      const v=clean(flat(x.val).join(' ')); h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>';
+      blocks.push({cls:'par',html:h,w:wordsOf(v),mark:(book?book+' ':'')+'פרק '+gem(x.ch)+' הלכה '+gem(x.v)}); }); });
+  const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('rmb:'+subj+':'+isoDate(new Date(date)),W);
+  return {title:RMB_NAME[subj]+' · '+R.he, blocks}; }
+
 /* Korbanos before Mincha (Chabad nusach) */
 const KORB_PARTS=['פרשת התמיד','ושחט אותו','אתה הוא','פרשת הקטורת','פיטום הקטורת','רבן שמעון בן גמליאל','תניא רבי נתן','תניא בר קפרא','ה׳ צבאות עמנו'];
 const KORB_WORDS=()=>wcGet('korbanot')||750;
