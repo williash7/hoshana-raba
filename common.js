@@ -200,6 +200,13 @@ async function partShnayim(i,date){ if(i===7) return partHaftara(date); const R=
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('shm:'+wkId()+':'+i,W);
   return {title:'שניים מקרא – '+R.he+' – '+ALIYAH[i], blocks}; }
 
+/* start a lesson over: clears the weekly tracking, the card's progress and the reader's saved place */
+function resetLesson(full){ const [b,wk]=splitWk(full), a=b.split(':'); wkSet(full,0,true);
+  if(wk!==wkId()) return; const dt=weekStart(wk); if(a[0]==='chu'||a[0]==='tan') dt.setDate(dt.getDate()+(+a[1])); const iso=isoDate(dt);
+  if(a[0]==='chu'||a[0]==='tan'){ const mod=a[0]==='chu'?'chumash':'tanya'; if(getProgress(mod,iso)>0) setProgress(mod,iso,0); const S=lsGet('study-'+mod+'-v1',null); if(S&&S.pos){ delete S.pos[iso]; lsSet('study-'+mod+'-v1',S); } }
+  if(a[0]==='teh'){ const P=lsGet('progress-v1',{}); if(P.tehillim) { P.tehillim.pct=0; P.tehillim.n=0; lsSet('progress-v1',P); } const S=lsGet('tehillim-daily-v1',null); if(S&&S.day===+a[1]){ S.pos=0; lsSet('tehillim-daily-v1',S); } }
+  if(a[0]==='korb'){ setProgress('korbanot',isoDate(new Date()),0); } }
+
 /* Daily Rambam (3 chapters / 1 chapter) straight from Sefaria – no booklet needed */
 const RMB_TITLE={rambam3:'Daily Rambam (3 Chapters)',rambam1:'Daily Rambam'}, RMB_NAME={rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד'};
 // the day from which Rambam is offered without a booklet (so old weeks don't pile up)
