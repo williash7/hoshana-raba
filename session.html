@@ -94,10 +94,10 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .play{width:calc(56px*var(--k));height:calc(56px*var(--k));border-radius:50%;border:0;background:var(--gold);color:#241c08;display:grid;place-items:center;flex:none}
 .play svg{width:calc(24px*var(--k));height:calc(24px*var(--k))}
 .speed{display:flex;align-items:center;background:var(--night2);border-radius:calc(28px*var(--k));padding:calc(4px*var(--k));flex:1;min-width:0;justify-content:space-between}
-.speed button{width:calc(50px*var(--k));height:calc(44px*var(--k));border:0;border-radius:calc(22px*var(--k));background:transparent;font-size:calc(14px*var(--k));font-weight:600}
-.speed .val{text-align:center;line-height:1.1}
+.speed button{width:calc(36px*var(--k));flex:none;height:calc(44px*var(--k));border:0;border-radius:calc(22px*var(--k));background:transparent;font-size:calc(14px*var(--k));font-weight:600}
+.speed .val{text-align:center;line-height:1.1;min-width:0;overflow:hidden}
 .speed .val b{font-size:calc(19px*var(--k));font-variant-numeric:tabular-nums}
-.speed .val span{display:block;white-space:nowrap;font-size:calc(11.5px*var(--k));color:var(--muted)}
+.speed .val span{display:block;white-space:nowrap;font-size:calc(10px*var(--k));color:var(--muted)}
 .ctl{height:calc(48px*var(--k));min-width:calc(48px*var(--k));border-radius:calc(24px*var(--k));border:calc(1.5px*var(--k)) solid #4a4f6b;background:transparent;padding:0 calc(10px*var(--k));font-size:calc(15px*var(--k));font-weight:600;flex:none;display:grid;place-items:center;text-decoration:none}
 .today.pill.on{border-color:var(--gold);color:var(--gold)}
 .ctl.on{border-color:var(--gold);color:var(--gold)}
@@ -123,7 +123,10 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .bar .tick.goal{background:var(--gold);width:calc(3px*var(--k))}
 .t.pause{background:var(--night2);color:var(--ink);font-family:var(--ui);text-align:center;padding:calc(22px*var(--k)) calc(18px*var(--k));font-size:calc(15px*var(--k));line-height:1.6}
 .t.pause b{display:block;font-family:var(--serif);font-size:calc(22px*var(--k));color:var(--gold);margin-bottom:calc(4px*var(--k))}
-.srcBtn{position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:24;writing-mode:vertical-rl;border:calc(1px*var(--k)) solid var(--gold);border-left:0;background:var(--night);color:var(--gold);border-radius:0 calc(12px*var(--k)) calc(12px*var(--k)) 0;padding:calc(12px*var(--k)) calc(6px*var(--k));font-size:calc(13px*var(--k));box-shadow:0 2px 10px #0006}
+.ctl.stack{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-size:calc(11px*var(--k));padding:0 calc(6px*var(--k))}
+.ctl.stack b{font-size:calc(15px*var(--k))}
+.srcBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-size:calc(11.5px*var(--k))!important;color:var(--gold);border-color:var(--gold)!important}
+.srcBtn b{font-size:calc(16px*var(--k))}
 .srcBtn[hidden]{display:none}
 .backBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH,76px) + calc(10px*var(--k)));z-index:25;background:var(--gold);color:#241c08;border:0;border-radius:calc(20px*var(--k));padding:calc(9px*var(--k)) calc(18px*var(--k));font-size:calc(14px*var(--k));font-weight:600;box-shadow:0 4px 16px #0007}
 .backBtn[hidden]{display:none}
@@ -157,17 +160,17 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <div class="shade" id="shade"></div>
 <div class="line" id="line"><span class="tab">כאן</span></div>
 <main id="scroller"><div id="doc"></div></main>
-<button class="srcBtn" id="srcBtn" hidden></button>
 <button class="backBtn" id="backBtn" hidden>↓ חזרה למקום שהגעת</button>
 <nav class="dock" id="dock">
   <div class="dock-in">
     <button class="play" id="play" aria-label="הפעל גלילה"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
     <div class="speed">
       <button id="slower">לאט</button>
-      <div class="val"><b id="spd">85</b><span>מילים לדק׳</span></div>
+      <div class="val"><b id="spd">85</b><span>מילים/דק׳</span></div>
       <button id="faster">מהר</button>
     </div>
-    <button class="ctl" id="fitBtn">לפי הזמן</button>
+    <button class="ctl stack" id="fitBtn"><b>⏱</b>לפי הזמן</button>
+    <button class="ctl srcBtn" id="srcBtn" hidden></button>
     <a class="ctl" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
   </div>
 </nav>
@@ -363,7 +366,7 @@ function openMore(p){ if(!OPEN||appending||!ready||!MORE.length||TOTAL-p>600) re
 // side button: switch the current Chumash / Tanya / Rambam between Sefaria and the booklet
 const srcKey=id=>{ const a=splitWk(id)[0].split(':'); return a[0]==='chu'?'chu':a[0]==='tan'?'tan':a[0]==='dm'&&RMB_TITLE[a[1]]&&a[2]!=null?'rmb':null; };
 function srcButton(curP){ const b=$('srcBtn'); const k=curP&&!curP.err?srcKey(curP.p):null; if(!k||!curP.src){ b.hidden=true; return; }
-  b.hidden=false; b.textContent=curP.src==='booklet'?'⇄ לספריא':'⇄ לחוברת';
+  b.hidden=false; b.innerHTML='<b>⇄</b>'+(curP.src==='booklet'?'ספריא':'חוברת'); b.title=curP.src==='booklet'?'מעבר לספריא':'מעבר לחוברת';
   b.onclick=async()=>{ const id=curP.p, to=curP.src==='booklet'?'sefaria':'booklet'; srcSet(k,to); b.hidden=true; await load(curPos); const x=PB.find(y=>y.p===id); if(x){ scrollToPos(x.rsC); maxPos=curPos; $('backBtn').hidden=true; update(); }
     const nx=PB.find(y=>y.p===id); toast(nx&&nx.src===to?(to==='booklet'?'עכשיו מתוך החוברת':'עכשיו מתוך ספריא'):'החוברת של השבוע לא טעונה – נשאר מספריא'); }; }
 function miniTxt(p,need,curP){ srcButton(curP); const fin=TOTAL-p<3;
