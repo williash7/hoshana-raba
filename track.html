@@ -94,7 +94,8 @@ TW={"cw": [57, 77, 63, 68, 98, 74, 124, 66, 150, 147, 62, 72, 48, 64, 44, 78, 11
 const Q=new URLSearchParams(location.search);
 const BUDGET=Math.max(1,+(Q.get('min')||30));
 const UNTIL=Q.get('until'), UNTILMS=UNTIL?(()=>{ const [h,m]=UNTIL.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); })():null;
-const FREE=Q.get('free')==='1'&&!UNTIL;   // no time limit – show when you will finish
+const OPEN=Q.get('open')==='1'&&!UNTIL;   // no time at all – piece after piece, see how much you did
+const FREE=(Q.get('free')==='1'||OPEN)&&!UNTIL;   // no time limit – show when you will finish
 const leftNow=tot=>FREE?0:UNTILMS?UNTILMS-Date.now():BUDGET*6e4-tot;
 const today=new Date(); today.setHours(12,0,0,0);
 const WD=today.getDay(), T=tehToday();
@@ -231,8 +232,11 @@ function replan(){ if(FREE||!S.since||allFin()||Date.now()-planT<45000) return; 
   const m=MORE.find(id=>!moreAsked.has(id)&&!S.items.some(it=>it.id===id)); if(m&&avail-need>=4){ moreAsked.add(m); planT=Date.now(); const I=info(m);
     note('בקצב הזה יישארו לך כ־<b>'+Math.round(avail-need)+' דק׳</b>. להוסיף גם את <b>'+I.name+(I.tag?' ('+I.tag+')':'')+'</b>?',[['כן, הוסף',()=>{ INFO[m]=I; S.items.push({id:m,plan:null,end:null,f0:wkFrac(m),f:null,ms:0,st:''}); save(); render(); }],['לא, תודה',null]]); } }
 setInterval(replan,5000);
+let openAdding=false;
 function tick(){ const tot=totalMs(), left=leftNow(tot);
-  if(FREE){ const rm=remainMin(), dn=allFin(); $('clock').textContent=dn?'✓':clockIn(rm); $('clockBox').classList.remove('over'); $('clockLbl').textContent=dn?'סיימת':'שעת סיום משוערת · עוד כ־'+fmtMin(rm); $('fill').style.width=(tot+rm*6e4?Math.min(100,tot/(tot+rm*6e4)*100):0)+'%'; }
+  if(OPEN){ $('clock').textContent=mmss(tot); $('clockBox').classList.remove('over'); $('clockLbl').textContent='זמן לימוד · בלי הגבלה'; $('fill').style.width='0%';
+    if(allFin()&&MORE.length&&!openAdding){ openAdding=true; const id=MORE.shift(); INFO[id]=info(id); S.items.push({id,plan:null,end:null,f0:wkFrac(id),f:null,ms:0,st:''}); S.cur=S.items.length-1; startRun(); save(); render(); openAdding=false; } }
+  else if(FREE){ const rm=remainMin(), dn=allFin(); $('clock').textContent=dn?'✓':clockIn(rm); $('clockBox').classList.remove('over'); $('clockLbl').textContent=dn?'סיימת':'שעת סיום משוערת · עוד כ־'+fmtMin(rm); $('fill').style.width=(tot+rm*6e4?Math.min(100,tot/(tot+rm*6e4)*100):0)+'%'; }
   else { $('clock').textContent=mmss(left); $('clockBox').classList.toggle('over',left<0);
   $('clockLbl').textContent=UNTIL?(left>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):left>=0?'נותרו מתוך '+fmtMin(BUDGET):'עבר הזמן שתכננת';
   $('fill').style.width=Math.min(100,tot/(BUDGET*6e4)*100)+'%'; }

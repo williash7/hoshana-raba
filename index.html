@@ -277,10 +277,10 @@ if(!P.korbPos) P.korbPos='start';
 // "continue learning" from a finished plan: index.html?go=1&min=..&until=..
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
 // these values are for this one plan only – the saved settings stay as they were
-let GOTMP=GO?{min:P.min,until:P.until||null,korb:P.korb,free:!!P.free}:null;
-if(GO){ P.free=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; P.korbDay=isoDate(new Date()); history.replaceState(null,'','./'); }
+let GOTMP=GO?{min:P.min,until:P.until||null,korb:P.korb,free:!!P.free,open:!!P.open}:null;
+if(GO){ P.free=false; P.open=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; P.korbDay=isoDate(new Date()); history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
-function availMin(){ if(P.free) return Infinity; if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
+function availMin(){ if(P.free||P.open) return Infinity; if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; P.manual=false; P.ord=[]; P.force=[]; }
 if(!P.ord) P.ord=[]; if(!P.force) P.force=[];
@@ -352,7 +352,7 @@ function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
   const left=()=>budget-acc;
   // 2) the time left goes to the first one that did not fit (part of it); only if all fit, to the rest of the booklet
   if(skipped){ if(left()>=3*wpm){ sel.push({u:skipped,w:left(),partial:true}); acc=budget; } }
-  else if(!P.free&&!P.manual) for(const u of rest){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
+  else if((!P.free||P.open)&&!P.manual) for(const u of rest){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
     else { if(left()>=3*wpm) sel.push({u,w:left(),partial:true}); break; } }
   // added with "+ בכל זאת": in the plan even if the time is short (the session drops / keeps by your pace)
   P.force.forEach(id=>{ const u=open.find(x=>x.id===id); if(!u) return; const s=sel.find(x=>x.u===u); if(s){ s.w=u.rem; s.partial=false; } else sel.push({u,w:u.rem}); });
@@ -377,15 +377,17 @@ function renderFlow(){
   $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
   $('startFlow').textContent=PR()?'התחל – עם מדידת זמן ⏱':'התחל ▶';
   const tb=$('times'); tb.innerHTML='<b>יש לי:</b>'; const TM=[10,15,20,30,45,60];
-  const fb=document.createElement('button'); fb.textContent='כמה שיקח'; fb.className=P.free?'on':''; fb.onclick=()=>{ GOTMP=null; P.free=true; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(fb);
-  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=!P.free&&!P.until&&P.min===m?'on':''; b.onclick=()=>{ GOTMP=null; P.free=false; P.min=m; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(b); });
+  const ob=document.createElement('button'); ob.textContent='בלי זמן'; ob.className=P.open?'on':''; ob.onclick=()=>{ GOTMP=null; P.open=true; P.free=false; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(ob);
+  const fb=document.createElement('button'); fb.textContent='כמה שיקח'; fb.className=P.free&&!P.open?'on':''; fb.onclick=()=>{ GOTMP=null; P.free=true; P.open=false; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(fb);
+  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=!P.free&&!P.open&&!P.until&&P.min===m?'on':''; b.onclick=()=>{ GOTMP=null; P.free=false; P.open=false; P.min=m; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(b); });
   const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=300; inp.placeholder='אחר'; inp.inputMode='numeric'; if(!P.free&&!P.until&&!TM.includes(P.min)) inp.value=P.min;
-  inp.onchange=()=>{ const v=+inp.value; if(v>0){ GOTMP=null; P.free=false; P.min=v; P.until=null; savePlan(); renderFlow(); } }; tb.appendChild(inp);
+  inp.onchange=()=>{ const v=+inp.value; if(v>0){ GOTMP=null; P.free=false; P.open=false; P.min=v; P.until=null; savePlan(); renderFlow(); } }; tb.appendChild(inp);
   const ub=document.createElement('button'); ub.textContent=P.until?'עד '+P.until:'עד שעה…'; ub.className=!P.free&&P.until?'on':''; tb.appendChild(ub);
   const ti=document.createElement('input'); ti.type='time'; ti.hidden=true; ti.value=P.until||''; tb.appendChild(ti);
   ub.onclick=()=>{ ti.hidden=false; try{ ti.showPicker(); }catch(e){ ti.focus(); } };
-  const setUntil=()=>{ if(ti.value&&(ti.value!==P.until||P.free)){ GOTMP=null; P.free=false; P.until=ti.value; savePlan(); renderFlow(); } }; ti.onchange=setUntil; ti.oninput=setUntil; ti.onblur=setUntil;
-  if(P.free){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי הגבלת זמן – כל מה שנשאר מחת״ת ורמב״ם, ואני אגיד לך מתי תסיים'; tb.appendChild(l); }
+  const setUntil=()=>{ if(ti.value&&(ti.value!==P.until||P.free)){ GOTMP=null; P.free=false; P.open=false; P.until=ti.value; savePlan(); renderFlow(); } }; ti.onchange=setUntil; ti.oninput=setUntil; ti.onblur=setUntil;
+  if(P.open){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי זמן – מתחילים, ועוברים מקטע לקטע כמה שתספיק. בסוף רואים כמה הספקת'; tb.appendChild(l); }
+  else if(P.free){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי הגבלת זמן – כל מה שנשאר מחת״ת ורמב״ם, ואני אגיד לך מתי תסיים'; tb.appendChild(l); }
   else if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent='עד '+P.until+' – יש לך '+fmtMin(a); tb.appendChild(l); }
   const {sel,all,open,KB,off}=plan(); const box=$('plan'); box.innerHTML='';
   const studySel=sel.filter(s=>!s.u.korb&&!s.u.mincha);
@@ -396,7 +398,8 @@ function renderFlow(){
     if($('cancelAll')) $('cancelAll').onclick=()=>{ P.manual=true; P.pin=[]; P.skip=[]; P.ord=[]; if(KB){ P.korb=false; P.korbDay=isoDate(today); } savePlan(); renderFlow(); };
     if($('autoPlan')) $('autoPlan').onclick=()=>{ P.manual=false; P.pin=[]; P.skip=[]; P.ord=[]; P.force=[]; savePlan(); renderFlow(); }; }
   const move=(id,d)=>{ const ids=studySel.map(s=>s.u.id), i=ids.indexOf(id), j=i+d; if(i<0||j<0||j>=ids.length) return; [ids[i],ids[j]]=[ids[j],ids[i]]; P.ord=ids; savePlan(); renderFlow(); };
-  sel.forEach(s=>{ const u=s.u;
+  const SHOWN=P.open?12:1e9;
+  sel.forEach((s,si)=>{ const u=s.u; if(si>=SHOWN){ if(si===SHOWN){ const d=document.createElement('div'); d.className='hint'; d.style.margin='6px 0'; d.textContent='ועוד '+(sel.length-SHOWN)+' קטעים בתור – יגיעו בהמשך הלימוד'; box.appendChild(d); } return; }
     row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך ('+Math.round(u.f*100)+'% נלמד)':''),
       u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; P.korbDay=isoDate(today); savePlan(); renderFlow(); return; } if(P.force.includes(u.id)) P.force=P.force.filter(x=>x!==u.id); if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':'');
     if(!u.korb&&!u.mincha&&studySel.length>1){ const k=studySel.indexOf(s), o=document.createElement('div'); o.className='ord';
@@ -420,14 +423,15 @@ function renderFlow(){
   const studyN=sel.filter(s=>!s.u.korb&&!s.u.mincha).length;
   const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
   $('flowSum').innerHTML=P.manual&&!studyN?'סמן ✓ ליד מה שאתה רוצה ללמוד עכשיו, וסדר בחצים ▲▼':(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(availMin()<3?'אין מספיק זמן – בחר זמן ארוך יותר.':P.skip.length?'הורדת את השיעורים מהתוכנית. <button class="restore" id="restore">החזר את כולם</button>':open.length?'אין שיעור שנכנס בזמן הזה – בחר זמן ארוך יותר.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
-    'התוכנית: <b>'+fmtMin(mm(tot))+'</b>'+(P.free?'':' מתוך '+fmtMin(availMin()))+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>'+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
+    (P.open?'בתור: <b>'+sel.length+'</b> קטעים, לפי הסדר – לומדים כמה שיוצא':'התוכנית: <b>'+fmtMin(mm(tot))+'</b>'+(P.free?'':' מתוך '+fmtMin(availMin()))+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>')+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
     (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
   // what didn't fit in the time you chose – say so, with a way to add it anyway
-  if(!P.free&&!P.manual&&sel.length){ const inS=new Set(sel.map(s=>s.u.id)); const out=open.filter(u=>u.g<=1&&!inS.has(u.id)&&!P.skip.includes(u.id));
+  if(!P.free&&!P.open&&!P.manual&&sel.length){ const inS=new Set(sel.map(s=>s.u.id)); const out=open.filter(u=>u.g<=1&&!inS.has(u.id)&&!P.skip.includes(u.id));
     if(out.length){ const d=document.createElement('div'); d.className='notFit'; d.innerHTML='<b>לא נכנס בזמן הזה:</b>'; out.slice(0,6).forEach(u=>{ const r=document.createElement('div'); r.innerHTML='<span>'+label(u)+' <small>(כ־'+fmtMin(mm(u.rem))+')</small></span><button type="button">+ בכל זאת</button>'; r.querySelector('button').onclick=()=>{ if(!P.force.includes(u.id)) P.force.push(u.id); savePlan(); renderFlow(); }; d.appendChild(r); });
       if(out.length>6) d.insertAdjacentHTML('beforeend','<small>ועוד '+(out.length-6)+'</small>'); $('flowSum').appendChild(d); } }
   if($('restore')) $('restore').onclick=()=>{ P.skip=[]; P.pin=[]; savePlan(); renderFlow(); };
-  $('startFlow').onclick=()=>{ location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+(P.free?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&!P.free?'&until='+P.until:'')+(P.free?'':moreIds(sel,off)); };
+  $('startFlow').onclick=()=>{ if(P.open){ const ids=sel.map(s=>s.u.id); location.href=(PR()?'track.html':'session.html')+'?u='+ids.slice(0,3).join(',')+'&open=1&min=60'+(ids.length>3?'&more='+ids.slice(3,80).join(','):''); return; }
+    location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>s.u.id+(s.partial?'~e'+(s.u.f+(1-s.u.f)*s.w/s.u.rem).toFixed(4):'')).join(',')+'&min='+(P.free?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&!P.free?'&until='+P.until:'')+(P.free?'':moreIds(sel,off)); };
   // weekly status
   cleanArchive(all);
   const core=all.filter(u=>u.g<=1&&u.cur), cd=core.filter(u=>u.f>=1).length, missed=all.filter(u=>u.g===1&&u.f<1&&u.cur), pastL=all.filter(u=>!u.cur&&u.g<=1&&u.f<1), pastOpen=pastL.length;

@@ -173,7 +173,8 @@ computeK(); applyTheme();
 const Q=new URLSearchParams(location.search);
 const BUDGET=Math.max(1,+(Q.get('min')||10));
 const UNTIL=Q.get('until'), UNTILMS=UNTIL?(()=>{ const [h,m]=UNTIL.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); })():null;
-const MINCHA=+(Q.get('mincha')||0), FREE=Q.get('free')==='1' && !UNTIL;   // FREE: no time limit – show when you will finish
+const OPEN=Q.get('open')==='1' && !UNTIL;   // OPEN: no time at all – go from piece to piece as long as you like, and see how much you did
+const MINCHA=+(Q.get('mincha')||0), FREE=(Q.get('free')==='1'||OPEN) && !UNTIL;   // FREE: no time limit – show when you will finish
 const HOME=lsGet('home-v1',{});
 const DMN={chumash:'חומש',tanya:'תניא',hayomyom:'היום יום',rambam3:'רמב״ם ג׳ פרקים',rambam1:'רמב״ם פרק אחד',sm:'ספר המצוות',halacha:'הלכה יומית',mishna:'משנה',gemara:'גמרא יומית',rav:'שו״ע הרב'};
 const today=new Date(); today.setHours(12,0,0,0);
@@ -344,7 +345,13 @@ let offered=false;
 function showOffer(m){ const d=document.createElement('div'); d.className='offer';
   d.innerHTML='סיימת לפני הזמן! נשארו עוד <b>'+m+' דק׳</b>.<br>תרצה ללמוד עוד קטע?<div><button>כן, תכין לי עוד</button><button>לא, תודה</button></div>';
   const [y,n]=d.querySelectorAll('button'); y.onclick=()=>{ location.href='index.html?go=1&min='+m+(UNTIL?'&until='+UNTIL:''); }; n.onclick=()=>d.remove(); document.body.appendChild(d); }
+// how much you did in this sitting: pieces finished and units by kind
+function didTxt(p){ if(!t0) return 'עוד לא התחלת – לחץ ▶'; const U={}; let parts=0; PB.forEach(x=>{ if(x.err||x.p==='mincha') return; if(p>=x.z-2&&x.rsC<x.z-2) parts++; if(x.ends&&x.ends.length){ const n=x.ends.filter(e=>e>x.rsC+0.5&&e<=p+0.5).length; if(n){ const k=x.un||''; U[k]=(U[k]||0)+n; } } });
+  return [parts?(parts===1?'חלק אחד הושלם':parts+' חלקים הושלמו'):''].concat(Object.entries(U).map(([k,v])=>v+(k?' '+k:''))).filter(Boolean).join(' · ')||'עוד לא התחלת'; }
+let appending=false;
+function openMore(p){ if(!OPEN||appending||!ready||!MORE.length||TOTAL-p>600) return; appending=true; const id=MORE.shift(); UNITS.push({id,end:null,plan:null}); NAMES[id]=uName(id); load(p).then(()=>{ appending=false; }).catch(()=>{ appending=false; }); }
 function miniTxt(p,need,curP){ const fin=TOTAL-p<3;
+  if(OPEN){ $('mini').innerHTML='<span>'+(curP?NAMES[curP.p]+' · ':'')+'הספקת: '+didTxt(p)+'</span><b>'+(t0?mmss(Date.now()-t0):'0:00')+'</b>'; return; }
   const cur=curP?NAMES[curP.p]+(curP.ut?' '+Math.min(curP.ut,curP.ends.filter(e=>e<=p+0.5).length)+'/'+curP.ut:''):'';
   const ov=$('overall').textContent.replace(/^בסך הכל:\s*/,'').split(' · ')[0];
   const clk=FREE?(fin?'✓':'סיום '+clockIn(need+(MINCHA&&!minchaDone?MINCHA:0))):mmss(leftMs());
@@ -365,6 +372,7 @@ function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; 
   const curP=PB.find(x=>p>=x.a-1&&p<x.z), curTxt=curP&&curP.ut?' · '+NAMES[curP.p]+': '+progTxt(Math.min(1,(curP.ends.filter(e=>e<=p+0.5).length)/curP.ut),curP.ends.filter(e=>e<=p+0.5).length,curP.ut,curP.un):'';
   $('left').innerHTML=TOTAL-p<3?'<b>✓ סיימת</b>':(tgt===GOAL&&GOAL<TOTAL-2?'עד היעד ':'נשאר ')+'כ־<b>'+fmtMin(need)+'</b> בקצב הזה'+curTxt;
   miniTxt(p,need,curP);
+  if(OPEN){ openMore(p); const fin=TOTAL-p<3&&!MORE.length; $('clock').textContent=t0?mmss(Date.now()-t0):'0:00'; $('clockLbl').textContent=fin?'✓ סיימת את כל מה שפתוח':'זמן לימוד · בלי הגבלה'; $('left').innerHTML='הספקת עכשיו: <b>'+didTxt(p)+'</b>'+(MORE.length?' · עוד '+MORE.length+' בתור':''); $('pace').innerHTML=''; $('spd').textContent=Math.round(wpm); return; }
   if(FREE){ const fin=TOTAL-p<3; $('clock').textContent=fin?'✓':clockIn(need+(MINCHA&&!minchaDone?MINCHA:0)); $('clockLbl').textContent=fin?'סיימת'+(t0?' · '+mmss(Date.now()-t0):''):(t0?'סיום משוער · למדת '+mmss(Date.now()-t0):'שעת סיום משוערת בקצב הזה'); $('pace').innerHTML=''; $('spd').textContent=Math.round(wpm); return; }
   $('pace').innerHTML=lw<3?(TOTAL-p<3?'':'<span class="fit">הגעת ליעד ✓</span>'):(need<=readLeftMs()/6e4+0.05?'<span class="fit">מספיק בזמן</span>':'<span class="nofit">חסרות '+fmtMin(need-readLeftMs()/6e4)+'</span>');
   $('spd').textContent=Math.round(wpm); }
