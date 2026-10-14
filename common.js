@@ -200,6 +200,11 @@ async function partShnayim(i,date){ if(i===7) return partHaftara(date); const R=
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('shm:'+wkId()+':'+i,W);
   return {title:'שניים מקרא – '+R.he+' – '+ALIYAH[i], blocks}; }
 
+/* where each text comes from: Sefaria or the Dvar Malchus booklet (when this week's booklet is loaded) */
+const SRCNAME={chu:'חומש',tan:'תניא',rmb:'רמב״ם'};
+function srcGet(){ return Object.assign({chu:'sefaria',tan:'sefaria',rmb:'booklet'},lsGet('src-v1',{})); }
+function srcSet(k,v){ const S=srcGet(); S[k]=v; lsSet('src-v1',S); }
+
 /* start a lesson over: clears the weekly tracking, the card's progress and the reader's saved place */
 function resetLesson(full){ const [b,wk]=splitWk(full), a=b.split(':'); wkSet(full,0,true);
   if(wk!==wkId()) return; const dt=weekStart(wk); if(a[0]==='chu'||a[0]==='tan') dt.setDate(dt.getDate()+(+a[1])); const iso=isoDate(dt);
