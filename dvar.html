@@ -235,7 +235,8 @@ function showList(){ const doc=$('doc'); doc.className=''; ready=false; B=[]; $(
 
 let PXW=0;   // typical pixels per word of the text – headings never scroll much faster than text
 function measure(){ tops=B.map(b=>b.el.offsetTop); hts=B.map(b=>b.el.offsetHeight); { const r=B.map((b,k)=>b.w>=4&&hts[k]>0?hts[k]/b.w:0).filter(Boolean).sort((a,b)=>a-b); PXW=r.length?r[r.length>>1]:0; }
-  const t=$('top').offsetHeight, b=$('dock').offsetHeight; $('scroller').style.paddingTop=t+'px'; root.style.setProperty('--dockH',b+'px'); placeLine(); }
+  const t=$('top').offsetHeight, b=$('dock').offsetHeight; // the text starts at the reading line, so you begin from the very first word
+  root.style.setProperty('--dockH',b+'px'); $('scroller').style.paddingTop=Math.round(lineY())+'px'; tops=B.map(x=>x.el.offsetTop); hts=B.map(x=>x.el.offsetHeight); placeLine(); }
 function lineY(){ const t=$('top').offsetHeight,b=$('dock').offsetHeight; return t+(innerHeight-t-b)*0.28; }
 function placeLine(){ const y=lineY(),t=$('top').offsetHeight; $('line').style.top=y+'px'; $('shade').style.top=t+'px'; $('shade').style.height=Math.max(0,y-t)+'px'; }
 function idxY(y){ let lo=0,hi=B.length-1; while(lo<hi){const m=(lo+hi+1)>>1; if(tops[m]<=y) lo=m; else hi=m-1;} return lo; }

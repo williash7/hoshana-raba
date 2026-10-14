@@ -362,7 +362,7 @@ $('menu').onclick=openSheet; $('veil').onclick=closeSheet; $('closeS').onclick=c
 function hrSeason(){ if(H.month!=='תשרי') return 0; const hr=new Date().getHours();
   if(H.day===20) return 1; if(H.day===21 && (H.night||hr<10)) return 2; return 0; }
 function renderSeason(){ const s=hrSeason(), b=$('hrban'); b.hidden=!s; if(s) $('hrT').textContent = s===1&&!H.night ? 'הערב: ליל הושענא רבה' : 'הלילה: ליל הושענא רבה'; placeBan(); }
-function placeBan(){ const b=$('hrban'); b.style.top=$('top').offsetHeight+'px'; $('scroller').style.paddingTop=($('top').offsetHeight+(b.hidden?0:b.offsetHeight))+'px'; }
+function placeBan(){ const b=$('hrban'); b.style.top=$('top').offsetHeight+'px'; $('scroller').style.paddingTop=Math.round(lineY())+'px'; }
 
 /* status */
 let toastT; function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove('show'),2600); }
