@@ -202,7 +202,7 @@ async function partShnayim(i,date){ if(i===7) return partHaftara(date); const R=
 
 /* where each text comes from: Sefaria or the Dvar Malchus booklet (when this week's booklet is loaded) */
 const SRCNAME={chu:'חומש',tan:'תניא',rmb:'רמב״ם'};
-function srcGet(){ return Object.assign({chu:'sefaria',tan:'sefaria',rmb:'booklet'},lsGet('src-v1',{})); }
+function srcGet(){ return Object.assign({chu:'sefaria',tan:'sefaria',rmb:'booklet',stz:'on'},lsGet('src-v1',{})); }
 function srcSet(k,v){ const S=srcGet(); S[k]=v; lsSet('src-v1',S); }
 
 /* start a lesson over: clears the weekly tracking, the card's progress and the reader's saved place */
@@ -223,12 +223,19 @@ function rmbHalachot(j){ const t=j.versions&&j.versions[0]&&j.versions[0].text; 
   if(Array.isArray(t)&&t.some(Array.isArray)) t.forEach((chap,ci)=>(Array.isArray(chap)?chap:[chap]).forEach((val,vi)=>out.push({ch:c0+ci,v:(ci===0?v0:1)+vi,val})));
   else (Array.isArray(t)?t:[t]).forEach((val,vi)=>out.push({ch:c0,v:v0+vi,val}));
   return out; }
-async function partRambam(subj,date){ const R=await rambamRef(subj,date); const data=await Promise.all(R.refs.map(r=>sefText(r,'hebrew')));
+// Steinsaltz's explanation on the Rambam → {'ch:h':[comments]}
+function stzMap(j){ const out={}; const t=j&&j.versions&&j.versions[0]&&j.versions[0].text; if(!t) return out; const s=(j.sections||[]).map(Number), c0=s[0]||1, h0=s[1]||1;
+  const deep=Array.isArray(t)&&t.some(x=>Array.isArray(x)&&x.some(Array.isArray));
+  if(deep) t.forEach((chap,ci)=>(chap||[]).forEach((cm,hi)=>{ out[(c0+ci)+':'+((ci===0?h0:1)+hi)]=flat(cm); }));
+  else (t||[]).forEach((cm,hi)=>{ out[c0+':'+(h0+hi)]=flat(cm); }); return out; }
+async function partRambam(subj,date){ const R=await rambamRef(subj,date); const withStz=srcGet().stz!=='off';
+  const data=await Promise.all(R.refs.map(r=>sefText(r,'hebrew'))), stz=withStz?await Promise.all(R.refs.map(r=>sefText('Steinsaltz on '+r,'hebrew').then(stzMap).catch(()=>({})))):[];
   const blocks=[{cls:'head',html:'<h3>'+RMB_NAME[subj]+'</h3><small>'+R.he+'</small>',w:2,mark:RMB_NAME[subj]}];
   data.forEach((j,ri)=>{ const book=String(j.heRef||'').replace(/^משנה תורה,?\s*/,'').replace(/\s+[א-ת׳״"']+(?:[-–][א-ת׳״"']+)?$/,''); let lastCh=null;
     rmbHalachot(j).forEach(x=>{ let h=''; if(x.ch!==lastCh){ h+='<span class="ch">'+(book?book+' – ':'')+'פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
-      const v=clean(flat(x.val).join(' ')); h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>';
-      blocks.push({cls:'par',html:h,w:wordsOf(v),mark:(book?book+' ':'')+'פרק '+gem(x.ch)+' הלכה '+gem(x.v)}); }); });
+      const v=clean(flat(x.val).join(' ')); h+='<p><span class="v">'+gem(x.v)+'</span> '+v+'</p>';
+      const cm=((stz[ri]||{})[x.ch+':'+x.v]||[]).map(clean).filter(Boolean); if(cm.length) h+='<div class="stz">'+cm.map(s=>'<div>'+s+'</div>').join('')+'</div>';
+      blocks.push({cls:'par',html:h,w:wordsOf(v)+wordsOf(cm.join(' ')),mark:(book?book+' ':'')+'פרק '+gem(x.ch)+' הלכה '+gem(x.v)}); }); });
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('rmb:'+subj+':'+isoDate(new Date(date)),W);
   return {title:RMB_NAME[subj]+' · '+R.he, blocks}; }
 
