@@ -249,8 +249,9 @@ computeK(); applyTheme();
 const $=id=>document.getElementById(id);
 const MODS={
   tehillim:{name:'תהילים יומי', href:'tehillim.html'},
-  chumash:{name:'חומש עם רש״י', href:'study.html?m=chumash'},
-  tanya:{name:'תניא יומי', href:'study.html?m=tanya'},
+  // when the booklet is chosen as the source, the card opens the study screen that can show the booklet
+  chumash:{name:'חומש עם רש״י', get href(){ return srcGet().chu==='booklet'?'session.html?u=chu:'+new Date().getDay()+'&min=30&free=1':'study.html?m=chumash'; }},
+  tanya:{name:'תניא יומי', get href(){ return srcGet().tan==='booklet'?'session.html?u=tan:'+new Date().getDay()+'&min=30&free=1':'study.html?m=tanya'; }},
   rambam:{name:'רמב״ם יומי', get href(){ return 'session.html?u=dm:'+rmbSubj()+':'+new Date().getDay()+'&min=60&free=1'; }},
   dvar:{name:'דבר מלכות', href:'dvar.html'},
   korbanot:{name:'קרבנות למנחה', href:'study.html?m=korbanot'},

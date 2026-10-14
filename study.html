@@ -258,6 +258,13 @@ requestAnimationFrame(load);
 </script>
 <script src="hdr.js?v=fb70dbb0"></script>
 <script>collapsibleTop({ids:['cur','pct','left']});</script>
+<button id="toBook" style="position:fixed;left:0;top:50%;transform:translateY(-50%);z-index:24;writing-mode:vertical-rl;border:1px solid var(--gold);border-left:0;background:var(--night);color:var(--gold);border-radius:0 12px 12px 0;padding:12px 6px;font:inherit;font-size:13px;box-shadow:0 2px 10px #0006" hidden>⇄ לחוברת</button>
+<script>
+// switch this lesson to the Dvar Malchus booklet (opens it in the study screen that shows the booklet)
+(function(){ const b=document.getElementById('toBook'); if(MOD==='korbanot') return; b.hidden=false;
+  b.onclick=()=>{ const d=dayDate(), now=new Date(); now.setHours(12,0,0,0); const back=Math.round((now-d)/864e5); if(back<0||back>now.getDay()){ alert('מהחוברת אפשר ללמוד רק ימים מהשבוע הזה'); return; }
+    srcSet(MOD==='chumash'?'chu':'tan','booklet'); location.href='session.html?u='+(MOD==='chumash'?'chu:':'tan:')+d.getDay()+'&min=30&free=1'; }; })();
+</script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
 </html>
