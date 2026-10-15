@@ -360,7 +360,14 @@ const TFLNAME={shacharit:'שחרית',mincha:'מנחה',maariv:'ערבית',shem
 const TFLSEC={'Upon Arising':'השכמת הבוקר','Morning Blessings':'ברכות השחר','Tzitzit and Tallit':'ציצית וטלית','Tefillin':'תפילין','Morning Prayer':'סדר הקרבנות','Kaddish DeRabbanan':'קדיש דרבנן','Hodu':'הודו','Pesukei Dezimra':'פסוקי דזמרה','Blessings of the Shema':'קריאת שמע וברכותיה','The Amidah':'שמונה עשרה','Amidah':'שמונה עשרה','Tachnun':'תחנון','Tachanun':'תחנון','Torah Reading':'קריאת התורה','Ashrei Uva LeZion':'אשרי ובא לציון','Song of the Day':'שיר של יום',"Mourner's Kaddish":'קדיש יתום','Kaveh':'קוה','Aleinu':'עלינו','Korbanot':'קרבנות','Ashrei':'אשרי','Maariv':'ערבית','Bedtime Shema':'קריאת שמע שעל המטה','Hallel':'הלל','Rosh Chodesh':'מוסף לראש חודש'};
 const smallLead=s=>{ const m=String(s).match(/^\s*<small>([\s\S]*?)<\/small>/); return m?m[1].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():''; };
 // choose the right words inside a segment: summer/winter, Ten Days, Rosh Chodesh / Chol HaMoed names
-function tflInline(s,c){ let t=String(s);
+// ג״פ: the verse before the mark is said three times – write it out three times
+function tflThrice(t){ const MK=/\s*<small>\s*ג״פ:?\s*<\/small>\s*:?/; if(!MK.test(t)) return t; const parts=t.split(MK); let out='';
+  parts.forEach((p,k)=>{ out+=p; if(k===parts.length-1) return;
+    const plain=p.replace(/<[^>]+>/g,''); let unit;
+    if(k>0||plain.length<220) unit=p.trim(); else { const body=p.replace(/[:׃]\s*$/,''); const j=Math.max(body.lastIndexOf(':'),body.lastIndexOf('׃')); unit=(j>=0?body.slice(j+1):body).trim(); }
+    unit=unit.replace(/[:׃]?\s*$/,':'); out=out.replace(/[:׃]?\s*$/,': ')+'<span class="tfl-rep">'+unit+'</span> <span class="tfl-rep">'+unit+'</span> '; });
+  return out; }
+function tflInline(s,c){ let t=tflThrice(String(s));
   t=t.replace(/<small>בקיץ<\/small>\s*([^(<]*?)\s*\(<small>בחורף<\/small>\s*([^)]*)\)/g,(_,a,b)=>'<span class="tfl-ch">'+(c.winterBar?b:a)+'</span>');
   t=t.replace(/<small>בקיץ<\/small>\s*([\s\S]*?)<small>בחורף<\/small>\s*([\s\S]*)$/,(_,a,b)=>'<span class="tfl-ch">'+(c.winterGev?b:a)+'</span>');
   t=t.replace(/\(?<small>בעשי״ת<\/small>\s*([^)<]*)\)?/g,(_,a)=>c.ayt?'<span class="tfl-ch">('+a.trim()+')</span>':'');
