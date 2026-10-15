@@ -207,6 +207,34 @@ const SRCNAME={chu:'חומש',tan:'תניא',rmb:'רמב״ם'};
 function srcGet(){ return Object.assign({chu:'sefaria',tan:'sefaria',rmb:'booklet',stz:'on'},lsGet('src-v1',{})); }
 function srcSet(k,v){ const S=srcGet(); S[k]=v; lsSet('src-v1',S); }
 
+/* Chassidus on the parsha: Torah Ohr (Bereshit, Shemot) / Likkutei Torah (the other books), from Sefaria.
+   The week's portion is spread over the days left until Shabbos (or learned freely) – unit id 'chas' (+'@<week>' for a past week). */
+const CHAS_BOOK={Genesis:['Torah Ohr','תורה אור'],Exodus:['Torah Ohr','תורה אור'],Leviticus:['Likkutei Torah','לקוטי תורה'],Numbers:['Likkutei Torah','לקוטי תורה'],Deuteronomy:['Likkutei Torah','לקוטי תורה']};
+const hnorm=s=>String(s||'').replace(/[^א-ת]/g,'').replace(/ך/g,'כ').replace(/ם/g,'מ').replace(/ן/g,'נ').replace(/ף/g,'פ').replace(/ץ/g,'צ');
+// the parsha (or two) read on the Shabbos of that week
+function chasParsha(wk){ const sh=weekStart(wk||wkId()); sh.setDate(sh.getDate()+6); const c=chumashFor(sh,!!lsGet('home-v1',{}).diaspora); if(!c) return null;
+  const book=SCHED.aliyot[c.names[0]]&&SCHED.aliyot[c.names[0]][0][0]; const B=CHAS_BOOK[book]; if(!B) return null; return {names:c.names, he:c.he, book:B[0], bookHe:B[1]}; }
+async function chasNodes(book){ const k='chasidx:'+book; let L=lsGet(k,null); if(L&&L.v===1) return L.n;
+  const j=await sefJSON(SEF+'/api/v2/raw/index/'+encodeURIComponent(book.replace(/ /g,'_'))); const out=[];
+  const walk=n=>{ (n.nodes||[]).forEach(x=>{ const t=x.titles||[]; const en=(t.find(y=>y.lang==='en'&&y.primary)||t.find(y=>y.lang==='en')||{}).text||x.title, he=(t.find(y=>y.lang==='he'&&y.primary)||t.find(y=>y.lang==='he')||{}).text||x.heTitle; out.push({en,he}); if(x.nodes) walk(x); }); };
+  walk(j.schema||j); lsSet(k,{v:1,n:out}); return out; }
+// text of the parsha's maamarim → [{m (maamar no.), paras:[...]}]
+async function chasText(P){ const nodes=await chasNodes(P.book); const out=[];
+  for(const nm of P.names){ const he=hnorm((SCHED.he&&SCHED.he[nm])||nm); const nd=nodes.find(n=>hnorm(n.he)===he)||nodes.find(n=>hnorm(n.he).startsWith(he)||he.startsWith(hnorm(n.he)))||nodes.find(n=>n.en.toLowerCase()===String(nm).toLowerCase()); if(!nd) continue;
+    const j=await sefText(P.book+', '+nd.en,'hebrew'); const t=j.versions&&j.versions[0]&&j.versions[0].text; if(!t) continue;
+    const arr=Array.isArray(t)?t:[t]; if(arr.some(Array.isArray)) arr.forEach((m,i)=>{ const ps=flat(m).map(clean).filter(Boolean); if(ps.length) out.push({parsha:nd.he,m:i+1,paras:ps}); }); else out.push({parsha:nd.he,m:1,paras:arr.map(clean).filter(Boolean)}); }
+  return out; }
+async function partChas(wk){ const P=chasParsha(wk); if(!P) throw new Error('אין פרשה'); const M=await chasText(P); if(!M.length) throw new Error('לא נמצא ב'+P.bookHe);
+  const blocks=[]; M.forEach(x=>{ const first=String(x.paras[0]).replace(/<[^>]+>/g,'').split(/\s+/).slice(0,6).join(' ');
+    blocks.push({cls:'head',html:'<h3>'+P.bookHe+' · '+x.parsha+(M.length>1?' · מאמר '+gem(x.m):'')+'</h3><small>'+first+'…</small>',w:2,mark:P.bookHe+' '+x.parsha+' '+gem(x.m)});
+    x.paras.forEach((p,i)=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:x.parsha+' מאמר '+gem(x.m)+' · קטע '+gem(i+1)})); });
+  const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('chas:'+(wk||wkId()),W);
+  return {title:P.bookHe+' · פרשת '+P.he, blocks}; }
+// daily share: what's left this week ÷ days left until Shabbos (today included); base = where you stood this morning
+function chasDay(){ const wk=wkId(), d=lsGet('chas-day-v1',{}), iso=isoDate(new Date()), f=wkFrac('chas'); let base=d.date===iso&&d.wk===wk?d.f0:null; if(base==null){ base=f; lsSet('chas-day-v1',{date:iso,wk,f0:f}); }
+  const left=7-new Date().getDay(); const target=Math.min(1,base+(1-base)/left); return {base,target,f,done:f>=target-0.002}; }
+function chasSince(){ let s=lsGet('chas-since',null); if(!s){ const d=weekStart(wkId()); d.setDate(d.getDate()-7); s=isoDate(d); lsSet('chas-since',s); } return s; }
+
 /* start a lesson over: clears the weekly tracking, the card's progress and the reader's saved place */
 function resetLesson(full){ const [b,wk]=splitWk(full), a=b.split(':'); wkSet(full,0,true);
   if(wk!==wkId()) return; const dt=weekStart(wk); if(a[0]==='chu'||a[0]==='tan') dt.setDate(dt.getDate()+(+a[1])); const iso=isoDate(dt);
