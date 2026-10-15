@@ -305,3 +305,122 @@ async function tanyaPortion(date){ const it=await tanyaStart(date);
 async function partTanya(date){ const P=await tanyaPortion(date); const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+P.heRef+'</small><a href="'+url+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-family:var(--ui);font-size:14px;color:var(--gold);border:1px solid var(--gold);border-radius:14px;padding:4px 12px;text-decoration:none">📖 ביאור על השיעור – "שיעורים בספר התניא" ↗</a>',w:2,mark:'תניא'}];
   P.segs.map(clean).filter(Boolean).forEach(p=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:'תניא'}));
   return {title:'תניא · '+hebOf(date).label, blocks}; }
+
+/* ===================== Weekday prayers (Chabad siddur, Sefaria) – adjusted to the date ===================== */
+const HM={Tishri:1,Heshvan:2,Kislev:3,Tevet:4,Shevat:5,Adar:6,'Adar I':6,'Adar II':6.5,Nisan:7,Iyar:8,Sivan:9,Tamuz:10,Av:11,Elul:12};
+const addDays=(d,k)=>{ const x=new Date(d); x.setHours(12,0,0,0); x.setDate(x.getDate()+k); return x; };
+function hInfo(d){ const h=hebOf(d); return {d:h.day, m:HM[h.men], men:h.men, wd:new Date(d).getDay()}; }
+// the Hebrew day the prayer belongs to: Maariv / bedtime Shema after sunset belong to the next day
+function tflDate(kind,now){ now=now||new Date(); let d=new Date(now); if((kind==='maariv'||kind==='shema')&&now.getTime()>sunsetMs(now)-10*6e4) d=addDays(now,1); return addDays(d,0); }
+function isFast(d){ const x=hInfo(d), wd=x.wd; const leap=hebOf(addDays(d,0)).men.startsWith('Adar ');
+  if(x.m===1&&((x.d===3&&wd!==6)||(x.d===4&&wd===0))) return 'גדליה';
+  if(x.m===4&&x.d===10) return 'עשרה בטבת';
+  const adar=x.men==='Adar'||x.men==='Adar II'; if(adar&&((x.d===13&&wd!==6)||(x.d===11&&wd===4))) return 'תענית אסתר';
+  if(x.m===10&&((x.d===17&&wd!==6)||(x.d===18&&wd===0))) return 'שבעה עשר בתמוז';
+  if(x.m===11&&((x.d===9&&wd!==6)||(x.d===10&&wd===0))) return 'תשעה באב';
+  return null; }
+function isChanukah(d){ for(let k=0;k<8;k++){ const x=hInfo(addDays(d,-k)); if(x.m===3&&x.d===25) return k+1; } return 0; }
+function noTachDay(d){ const x=hInfo(d), m=x.m, n=x.d; if(x.wd===6) return true;
+  if(n===30||(n===1&&m!==1)) return true;                       // Rosh Chodesh
+  if(m===1&&n<=2) return true; if((m===1&&n>=9)||(m===2&&n<=2)) return true; if(m===12&&n===29) return true;   // RH, 9 Tishrei – 2 Cheshvan, erev RH
+  if(isChanukah(d)) return true; if(m===5&&n===15) return true;
+  if((x.men==='Adar'||x.men==='Adar II'||x.men==='Adar I')&&(n===14||n===15)) return true;
+  if(m===7) return true; if(m===8&&(n===14||n===18)) return true; if(m===9&&n<=12) return true;
+  if(m===11&&(n===15||(n===9&&x.wd!==6)||(n===10&&x.wd===0))) return true;
+  if(m===3&&(n===10||n===19||n===20)) return true; if(m===10&&(n===12||n===13)) return true; return false; }
+function tflCtx(kind,now){ const dia=!!lsGet('home-v1',{}).diaspora, d=tflDate(kind,now), x=hInfo(d), m=x.m, n=x.d, wd=x.wd;
+  const rc=n===30||(n===1&&m!==1), chan=isChanukah(d), fast=isFast(d);
+  const purim=(x.men==='Adar'||x.men==='Adar II')&&n===14;
+  const chm=(m===1&&n>=(dia?17:16)&&n<=21)?'sukkot':(m===7&&n>=(dia?17:16)&&n<=20)?'pesach':null;
+  const ayt=m===1&&n<=10;
+  const winterGev=(m===1&&n>=23)||(m>=2&&m<7)||(m===7&&n<15);
+  let winterBar; if(!dia) winterBar=(m===2&&n>=7)||(m>=3&&m<7)||(m===7&&n<15);
+  else { const cm=d.getMonth(), cy=d.getFullYear(); const leapNext=((cy+1)%4===0&&(cy+1)%100!==0)||(cy+1)%400===0;
+    if(cm===11) winterBar=d.getDate()>=5+(leapNext?1:0); else if(cm<=3) winterBar=m<7||(m===7&&n<15); else winterBar=false; }
+  // Tachanun: none on the day itself; at Mincha also none on the eve of such a day (but said before Pesach Sheni), nor on Friday afternoon
+  let noTach=noTachDay(d); if(kind==='mincha'&&!noTach){ const t=addDays(d,1), y=hInfo(t); if(wd===5) noTach=true; else if(noTachDay(t)&&!(y.m===8&&y.d===14)) noTach=true; }
+  const monThu=wd===1||wd===4, torah=monThu||rc||!!chan||purim||(!!fast&&kind!=='maariv')||!!chm;
+  const hallel=chan||chm==='sukkot'?'full':(rc||chm==='pesach')?'half':null;
+  const elulHR=m===12||(m===1&&n<=21);
+  let omer=0; for(let k=0;k<50;k++){ const y=hInfo(addDays(d,-k)); if(y.m===7&&y.d===16){ omer=k+1; break; } } if(omer>49) omer=0;
+  return {d,kind,dia,m,n,wd,rc,chan,fast,tishaBav:fast==='תשעה באב',purim,chm,ayt,winterGev,winterBar,noTach,monThu,torah,hallel,elulHR,omer,motzash:kind==='maariv'&&wd===0}; }
+// what is different today – shown at the top of the prayer
+function tflNotes(c){ const L=[];
+  L.push(c.winterGev?'משיב הרוח ומוריד הגשם':'מוריד הטל'); L.push(c.winterBar?'ותן טל ומטר לברכה':'ותן ברכה');
+  if(c.ayt) L.push('עשרת ימי תשובה: זכרנו, המלך הקדוש, המלך המשפט'); if(c.rc) L.push('ראש חודש: יעלה ויבוא'+(c.kind==='shacharit'?(c.chan?'':', הלל בדילוג')+', מוסף':''));
+  if(c.chm) L.push('חול המועד '+(c.chm==='pesach'?'פסח':'סוכות')+': יעלה ויבוא'+(c.kind==='shacharit'?(c.chm==='pesach'?', הלל בדילוג':', הלל שלם')+' (מוסף – מהסידור)':'')); if(c.chan) L.push('חנוכה (יום '+gem(c.chan)+'): על הנסים'+(c.kind==='shacharit'?', הלל שלם':''));
+  if(c.purim) L.push('פורים: על הנסים'); if(c.fast) L.push('תענית '+c.fast+(c.kind==='mincha'?': עננו':''));
+  if(c.kind!=='maariv'&&c.kind!=='shema') L.push(c.noTach?'אין אומרים תחנון':'אומרים תחנון'+(c.kind==='shacharit'&&c.monThu?' (והוא רחום – שני וחמישי)':''));
+  if(c.kind==='shacharit'&&c.torah) L.push('קריאת התורה'); if(c.elulHR&&c.kind!=='maariv'&&c.kind!=='shema') L.push('לדוד ה׳ אורי');
+  if(c.motzash) L.push('אתה חוננתנו'); if(c.omer&&c.kind==='maariv') L.push('ספירת העומר: יום '+gem(c.omer));
+  return L; }
+const TFL={shacharit:['Shacharit, Upon Arising','Shacharit, Morning Blessings','Shacharit, Tzitzit and Tallit','Shacharit, Tefillin','Shacharit, Morning Prayer','Shacharit, Kaddish DeRabbanan','Shacharit, Hodu','Shacharit, Pesukei Dezimra','Shacharit, Blessings of the Shema','Shacharit, The Amidah','Shacharit, Tachnun','Shacharit, Torah Reading','Shacharit, Ashrei Uva LeZion','Shacharit, Song of the Day',"Shacharit, Mourner's Kaddish",'Shacharit, Kaveh','Shacharit, Aleinu'],
+  mincha:['Mincha, Korbanot','Mincha, Ashrei','Mincha, Amidah','Mincha, Tachanun','Mincha, Aleinu'], maariv:['Maariv'], shema:['Bedtime Shema']};
+const TFLNAME={shacharit:'שחרית',mincha:'מנחה',maariv:'ערבית',shema:'קריאת שמע שעל המטה'};
+const TFLSEC={'Upon Arising':'השכמת הבוקר','Morning Blessings':'ברכות השחר','Tzitzit and Tallit':'ציצית וטלית','Tefillin':'תפילין','Morning Prayer':'סדר הקרבנות','Kaddish DeRabbanan':'קדיש דרבנן','Hodu':'הודו','Pesukei Dezimra':'פסוקי דזמרה','Blessings of the Shema':'קריאת שמע וברכותיה','The Amidah':'שמונה עשרה','Amidah':'שמונה עשרה','Tachnun':'תחנון','Tachanun':'תחנון','Torah Reading':'קריאת התורה','Ashrei Uva LeZion':'אשרי ובא לציון','Song of the Day':'שיר של יום',"Mourner's Kaddish":'קדיש יתום','Kaveh':'קוה','Aleinu':'עלינו','Korbanot':'קרבנות','Ashrei':'אשרי','Maariv':'ערבית','Bedtime Shema':'קריאת שמע שעל המטה','Hallel':'הלל','Rosh Chodesh':'מוסף לראש חודש'};
+const smallLead=s=>{ const m=String(s).match(/^\s*<small>([\s\S]*?)<\/small>/); return m?m[1].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():''; };
+// choose the right words inside a segment: summer/winter, Ten Days, Rosh Chodesh / Chol HaMoed names
+function tflInline(s,c){ let t=String(s);
+  t=t.replace(/<small>בקיץ<\/small>\s*([^(<]*?)\s*\(<small>בחורף<\/small>\s*([^)]*)\)/g,(_,a,b)=>'<span class="tfl-ch">'+(c.winterBar?b:a)+'</span>');
+  t=t.replace(/<small>בקיץ<\/small>\s*([\s\S]*?)<small>בחורף<\/small>\s*([\s\S]*)$/,(_,a,b)=>'<span class="tfl-ch">'+(c.winterGev?b:a)+'</span>');
+  t=t.replace(/\(?<small>בעשי״ת<\/small>\s*([^)<]*)\)?/g,(_,a)=>c.ayt?'<span class="tfl-ch">('+a.trim()+')</span>':'');
+  t=t.replace(/\(\s*\)/g,'');
+  if(/<small>בראש חדש:<\/small>/.test(t)){ const which=c.rc?'בראש חדש:':c.chm==='pesach'?'בחוה״מ פסח:':'בחוה״מ סוכות:';
+    t=t.replace(/<small>(בראש חדש:|בחוה״מ פסח:|בחוה״מ סוכות:)<\/small>\s*([^<]*)/g,(_,k,a)=>k===which?'<span class="tfl-ch">'+a+'</span>':''); }
+  return t; }
+// keep / drop each segment by its instruction
+function tflFilter(sec,segs,c){ const out=[]; let mode=null;
+  for(let i=0;i<segs.length;i++){ let s=segs[i]; const lead=smallLead(s), plain=String(s).replace(/<[^>]+>/g,'').trim(); const onlySmall=/^\s*<small>[\s\S]*<\/small>\s*$/.test(s)&&!/<\/small>[\s\S]*\S[\s\S]*<small>/.test(s);
+    // blocks that continue until a closing marker
+    if(mode==='monthu'){ if(c.monThu) out.push(s); if(/ע״כ מה שמוסיפין/.test(s)) mode=null; continue; }
+    if(sec==='Song of the Day'){
+      const dm=lead.match(/^ב(ראשון|שני|שלישי|רביעי|חמישי|שישי) בשבת/); if(dm){ mode='day:'+['ראשון','שני','שלישי','רביעי','חמישי','שישי'].indexOf(dm[1]); }
+      else if(/^בראש חדש אחר שיר של יום/.test(lead)) mode='rc'; else if(/^מר״ח אלול/.test(lead)) mode='elul';
+      if(mode&&mode.startsWith('day:')){ if(+mode.slice(4)===c.wd) out.push(s); continue; }
+      if(mode==='rc'){ if(c.rc) out.push(s); continue; } if(mode==='elul'){ if(c.elulHR) out.push(s); continue; }
+      if(/^בימים שאין אומרים תחנון/.test(lead)){ if(c.noTach) i++; continue; } }
+    if(/^<b>לשני וחמישי<\/b>\s*$/.test(String(s).trim())){ mode='monthu'; continue; }
+    if(/^בעשי״ת|^בעשרת ימי תשובה/.test(lead)){ if(c.ayt) out.push('<span class="tfl-ch">'+tflInline(String(s).replace(/^\s*<small>[\s\S]*?<\/small>\s*/,''),c)+'</span>'); continue; }
+    if(/^בתענית צ[י]?בור ובעשי״ת/.test(lead)){ if(c.ayt||c.fast){ out.push(s); if(segs[i+1]&&/^<b>אָבִינוּ<\/b> מַלְכֵּנוּ/.test(segs[i+1])) out.push(segs[++i]); } else if(segs[i+1]&&/^<b>אָבִינוּ<\/b> מַלְכֵּנוּ/.test(segs[i+1])) i++; continue; }
+    if(/^בתענית צ[י]?בור/.test(lead)){ if(c.fast&&!/הש״ץ|השליח ציבור/.test(lead)) out.push(s); continue; }
+    if(/^בראש חודש ובחול המועד/.test(lead)){ if(c.rc||c.chm) out.push(tflInline(s,c)); continue; }
+    if(/^בחנוכה ופורים/.test(lead)){ if(c.chan||c.purim) out.push(s); continue; }
+    if(/^בחנוכה אומרים/.test(lead)){ if(c.chan){ out.push(s); } else if(segs[i+1]&&/מַתִּתְיָהו/.test(segs[i+1])) i++; continue; }
+    if(/^לחנוכה/.test(lead)){ if(c.chan) out.push(s); continue; } if(/^לפורים/.test(lead)){ if(c.purim) out.push(s); continue; }
+    if(/^\(?בתשעה באב אומרים כאן נחם/.test(lead)||/^במנחת תשעה באב/.test(lead)){ if(c.tishaBav) out.push(s); continue; }
+    if(/^בתשעה באב וביום הכפורים אין אומרים ברכה זו/.test(lead)){ if(c.tishaBav) i++; continue; }
+    if(/^במוצאי שבת/.test(lead)){ if(c.motzash) out.push(s); continue; }
+    if(/^מנהג ספרד שבכל יום שאין בו תחנון/.test(lead)){ if(c.noTach&&segs[i+1]&&/לַמְנַצֵּחַ/.test(segs[i+1])) i++; continue; }
+    if(/^בשני ובחמישי ושאר ימים שמוציאין/.test(lead)){ if(!c.torah){ while(segs[i+1]&&/יְהַלְלוּ|הוֹדוֹ עַל/.test(segs[i+1])) i++; } else out.push(s); continue; }
+    if(/^אין אומרים אל ארך אפים/.test(lead)){ if(c.rc||c.chan||c.purim) i++; continue; }
+    if(/^ברכת הגומל|^ברכת ברוך שפטרני/.test(plain)){ while(segs[i+1]&&!/^\s*<small>וכשמגביהין/.test(segs[i+1])) i++; continue; }
+    if(/^יש לומר קודם הזווג/.test(lead)) continue;
+    if(sec==='Hallel'){ if(/^אלו ימים שגומרים/.test(lead)) continue; if(/^בראש חודש ובחוה״מ פסח מדלגין/.test(lead)){ if(c.hallel==='half') i++; continue; }
+      if(/^יש נוהגין|^ויאמר/.test(lead)||/^וְאַבְרָהָם זָקֵן/.test(plain)) continue; if(/^בראש חדש (\[אחר|וביום טוב)|^ומוציאין ספר תורה/.test(lead)) continue; }
+    if(/^כשהש״ץ חוזר|^מודים דרבנן|^לשליח ציבור/.test(lead)){ out.push('<div class="tfl-opt">'+s+'</div>'); continue; }
+    out.push(tflInline(s,c)); }
+  return out; }
+const OMER_N=['','אחד','שנים','שלשה','ארבעה','חמשה','ששה','שבעה','שמונה','תשעה','עשרה'];
+function omerWords(n){ const u=n%10, t=Math.floor(n/10); let w;
+  if(n===1) w='יום אחד'; else if(n<=10) w=OMER_N[n]+' ימים'; else if(n<20) w=(n===11?'אחד':n===12?'שנים':OMER_N[u])+' עשר יום'; else { const T=['','','עשרים','שלשים','ארבעים'][t]; w=(u?OMER_N[u]+' ו':'')+T+' יום'; }
+  const wk=Math.floor(n/7), d=n%7; if(n<7) return 'הַיּוֹם '+w+' לָעֹמֶר';
+  const W=wk===1?'שבוע אחד':OMER_N[wk]+' שבועות', D=d===0?'':d===1?' ויום אחד':' ו'+OMER_N[d]+' ימים';
+  return 'הַיּוֹם '+w+' שֶׁהֵם '+W+D+' לָעֹמֶר'; }
+const SEFIROT=['חסד','גבורה','תפארת','נצח','הוד','יסוד','מלכות'];
+async function partPrayer(kind,now){ const c=tflCtx(kind,now); let secs=TFL[kind].slice();
+  if(kind==='shacharit'){
+    if(c.noTach) secs=secs.filter(s=>!/Tachnun/.test(s)); if(!c.torah) secs=secs.filter(s=>!/Torah Reading/.test(s));
+    if(c.hallel){ const i=secs.indexOf('Shacharit, The Amidah'); secs.splice(i+1,0,'Hallel'); }
+    if(c.rc){ const i=secs.indexOf('Shacharit, Ashrei Uva LeZion'); secs.splice(i+1,0,'Rosh Chodesh'); } }
+  if(kind==='mincha'&&c.noTach) secs=secs.filter(s=>!/Tachanun/.test(s));
+  const data=await Promise.all(secs.map(s=>sefJSON(SEF+'/api/texts/'+encodeURIComponent('Weekday Siddur Chabad, '+s)+'?context=0').catch(e=>({err:e}))));
+  const blocks=[{cls:'head',html:'<h3>'+TFLNAME[kind]+'</h3><small>'+hebOf(c.d).label+' · יום '+WEEKDAYS[c.wd]+'</small><div class="tfl-today"><b>היום בתפילה:</b> '+tflNotes(c).join(' · ')+'</div>',w:2,mark:TFLNAME[kind]}];
+  secs.forEach((s,i)=>{ const j=data[i]; const short=s.split(', ').pop(); const he=TFLSEC[short]||short;
+    if(j.err){ blocks.push({cls:'msg',html:'לא הצלחתי לטעון את '+he,w:1,mark:he}); return; }
+    const segs=flat(j.he).filter(x=>x!=null&&String(x).trim()); const keep=tflFilter(short,segs,c); if(!keep.length) return;
+    blocks.push({cls:'head',html:'<h3>'+he+'</h3>',w:1,mark:he});
+    keep.forEach(x=>{ const h=clean(x); const note=/^\s*<small>[\s\S]*<\/small>\s*$/.test(h)&&h.replace(/<small>[\s\S]*?<\/small>/g,'').trim()===''; blocks.push({cls:note?'tfl-note':'par',html:'<p>'+h+'</p>',w:note?1:wordsOf(h),mark:he}); }); 
+    if(kind==='maariv'&&short==='Maariv'&&c.omer){ const n=c.omer; blocks.push({cls:'head',html:'<h3>ספירת העומר</h3>',w:1,mark:'ספירת העומר'});
+      blocks.push({cls:'par',html:'<p>בָּרוּךְ אַתָּה יְיָ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ עַל סְפִירַת הָעֹמֶר:</p><p><b>'+omerWords(n)+':</b></p><p>הָרַחֲמָן הוּא יַחֲזִיר לָנוּ עֲבוֹדַת בֵּית הַמִּקְדָּשׁ לִמְקוֹמָהּ בִּמְהֵרָה בְיָמֵינוּ אָמֵן סֶלָה:</p><p><small>'+SEFIROT[(n-1)%7]+' שב'+SEFIROT[Math.floor((n-1)/7)]+'</small></p>',w:40,mark:'ספירת העומר'}); } });
+  const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('tfl:'+kind,W);
+  return {title:TFLNAME[kind]+' · '+hebOf(c.d).label, blocks}; }
