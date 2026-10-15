@@ -214,15 +214,21 @@ const hnorm=s=>String(s||'').replace(/[^א-ת]/g,'').replace(/ך/g,'כ').replace
 // the parsha (or two) read on the Shabbos of that week
 function chasParsha(wk){ const sh=weekStart(wk||wkId()); sh.setDate(sh.getDate()+6); const c=chumashFor(sh,!!lsGet('home-v1',{}).diaspora); if(!c) return null;
   const book=SCHED.aliyot[c.names[0]]&&SCHED.aliyot[c.names[0]][0][0]; const B=CHAS_BOOK[book]; if(!B) return null; return {names:c.names, he:c.he, book:B[0], bookHe:B[1]}; }
-async function chasNodes(book){ const k='chasidx:'+book; let L=lsGet(k,null); if(L&&L.v===1) return L.n;
-  const j=await sefJSON(SEF+'/api/v2/raw/index/'+encodeURIComponent(book.replace(/ /g,'_'))); const out=[];
+const CHAS_EN={'Lech-Lecha':'Lech Lecha','Chayei Sara':'Chayei Sara','Vayetzei':'Vayetzei','Ki Tisa':'Ki Tisa'};
+async function chasNodes(book){ const k='chasidx:'+book; let L=lsGet(k,null); if(L&&L.v===1) return L.n; let j;
+  try{ j=await sefJSON(SEF+'/api/v2/raw/index/'+encodeURIComponent(book.replace(/ /g,'_'))); }catch(e){ try{ j=await sefJSON(SEF+'/api/index/'+encodeURIComponent(book.replace(/ /g,'_'))); }catch(e2){ return []; } } const out=[];
   const walk=n=>{ (n.nodes||[]).forEach(x=>{ const t=x.titles||[]; const en=(t.find(y=>y.lang==='en'&&y.primary)||t.find(y=>y.lang==='en')||{}).text||x.title, he=(t.find(y=>y.lang==='he'&&y.primary)||t.find(y=>y.lang==='he')||{}).text||x.heTitle; out.push({en,he}); if(x.nodes) walk(x); }); };
   walk(j.schema||j); lsSet(k,{v:1,n:out}); return out; }
 // text of the parsha's maamarim → [{m (maamar no.), paras:[...]}]
 async function chasText(P){ const nodes=await chasNodes(P.book); const out=[];
-  for(const nm of P.names){ const he=hnorm((SCHED.he&&SCHED.he[nm])||nm); const nd=nodes.find(n=>hnorm(n.he)===he)||nodes.find(n=>hnorm(n.he).startsWith(he)||he.startsWith(hnorm(n.he)))||nodes.find(n=>n.en.toLowerCase()===String(nm).toLowerCase()); if(!nd) continue;
-    const j=await sefText(P.book+', '+nd.en,'hebrew'); const t=j.versions&&j.versions[0]&&j.versions[0].text; if(!t) continue;
-    const arr=Array.isArray(t)?t:[t]; if(arr.some(Array.isArray)) arr.forEach((m,i)=>{ const ps=flat(m).map(clean).filter(Boolean); if(ps.length) out.push({parsha:nd.he,m:i+1,paras:ps}); }); else out.push({parsha:nd.he,m:1,paras:arr.map(clean).filter(Boolean)}); }
+  for(const nm of P.names){ const he=hnorm((SCHED.he&&SCHED.he[nm])||nm);
+    const nd=nodes.find(n=>hnorm(n.he)===he)||nodes.find(n=>hnorm(n.he).startsWith(he)||(n.he&&he.startsWith(hnorm(n.he))))||nodes.find(n=>String(n.en).toLowerCase()===String(CHAS_EN[nm]||nm).toLowerCase())||{en:CHAS_EN[nm]||String(nm).replace(/-/g,' '),he:(SCHED.he&&SCHED.he[nm])||nm};
+    const ref=P.book+', '+nd.en; let got=false;
+    // the whole parsha at once (maamar → paragraphs); if Sefaria refuses, maamar by maamar
+    try{ const j=await sefText(ref,'hebrew'); const t=j.versions&&j.versions[0]&&j.versions[0].text;
+      if(t&&(Array.isArray(t)?t.length:1)){ const arr=Array.isArray(t)?t:[t]; if(arr.some(Array.isArray)) arr.forEach((m,i)=>{ const ps=flat(m).map(clean).filter(Boolean); if(ps.length) out.push({parsha:nd.he,m:i+1,paras:ps}); }); else out.push({parsha:nd.he,m:1,paras:arr.map(clean).filter(Boolean)}); got=true; } }catch(e){}
+    if(!got){ for(let i=1;i<=30;i++){ let j; try{ j=await sefText(ref+' '+i,'hebrew'); }catch(e){ if(i===1) throw new Error('ספריא לא מצאה את „'+ref+'” ('+e.message+')'); break; }
+      const t=j.versions&&j.versions[0]&&j.versions[0].text; const ps=flat(t).map(clean).filter(Boolean); if(!ps.length) break; out.push({parsha:nd.he,m:i,paras:ps}); } } }
   return out; }
 async function partChas(wk){ const P=chasParsha(wk); if(!P) throw new Error('אין פרשה'); const M=await chasText(P); if(!M.length) throw new Error('לא נמצא ב'+P.bookHe);
   const blocks=[]; M.forEach(x=>{ const first=String(x.paras[0]).replace(/<[^>]+>/g,'').split(/\s+/).slice(0,6).join(' ');
