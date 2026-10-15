@@ -10,7 +10,7 @@
 <title>שיעור יומי</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Noto+Serif+Hebrew:wght@500;700&family=Assistant:wght@400;600;700&family=Noto+Rashi+Hebrew:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Tinos:wght@400;700&family=Assistant:wght@400;600;700&family=Noto+Rashi+Hebrew:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --k:1;
@@ -90,8 +90,8 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH,calc(76px*var(--k))) + calc(18px*var(--k)));z-index:25;background:#2c3046;color:var(--ink);padding:calc(9px*var(--k)) calc(16px*var(--k));border-radius:calc(20px*var(--k));font-size:calc(14px*var(--k));opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 @media (max-width:380px){ .day .dt b{font-size:calc(18px*var(--k))} .ctl{min-width:calc(42px*var(--k));padding:0 calc(7px*var(--k))} .speed button{width:calc(42px*var(--k))} }
-/* verses with cantillation marks: Frank Ruhl has no ta'amim, so the whole verse uses Noto Serif Hebrew (otherwise letters come out in mixed fonts) */
-.t.ps p{font-family:"Noto Serif Hebrew",var(--serif)}
+/* verses with cantillation marks: Frank Ruhl has no ta'amim, so the whole verse uses Tinos (otherwise letters come out in mixed fonts; Noto puts the meteg between the tzere dots so it looks like a kamatz) */
+.t.ps p{font-family:"Tinos","Noto Serif Hebrew",var(--serif);font-weight:400}
 .t.ps .v{font-family:var(--ui)}
 </style>
 </head>

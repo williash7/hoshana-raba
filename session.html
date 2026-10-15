@@ -10,7 +10,7 @@
 <title>לימוד ברצף</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Noto+Serif+Hebrew:wght@500;700&family=Assistant:wght@400;600;700&family=Noto+Rashi+Hebrew:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700&family=Tinos:wght@400;700&family=Assistant:wght@400;600;700&family=Noto+Rashi+Hebrew:wght@400;600&display=swap" rel="stylesheet">
 <style>
 :root{
   --k:1;
@@ -140,8 +140,8 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .t.ps p.mk2{color:var(--textmuted)}
 .t.ps .targ{font-size:calc(var(--fs) * .8);line-height:1.75;color:var(--rashi);margin:calc(4px*var(--k)) 0 calc(6px*var(--k));padding-right:calc(10px*var(--k));border-right:calc(2px*var(--k)) solid var(--rule)}
 .t.part{padding:calc(14px*var(--k)) calc(20px*var(--k));background:var(--night);color:var(--gold);font-family:var(--serif);font-size:calc(20px*var(--k));text-align:center;font-weight:700}
-/* verses with cantillation marks: Frank Ruhl has no ta'amim, so the whole verse uses Noto Serif Hebrew (otherwise letters come out in mixed fonts) */
-.t.ps p{font-family:"Noto Serif Hebrew",var(--serif)}
+/* verses with cantillation marks: Frank Ruhl has no ta'amim, so the whole verse uses Tinos (otherwise letters come out in mixed fonts; Noto puts the meteg between the tzere dots so it looks like a kamatz) */
+.t.ps p{font-family:"Tinos","Noto Serif Hebrew",var(--serif);font-weight:400}
 .t.ps .v{font-family:var(--ui)}
 </style>
 </head>
