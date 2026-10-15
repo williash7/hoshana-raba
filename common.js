@@ -266,8 +266,6 @@ async function tanyaPortion(date){ const it=await tanyaStart(date);
     if(Bn&&Bn.book===A.book){ for(let c=A.ch+1;c<Bn.ch;c++) out.push(...(await chapSegs(A.book,c)).segs); if(Bn.seg>1) out.push(...(await chapSegs(Bn.book,Bn.ch)).segs.slice(0,Bn.seg-1)); }
     else if(Bn&&Bn.seg>1){ out.push(...(await chapSegs(Bn.book,Bn.ch)).segs.slice(0,Bn.seg-1)); } }
   return {segs:out, heRef:(first.he||it.heRef||it.ref).replace(/[:׃]\s*\S+$/,''), it}; }
-async function partTanya(date){ const P=await tanyaPortion(date); const d=new Date(date), url='https://he.chabad.org/dailystudy/tanya.asp?tdate='+(d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
-  // a full explanation of the day's portion ("שיעורים בספר התניא", Kehot) is on chabad.org – opens in the browser
-  const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+P.heRef+'</small><a href="'+url+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-family:var(--ui);font-size:14px;color:var(--gold);border:1px solid var(--gold);border-radius:14px;padding:4px 12px;text-decoration:none">📖 ביאור על השיעור – "שיעורים בספר התניא" ↗</a>',w:2,mark:'תניא'}];
+async function partTanya(date){ const P=await tanyaPortion(date); const blocks=[{cls:'head',html:'<h3>תניא יומי – '+hebOf(date).label+'</h3><small>'+P.heRef+'</small><a href="'+url+'" target="_blank" rel="noopener" style="display:inline-block;margin-top:8px;font-family:var(--ui);font-size:14px;color:var(--gold);border:1px solid var(--gold);border-radius:14px;padding:4px 12px;text-decoration:none">📖 ביאור על השיעור – "שיעורים בספר התניא" ↗</a>',w:2,mark:'תניא'}];
   P.segs.map(clean).filter(Boolean).forEach(p=>blocks.push({cls:'par',html:'<p>'+p+'</p>',w:wordsOf(p),mark:'תניא'}));
   return {title:'תניא · '+hebOf(date).label, blocks}; }
