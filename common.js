@@ -235,7 +235,7 @@ async function partRambam(subj,date){ const R=await rambamRef(subj,date); const 
     rmbHalachot(j).forEach(x=>{ let h=''; if(x.ch!==lastCh){ h+='<span class="ch">'+(book?book+' – ':'')+'פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
       const v=clean(flat(x.val).join(' ')); h+='<p><span class="v">'+gem(x.v)+'</span> '+v+'</p>';
       const cm=((stz[ri]||{})[x.ch+':'+x.v]||[]).map(clean).filter(Boolean); if(cm.length) h+='<div class="stz">'+cm.map(s=>'<div>'+s+'</div>').join('')+'</div>';
-      blocks.push({cls:'par',html:h,w:wordsOf(v)+wordsOf(cm.join(' ')),mark:(book?book+' ':'')+'פרק '+gem(x.ch)+' הלכה '+gem(x.v)}); }); });
+      blocks.push({cls:'par',chap:ri+':'+x.ch,html:h,w:wordsOf(v)+wordsOf(cm.join(' ')),mark:(book?book+' ':'')+'פרק '+gem(x.ch)+' הלכה '+gem(x.v)}); }); });
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('rmb:'+subj+':'+isoDate(new Date(date)),W);
   return {title:RMB_NAME[subj]+' · '+R.he, blocks}; }
 
