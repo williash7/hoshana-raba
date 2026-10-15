@@ -149,6 +149,8 @@ function clockIn(m){ const d=new Date(Date.now()+Math.max(0,m)*6e4); return d.ge
 function fmtMin(m){ m=Math.round(m); if(m<1) return 'פחות מדקה'; if(m<60) return m+' דק׳'; return Math.floor(m/60)+' שע׳'+(m%60?' ו־'+(m%60)+' דק׳':''); }
 
 /* parts for the continuous session: each returns {title, blocks:[{cls,html,w,mark}]} */
+// the meteg is dropped from verses: in the verse font it sits between the tzere dots and looks like a kamatz
+const noMeteg=s=>String(s).replace(/\u05BD/g,'');
 const wordsOf=s=>String(s).replace(/<[^>]+>/g,' ').split(/\s+/).filter(Boolean).length;
 async function partChumash(date,diaspora,rashi){ const c=chumashFor(date,diaspora); if(!c) throw new Error('no chumash');
   const data=await Promise.all(c.refs.map(r=>Promise.all([sefText(r.ref,"hebrew|Tanach with Ta'amei Hamikra"), rashi?sefText('Rashi on '+r.ref,'hebrew').catch(()=>null):null])));
@@ -156,7 +158,7 @@ async function partChumash(date,diaspora,rashi){ const c=chumashFor(date,diaspor
   c.refs.forEach((r,ri)=>{ const [txt,ra]=data[ri]; const rv={}; if(ra) toVerses(ra).forEach(x=>{ rv[x.ch+':'+x.v]=flat(x.val); });
     blocks.push({cls:'head',html:'<h3>חומש – פרשת '+r.parsha+' – '+c.aliyahName+'</h3><small>'+(txt.heRef||r.ref)+'</small>',w:2,mark:'פרשת '+r.parsha});
     let lastCh=null;
-    toVerses(txt).forEach(x=>{ const v=clean(flat(x.val).join(' ')); const com=(rv[x.ch+':'+x.v]||[]).map(clean).filter(Boolean);
+    toVerses(txt).forEach(x=>{ const v=noMeteg(clean(flat(x.val).join(' '))); const com=(rv[x.ch+':'+x.v]||[]).map(clean).filter(Boolean);
       let h=''; if(x.ch!==lastCh){ h+='<span class="ch">פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
       h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>'; if(com.length) h+='<div class="rashi">'+com.map(s=>'<div>'+s+'</div>').join('')+'</div>';
       blocks.push({cls:'ps',html:h,w:wordsOf(v)+wordsOf(com.join(' ')),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); });
@@ -182,7 +184,7 @@ async function partHaftara(date){ const H=haftFor(date); if(!H) throw new Error(
   const blocks=[];
   H.list.forEach((h,hi)=>{ blocks.push({cls:'head',html:'<h3>'+h.label+'</h3><small>'+data[hi].map((t,ri)=>t.heRef||h.refs[ri]).join(' · ')+'</small>',w:2,mark:h.label});
     data[hi].forEach((txt,ri)=>{ if(ri) blocks.push({cls:'head',html:'<small>'+(txt.heRef||h.refs[ri])+'</small>',w:1,mark:h.label});
-      let lastCh=null; toVerses(txt).forEach(x=>{ const v=clean(flat(x.val).join(' '));
+      let lastCh=null; toVerses(txt).forEach(x=>{ const v=noMeteg(clean(flat(x.val).join(' ')));
         let s=''; if(x.ch!==lastCh){ s+='<span class="ch">פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
         blocks.push({cls:'ps',html:s+'<p><span class="v">'+gem(x.v)+'</span>'+v+'</p>',w:wordsOf(v),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); }); });
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('shm:'+wkId()+':7',W);
@@ -193,7 +195,7 @@ async function partShnayim(i,date){ if(i===7) return partHaftara(date); const R=
   R.refs.forEach((r,ri)=>{ const [txt,on]=data[ri]; const tv={}; if(on) toVerses(on).forEach(x=>{ tv[x.ch+':'+x.v]=clean(flat(x.val).join(' ')); });
     blocks.push({cls:'head',html:'<h3>שניים מקרא ואחד תרגום – פרשת '+r.parsha+' – '+ALIYAH[i]+'</h3><small>'+(txt.heRef||r.ref)+' · כל פסוק פעמיים ואחר כך התרגום</small>',w:2,mark:'פרשת '+r.parsha});
     let lastCh=null;
-    toVerses(txt).forEach(x=>{ const v=clean(flat(x.val).join(' ')); const tg=tv[x.ch+':'+x.v]||'';
+    toVerses(txt).forEach(x=>{ const v=noMeteg(clean(flat(x.val).join(' '))); const tg=tv[x.ch+':'+x.v]||'';
       let h=''; if(x.ch!==lastCh){ h+='<span class="ch">פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
       h+='<p><span class="v">'+gem(x.v)+'</span>'+v+'</p><p class="mk2">'+v+'</p>'+(tg?'<div class="targ">'+tg+'</div>':'');
       blocks.push({cls:'ps',html:h,w:wordsOf(v)*2+wordsOf(tg),mark:'פסוק '+gem(x.ch)+':'+gem(x.v)}); }); });
