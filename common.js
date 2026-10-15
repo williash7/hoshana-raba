@@ -364,6 +364,8 @@ function tflInline(s,c){ let t=String(s);
   t=t.replace(/<small>בקיץ<\/small>\s*([^(<]*?)\s*\(<small>בחורף<\/small>\s*([^)]*)\)/g,(_,a,b)=>'<span class="tfl-ch">'+(c.winterBar?b:a)+'</span>');
   t=t.replace(/<small>בקיץ<\/small>\s*([\s\S]*?)<small>בחורף<\/small>\s*([\s\S]*)$/,(_,a,b)=>'<span class="tfl-ch">'+(c.winterGev?b:a)+'</span>');
   t=t.replace(/\(?<small>בעשי״ת<\/small>\s*([^)<]*)\)?/g,(_,a)=>c.ayt?'<span class="tfl-ch">('+a.trim()+')</span>':'');
+  // אתה חוננתנו – only on Motzaei Shabbos / Yom Tov (the instruction and the text sit together inside the segment)
+  t=t.replace(/<small>\s*במוצאי שבת[^<:]*:?\s*(?:<br\s*\/?>)?([\s\S]*?)<\/small>/g,(_,a)=>c.motzash?'<span class="tfl-ch">'+a+'</span>':'');
   t=t.replace(/\(\s*\)/g,'');
   if(/<small>בראש חדש:<\/small>/.test(t)){ const which=c.rc?'בראש חדש:':c.chm==='pesach'?'בחוה״מ פסח:':'בחוה״מ סוכות:';
     t=t.replace(/<small>(בראש חדש:|בחוה״מ פסח:|בחוה״מ סוכות:)<\/small>\s*([^<]*)/g,(_,k,a)=>k===which?'<span class="tfl-ch">'+a+'</span>':''); }
@@ -389,7 +391,7 @@ function tflFilter(sec,segs,c){ const out=[]; let mode=null;
     if(/^לחנוכה/.test(lead)){ if(c.chan) out.push(s); continue; } if(/^לפורים/.test(lead)){ if(c.purim) out.push(s); continue; }
     if(/^\(?בתשעה באב אומרים כאן נחם/.test(lead)||/^במנחת תשעה באב/.test(lead)){ if(c.tishaBav) out.push(s); continue; }
     if(/^בתשעה באב וביום הכפורים אין אומרים ברכה זו/.test(lead)){ if(c.tishaBav) i++; continue; }
-    if(/^במוצאי שבת/.test(lead)){ if(c.motzash) out.push(s); continue; }
+    if(/^במוצאי שבת/.test(lead)){ const r=tflInline(s,c); if(r.replace(/<[^>]+>/g,'').trim()) out.push(r); continue; }
     if(/^מנהג ספרד שבכל יום שאין בו תחנון/.test(lead)){ if(c.noTach&&segs[i+1]&&/לַמְנַצֵּחַ/.test(segs[i+1])) i++; continue; }
     if(/^בשני ובחמישי ושאר ימים שמוציאין/.test(lead)){ if(!c.torah){ while(segs[i+1]&&/יְהַלְלוּ|הוֹדוֹ עַל/.test(segs[i+1])) i++; } else out.push(s); continue; }
     if(/^אין אומרים אל ארך אפים/.test(lead)){ if(c.rc||c.chan||c.purim) i++; continue; }
