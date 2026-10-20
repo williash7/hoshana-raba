@@ -134,6 +134,19 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .srcBtn{display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;font-size:calc(11.5px*var(--k))!important;color:var(--gold);border-color:var(--gold)!important}
 .srcBtn b{font-size:calc(16px*var(--k))}
 .srcBtn[hidden]{display:none}
+.navBtn{margin-top:calc(4px*var(--k));border:calc(1px*var(--k)) solid #4a4f6b;background:transparent;color:var(--gold);border-radius:calc(12px*var(--k));padding:calc(2px*var(--k)) calc(10px*var(--k));font-size:calc(12px*var(--k))}
+.parts i{cursor:pointer}
+.nav{position:fixed;inset:0;z-index:40;background:#0008;display:flex;align-items:flex-end}
+.nav[hidden]{display:none}
+.navIn{width:100%;max-height:80vh;overflow:auto;background:var(--night);color:var(--ink);border-radius:calc(18px*var(--k)) calc(18px*var(--k)) 0 0;padding:calc(14px*var(--k)) calc(16px*var(--k)) calc(24px*var(--k))}
+.navHd{display:flex;justify-content:space-between;align-items:center;font-size:calc(17px*var(--k))}
+.navHd button{border:0;background:transparent;color:var(--muted);font-size:calc(20px*var(--k))}
+.navHint{color:var(--muted);font-size:calc(12.5px*var(--k));margin:calc(4px*var(--k)) 0 calc(10px*var(--k))}
+.navIt{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:right;border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(12px*var(--k));padding:calc(10px*var(--k)) calc(12px*var(--k));margin-bottom:calc(8px*var(--k));font-size:calc(15px*var(--k))}
+.navIt small{color:var(--muted);font-size:calc(12.5px*var(--k))}
+.navIt.here{border-color:var(--gold)}
+.navIt.here small{color:var(--gold)}
+.navIt.dn small{color:var(--willow)}
 .backBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH,76px) + calc(10px*var(--k)));z-index:25;background:var(--gold);color:#241c08;border:0;border-radius:calc(20px*var(--k));padding:calc(9px*var(--k)) calc(18px*var(--k));font-size:calc(14px*var(--k));font-weight:600;box-shadow:0 4px 16px #0007}
 .backBtn[hidden]{display:none}
 .t.part.dropped{opacity:.55}
@@ -162,6 +175,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
     <div style="min-width:0">
       <div style="font-family:var(--serif);font-size:calc(20px*var(--k));font-weight:700">לימוד ברצף</div>
       <div class="parts" id="parts"></div>
+      <button class="navBtn" id="navBtn">☰ כל הקטעים</button>
     </div>
     <div class="timebox"><b id="clock">--:--</b><span id="clockLbl"></span></div>
   </div>
@@ -175,6 +189,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <div class="line" id="line"><span class="tab">כאן</span></div>
 <main id="scroller"><div id="doc"></div></main>
 <button class="backBtn" id="backBtn" hidden>↓ חזרה למקום שהגעת</button>
+<div class="nav" id="nav" hidden><div class="navIn"><div class="navHd"><b>הקטעים בלימוד הזה</b><button id="navX" aria-label="סגור">✕</button></div><p class="navHint">לחץ על קטע כדי לעבור אליו. כל קטע זוכר איפה עצרת.</p><div id="navList"></div></div></div>
 <nav class="dock" id="dock">
   <div class="dock-in">
     <button class="play" id="play" aria-label="הפעל גלילה"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
@@ -310,7 +325,7 @@ async function load(keepPos){
   GOAL0=goalAt!=null?B[goalAt].cum:TOTAL-2;
   const bar=$('bar'); bar.querySelectorAll('.tick').forEach(t=>t.remove()); PB.slice(1).forEach(x=>{ const t=document.createElement('div'); t.className='tick'; t.style.right=(x.a/TOTAL*100)+'%'; bar.appendChild(t); });
   setGoal();
-  measure(); if(keepPos!=null){ scrollToPos(keepPos); maxPos=curPos; $('backBtn').hidden=true; ready=true; update(); return; } scrollToPos(RESUME0!=null&&RESUME0<B.length&&B[RESUME0].el.previousElementSibling&&B[RESUME0].el.previousElementSibling.classList.contains('resume')?B[RESUME0].cum:0); ready=true; maxPos=curPos; if(fit) applyFit(); update(); }
+  measure(); if(keepPos!=null){ scrollToPos(keepPos); maxPos=curPos; prevPos=curPos; $('backBtn').hidden=true; ready=true; update(); return; } scrollToPos(RESUME0!=null&&RESUME0<B.length&&B[RESUME0].el.previousElementSibling&&B[RESUME0].el.previousElementSibling.classList.contains('resume')?B[RESUME0].cum:0); ready=true; maxPos=curPos; prevPos=curPos; if(fit) applyFit(); update(); }
 
 /* geometry */
 let PXW=0;   // typical pixels per word of the text – headings never scroll much faster than text
@@ -347,7 +362,23 @@ function replan(){ if(!ready||FREE||fit||!t0||TOTAL-curPos<3||Date.now()-planT<4
   const m=MORE.find(id=>!moreAsked.has(id)); if(m&&avail-need>=4){ moreAsked.add(m); planT=Date.now();
     note('בקצב הזה יישארו לך כ־<b>'+Math.round(avail-need)+' דק׳</b>. להוסיף גם את <b>'+uName(m)+'</b>?',[['כן, הוסף',async()=>{ const p=curPos; UNITS.push({id:m,end:null,plan:null}); NAMES[m]=uName(m); await load(p); toast('נוסף לתוכנית ✓'); }],['לא, תודה',null]]); } }
 setInterval(replan,5000);
-function remW(p){ const tgt=p<GOAL-1?GOAL:TOTAL; let r=0; PB.forEach(x=>{ if(x.err) return; r+=Math.max(0,Math.min(x.z,tgt)-(p>=x.a-1?p:x.rsC)); }); return r; }
+// where you got to in each piece (you can jump between pieces – each keeps its place)
+const PP={}; let prevPos=0;
+const inPart=(x,p)=>p>=x.a-1&&p<x.z+0.5;
+function posFor(x,p){ return inPart(x,p)?p:(PP[x.p]!=null?PP[x.p]:x.rsC); }
+// reading on (scrolling, auto-scroll) fills every piece you pass; a jump only marks where you landed
+function reach(p){ const step=p-prevPos; PB.forEach(x=>{ if(x.err) return; if(inPart(x,p)) PP[x.p]=Math.max(PP[x.p]||x.rsC,p);
+  else if(step>0&&step<2500&&x.a-1<=p&&x.z>prevPos&&x.z<=p+0.5) PP[x.p]=Math.max(PP[x.p]||x.rsC,x.z); }); prevPos=p; }
+function remW(p){ const tgt=p<GOAL-1?GOAL:TOTAL; let r=0; PB.forEach(x=>{ if(x.err) return; r+=Math.max(0,Math.min(x.z,tgt)-(inPart(x,p)?p:Math.max(x.rsC,PP[x.p]||0))); }); return r; }
+function jumpTo(id){ const x=PB.find(y=>y.p===id); if(!x) return; let t=Math.max(x.rsC,PP[id]||0); if(t>=x.z-2) t=x.a; setPlaying(false); scrollToPos(t); prevPos=curPos; reach(curPos); maxPos=curPos; $('backBtn').hidden=true; closeNav(); update(); toast('עברת ל'+NAMES[id]+(t>x.rsC+1?' – ממשיכים מהמקום שעצרת':'')); }
+// the list of all pieces – status of each, tap to move to it
+function openNav(){ const L=$('navList'); L.innerHTML=''; const p=curPos;
+  PB.forEach(x=>{ if(x.p==='mincha') return; const px=posFor(x,p), fr=x.err?0:Math.min(1,Math.max(0,px-x.a)/Math.max(1,x.z-x.a)), dn=fr>=0.98, cn=x.ends?Math.min(x.ut,x.ends.filter(e=>e<=px+0.5).length):0, here=inPart(x,p)&&!x.err;
+    const d=document.createElement('button'); d.className='navIt'+(here?' here':'')+(dn?' dn':'');
+    d.innerHTML='<b>'+NAMES[x.p]+'</b><small>'+(x.err?'לא נטען':here?'כאן עכשיו · '+Math.round(fr*100)+'%':dn?'✓ הושלם':fr>0.01?'עצרת ב־'+Math.round(fr*100)+'%'+(x.ut?' · '+Math.max(cn,x.us)+'/'+x.ut+' '+(x.un||''):''):'עוד לא התחלת')+'</small>';
+    if(!here&&!x.err) d.onclick=()=>jumpTo(x.p); L.appendChild(d); });
+  $('nav').hidden=false; }
+function closeNav(){ $('nav').hidden=true; }
 let maxPos=0;
 function applyFit(){ if(!ready) return; const lw=Math.max(1,remW(curPos)), lm=readLeftMs()/6e4; if(lm<=0.2) return; wpm=Math.max(20,Math.min(400,lw/lm)); $('spd').textContent=Math.round(wpm); }
 setInterval(()=>{ if(fit) applyFit(); },10000);
@@ -406,10 +437,10 @@ function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; 
   if(!ready) return;
   const p=curPos; checkStops(p); $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
   const box=$('parts'); box.innerHTML=''; const OV={}; let ovDone=0, ovN=0, ovD=0, ovT=0;
-  PB.forEach(x=>{ const i=document.createElement('i'); const q=Math.max(0,Math.min(x.z-x.a,p-x.a)), fr=q/Math.max(1,x.z-x.a); const uf=x.err?0:Math.min(1,q/x.W);
-    const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; const cn=x.ends?Math.min(x.ut,x.ends.filter(e=>e<=p+0.5).length):0; if(!x.err&&x.p!=='mincha'){ ovN++; ovT+=x.z-x.a; ovD+=dn?x.z-x.a:p>=x.a-1?q:x.rsC-x.a; if(dn) ovDone++; if(x.ut){ const k=x.un||''; OV[k]=OV[k]||[0,0]; OV[k][0]+=dn?x.ut:(p>=x.a-1?cn:x.us); OV[k][1]+=x.ut; } }
-    i.textContent=NAMES[x.p]+(dn?' ✓':x.ut?' '+(p>=x.a-1?cn:x.us)+'/'+x.ut:''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); box.appendChild(i);
-    if(!x.err && x.p!=='mincha' && p>=x.a-0.5){ saveCh(x,dn?x.z:p); if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else wkSet(x.p,v);
+  PB.forEach(x=>{ const i=document.createElement('i'); const px=posFor(x,p), q=Math.max(0,Math.min(x.z-x.a,px-x.a)), fr=q/Math.max(1,x.z-x.a); const uf=x.err?0:Math.min(1,q/x.W);
+    const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; const cn=x.ends?Math.min(x.ut,x.ends.filter(e=>e<=px+0.5).length):0; if(!x.err&&x.p!=='mincha'){ ovN++; ovT+=x.z-x.a; ovD+=dn?x.z-x.a:Math.max(q,x.rsC-x.a); if(dn) ovDone++; if(x.ut){ const k=x.un||''; OV[k]=OV[k]||[0,0]; OV[k][0]+=dn?x.ut:Math.max(cn,x.us); OV[k][1]+=x.ut; } }
+    i.textContent=NAMES[x.p]+(dn?' ✓':x.ut?' '+Math.max(cn,x.us)+'/'+x.ut:''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); if(!x.err&&!inPart(x,p)) i.onclick=()=>jumpTo(x.p); box.appendChild(i);
+    if(!x.err && x.p!=='mincha' && px>x.rsC+0.5){ saveCh(x,dn?x.z:px); if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else wkSet(x.p,v);
       const [xb,xw]=splitWk(x.p), a=xw===CURWK?xb.split(':'):['']; if(a[0]==='chu'&&+a[1]===WD) setProgress('chumash',isoDate(today),v,v>=1?x.ut:cn,x.ut,x.un); if(a[0]==='tan'&&+a[1]===WD) setProgress('tanya',isoDate(today),v,v>=1?x.ut:cn,x.ut,x.un);
       if(a[0]==='teh'&&+a[1]===T.day) setProgress('tehillim',T.key,v,v>=1?x.ut:cn,x.ut,x.un); } });
   const tgt=p<GOAL-1?GOAL:TOTAL, lw=remW(p), need=lw/wpm;
@@ -428,9 +459,10 @@ function setHdr(v){ HMIN=v; lsSet('hdr-min-v1',v); $('top').classList.toggle('mi
 // letter size (saved): א cycles through four sizes
 const FSZ=[19,23,27,31]; let FS=lsGet('sess-fs-v1',23); root.style.setProperty('--fs',(FS*K)+'px');
 $('font').onclick=()=>{ const p=curPos; FS=FSZ[(FSZ.indexOf(FS)+1)%FSZ.length]; lsSet('sess-fs-v1',FS); root.style.setProperty('--fs',(FS*K)+'px'); if(ready){ measure(); scrollToPos(p); update(); } toast('גודל אותיות: '+(FSZ.indexOf(FS)+1)+' מתוך '+FSZ.length); };
+$('navBtn').onclick=openNav; $('navX').onclick=closeNav; $('nav').onclick=e=>{ if(e.target.id==='nav') closeNav(); };
 $('hdrTgl').onclick=()=>setHdr(!HMIN); $('mini').onclick=()=>setHdr(false);
 setHdr(HMIN);
-addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); if(curPos>maxPos) maxPos=curPos; $('backBtn').hidden=maxPos-curPos<15; },{passive:true});
+addEventListener('scroll',()=>{ if(!ready) return; curPos=posFromScroll(); reach(curPos); if(curPos>maxPos) maxPos=curPos; $('backBtn').hidden=maxPos-curPos<15; },{passive:true});
 $('backBtn').onclick=()=>{ scrollToPos(maxPos); $('backBtn').hidden=true; update(); };
 setInterval(()=>{ update(); if(playing&&document.visibilityState==='visible') addWeekTime(1000); },1000);
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); measure(); scrollToPos(p); });
