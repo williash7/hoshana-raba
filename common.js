@@ -394,6 +394,8 @@ function tflFilter(sec,segs,c){ const out=[]; let mode=null;
       if(mode==='rc'){ if(c.rc) out.push(s); continue; } if(mode==='elul'){ if(c.elulHR) out.push(s); continue; }
       if(/^בימים שאין אומרים תחנון/.test(lead)){ if(c.noTach) i++; continue; } }
     if(/^<b>לשני וחמישי<\/b>\s*$/.test(String(s).trim())){ mode='monthu'; continue; }
+    // לדוד ה׳ אורי (and its instruction) only from Rosh Chodesh Elul to Hoshana Raba
+    if(/^מר״ח אלול/.test(lead)){ if(c.elulHR){ out.push(s); if(segs[i+1]) out.push(segs[++i]); } else if(segs[i+1]&&/לְדָוִד|לְדָוִֹד|לדוד/.test(tpStrip(segs[i+1]).slice(0,8)+segs[i+1].slice(0,40))) i++; continue; }
     // ויהי נועם, יושב בסתר, ואתה קדוש – only on Motzaei Shabbos, until עלינו
     if(mode==='motzash'){ if(/^\s*<b>עָלֵ/.test(s)) mode=null; else { if(c.motzash) out.push(tflInline(s,c)); continue; } }
     if(/^<b>למוצאי שבת<\/b>\s*$/.test(String(s).trim())){ mode='motzash'; if(c.motzash) out.push(s); continue; }

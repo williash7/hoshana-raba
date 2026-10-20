@@ -394,7 +394,7 @@ requestAnimationFrame(()=>{ measure(); { const f=learnedFrac(); if(f>0&&f*TOTAL>
   const fix=()=>{ if(!playing){ const p=D.pos; measure(); scrollToPos(p); D.pos=p; } }; setTimeout(fix,300); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(fix);
   if(D.pos>=TOTAL-3.5) toast('כבר אמרת את התהילים של היום ✓'); else if(D.pos>3) toast('ממשיכים מאיפה שעצרת'); });
 </script>
-<script src="hdr.js?v=75348075"></script>
+<script src="hdr.js?v=5f2d4d2f"></script>
 <script>collapsibleTop({ids:['curCh','pct','left']});</script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
