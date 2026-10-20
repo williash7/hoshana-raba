@@ -372,8 +372,10 @@ function posFor(x,p){ return inPart(x,p)?p:(PP[x.p]!=null?PP[x.p]:x.rsC); }
 function reach(p){ const step=p-prevPos; PB.forEach(x=>{ if(x.err) return; if(inPart(x,p)) PP[x.p]=Math.max(PP[x.p]||x.rsC,p);
   else if(step>0&&step<2500&&x.a-1<=p&&x.z>prevPos&&x.z<=p+0.5) PP[x.p]=Math.max(PP[x.p]||x.rsC,x.z); }); prevPos=p; }
 function remW(p){ const tgt=p<GOAL-1?GOAL:TOTAL; let r=0; PB.forEach(x=>{ if(x.err) return; r+=Math.max(0,Math.min(x.z,tgt)-(inPart(x,p)?p:Math.max(x.rsC,PP[x.p]||0))); }); return r; }
+// the end of the piece is already on the screen above the bottom bar → you have it in front of you; leaving now counts it as said
+function endOnScreen(x){ const k=x.end-1; if(k<0||!B[k]) return false; const bottom=tops[k]+hts[k]; return bottom<=scrollY+innerHeight-$('dock').offsetHeight+4; }
 function markDone(x){ PP[x.p]=x.z; if(x.p==='korb') setProgress('korbanot',isoDate(today),1); else { wkSet(x.p,1,true); tpSynced(x.p,1); } }
-function jumpTo(id){ const x=PB.find(y=>y.p===id); if(!x) return; const from=PB.find(y=>!y.err&&inPart(y,curPos)); if(from&&from!==x){ const fr=(curPos-from.a)/Math.max(1,from.z-from.a); if(fr>=0.75) markDone(from); } let t=Math.max(x.rsC,PP[id]||0); if(t>=x.z-2) t=x.a; setPlaying(false); scrollToPos(t); prevPos=curPos; reach(curPos); maxPos=curPos; $('backBtn').hidden=true; closeNav(); update(); toast('עברת ל'+NAMES[id]+(t>x.rsC+1?' – ממשיכים מהמקום שעצרת':'')); }
+function jumpTo(id){ const x=PB.find(y=>y.p===id); if(!x) return; const from=PB.find(y=>!y.err&&inPart(y,curPos)); if(from&&from!==x&&endOnScreen(from)) markDone(from); let t=Math.max(x.rsC,PP[id]||0); if(t>=x.z-2) t=x.a; setPlaying(false); scrollToPos(t); prevPos=curPos; reach(curPos); maxPos=curPos; $('backBtn').hidden=true; closeNav(); update(); toast('עברת ל'+NAMES[id]+(t>x.rsC+1?' – ממשיכים מהמקום שעצרת':'')); }
 // the list of all pieces – status of each, tap to move to it
 function openNav(){ const L=$('navList'); L.innerHTML=''; const p=curPos;
   PB.forEach(x=>{ if(x.p==='mincha') return; const px=posFor(x,p), fr=x.err?0:Math.min(1,Math.max(0,px-x.a)/Math.max(1,x.z-x.a)), dn=fr>=0.98, cn=x.ends?Math.min(x.ut,x.ends.filter(e=>e<=px+0.5).length):0, here=inPart(x,p)&&!x.err;
