@@ -462,6 +462,17 @@ const tpStrip=s=>String(s).replace(/<[^>]+>/g,' ').replace(/[\u05BE|]/g,' ').rep
 function tpPiece(key){ return TPIECES.find(p=>p[0]===key); }
 function tpKind(key){ return TPK[key[0]]; }
 // pieces that apply today
+// one prayer, many places: the whole prayer, its pieces, and (for Mincha) the Korbanos card are kept in step
+function tflWholeId(kind){ return 'tfl:'+kind+':'+tflDate(kind).getDay(); }
+function tflPieceIds(kind){ const pre=kind[0]==='s'&&kind==='shacharit'?'s_':kind==='mincha'?'m_':null; if(!pre) return []; return tpToday().filter(p=>p[0].startsWith(pre)).map(p=>'tp:'+p[0]+':'+tflDate(kind).getDay()); }
+function tflKindDone(kind){ const w=wkFrac(tflWholeId(kind)); const ids=tflPieceIds(kind); const pf=ids.length?ids.filter(id=>wkFrac(id)>=1).length/ids.length:0;
+  let f=Math.max(w,pf>=1?1:0); return {f, pieces:pf}; }
+function tpFrac(id){ const [b]=splitWk(id), a=b.split(':'); if(a[0]==='tp'){ const kind=tpKind(a[1]); let f=wkFrac(id); if(wkFrac(tflWholeId(kind))>=1) f=1;
+    if(a[1]==='m_korb'&&getProgress('korbanot',isoDate(new Date()))>=1) f=1; return f; }
+  if(a[0]==='tfl') return tflKindDone(a[1]).f; return wkFrac(id); }
+function tpSynced(id,v){ const [b]=splitWk(id), a=b.split(':'); if(v<1) return;
+  if(a[0]==='tp'&&a[1]==='m_korb') setProgress('korbanot',isoDate(new Date()),1);
+  if(a[0]==='tfl'&&a[1]==='mincha') setProgress('korbanot',isoDate(new Date()),1); }
 function tpToday(){ return TPIECES.filter(p=>{ const c=tflCtx(tpKind(p[0])); return !p[5]||p[5](c); }); }
 async function partPiece(key){ const P=tpPiece(key); if(!P) throw new Error('?'); const kind=tpKind(key), c=tflCtx(kind);
   const j=await sefJSON(SEF+'/api/texts/'+encodeURIComponent('Weekday Siddur Chabad, '+P[2])+'?context=0'); let segs=flat(j.he).filter(x=>x!=null&&String(x).trim());
