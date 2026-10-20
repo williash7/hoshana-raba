@@ -369,7 +369,13 @@ const PP={}; let prevPos=0;
 const inPart=(x,p)=>p>=x.a-1&&p<x.z+0.5;
 function posFor(x,p){ return inPart(x,p)?p:(PP[x.p]!=null?PP[x.p]:x.rsC); }
 // reading on (scrolling, auto-scroll) fills every piece you pass; a jump only marks where you landed
-function reach(p){ const step=p-prevPos; PB.forEach(x=>{ if(x.err) return; if(inPart(x,p)) PP[x.p]=Math.max(PP[x.p]||x.rsC,p);
+// reading on into a piece you already read part of (or all of) → continue where you stopped there
+let skipping=false;
+function skipRead(p){ if(skipping) return false; const x=PB.find(y=>!y.err&&inPart(y,p)); if(!x||PP[x.p]==null) return false; const was=PB.find(y=>!y.err&&inPart(y,prevPos));
+  if(!was||was===x||p-prevPos<=0||p-prevPos>2500) return false; let t=PP[x.p], y=x;
+  while(y&&t>=y.z-2){ const nx=PB[PB.indexOf(y)+1]; if(!nx||nx.err) return false; y=nx; t=PP[nx.p]!=null?PP[nx.p]:nx.rsC; }
+  if(t<=p+2) return false; PP[was.p]=Math.max(PP[was.p]||was.rsC,was.z); skipping=true; scrollToPos(t); accY=null; prevPos=curPos; skipping=false; toast(y===x?'ממשיכים ב'+NAMES[x.p]+' מהמקום שעצרת':NAMES[x.p]+' כבר נאמר – ממשיכים ב'+NAMES[y.p]); return true; }
+function reach(p){ if(skipRead(p)) p=curPos; const step=p-prevPos; PB.forEach(x=>{ if(x.err) return; if(inPart(x,p)) PP[x.p]=Math.max(PP[x.p]||x.rsC,p);
   else if(step>0&&step<2500&&x.a-1<=p&&x.z>prevPos&&x.z<=p+0.5) PP[x.p]=Math.max(PP[x.p]||x.rsC,x.z); }); prevPos=p; }
 function remW(p){ const tgt=p<GOAL-1?GOAL:TOTAL; let r=0; PB.forEach(x=>{ if(x.err) return; r+=Math.max(0,Math.min(x.z,tgt)-(inPart(x,p)?p:Math.max(x.rsC,PP[x.p]||0))); }); return r; }
 // the end of the piece is already on the screen above the bottom bar → you have it in front of you; leaving now counts it as said
