@@ -398,7 +398,8 @@ function tflFilter(sec,segs,c){ const out=[]; let mode=null;
     if(mode==='motzash'){ if(/^\s*<b>עָלֵ/.test(s)) mode=null; else { if(c.motzash) out.push(tflInline(s,c)); continue; } }
     if(/^<b>למוצאי שבת<\/b>\s*$/.test(String(s).trim())){ mode='motzash'; if(c.motzash) out.push(s); continue; }
     if(/^בעשי״ת|^בעשרת ימי תשובה/.test(lead)){ if(c.ayt) out.push('<span class="tfl-ch">'+tflInline(String(s).replace(/^\s*<small>[\s\S]*?<\/small>\s*/,''),c)+'</span>'); continue; }
-    if(/^בתענית צ[י]?בור ובעשי״ת/.test(lead)){ if(c.ayt||c.fast){ out.push(s); if(segs[i+1]&&/^<b>אָבִינוּ<\/b> מַלְכֵּנוּ/.test(segs[i+1])) out.push(segs[++i]); } else if(segs[i+1]&&/^<b>אָבִינוּ<\/b> מַלְכֵּנוּ/.test(segs[i+1])) i++; continue; }
+    // the long Avinu Malkeinu only in the Ten Days and on fasts; the short daily one that follows stays
+    if(/^בתענית צ[י]?בור ובעשי״ת/.test(lead)){ if(c.ayt||c.fast) out.push(s); continue; }
     if(/^בתענית צ[י]?בור/.test(lead)){ if(c.fast&&!/הש״ץ|השליח ציבור/.test(lead)) out.push(s); continue; }
     if(/^בראש חודש ובחול המועד/.test(lead)){ if(c.rc||c.chm) out.push(tflInline(s,c)); continue; }
     if(/^בחנוכה ופורים/.test(lead)){ if(c.chan||c.purim) out.push(s); continue; }
