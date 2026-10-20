@@ -354,10 +354,10 @@ function tflNotes(c){ const L=[];
   if(c.kind==='shacharit'&&c.torah) L.push('קריאת התורה'); if(c.elulHR&&c.kind!=='maariv'&&c.kind!=='shema') L.push('לדוד ה׳ אורי');
   if(c.motzash) L.push('אתה חוננתנו'); if(c.omer&&c.kind==='maariv') L.push('ספירת העומר: יום '+gem(c.omer));
   return L; }
-const TFL={shacharit:['Shacharit, Upon Arising','Shacharit, Morning Blessings','Shacharit, Tzitzit and Tallit','Shacharit, Tefillin','Shacharit, Morning Prayer','Shacharit, Hodu','Shacharit, Pesukei Dezimra','Shacharit, Blessings of the Shema','Shacharit, The Amidah','Shacharit, Tachnun','Shacharit, Torah Reading','Shacharit, Ashrei Uva LeZion','Shacharit, Song of the Day','Shacharit, Kaveh','Shacharit, Aleinu'],
+const TFL={shacharit:['Shacharit, Upon Arising','Shacharit, Morning Blessings','Shacharit, Tzitzit and Tallit','Shacharit, Tefillin','Shacharit, Morning Prayer','Shacharit, Hodu','Shacharit, Pesukei Dezimra','Shacharit, Blessings of the Shema','Shacharit, The Amidah','Shacharit, Tachnun','Shacharit, Torah Reading','Shacharit, Ashrei Uva LeZion','Shacharit, Song of the Day','Shacharit, Kaveh','Shacharit, Aleinu','Shacharit, Rabbenu Tam','Shacharit, Six Remembrances'],
   mincha:['Mincha, Korbanot','Mincha, Ashrei','Mincha, Amidah','Mincha, Tachanun','Mincha, Aleinu'], maariv:['Maariv'], shema:['Bedtime Shema']};
 const TFLNAME={shacharit:'שחרית',mincha:'מנחה',maariv:'ערבית',shema:'קריאת שמע שעל המטה'};
-const TFLSEC={'Upon Arising':'השכמת הבוקר','Morning Blessings':'ברכות השחר','Tzitzit and Tallit':'ציצית וטלית','Tefillin':'תפילין','Morning Prayer':'סדר הקרבנות','Kaddish DeRabbanan':'קדיש דרבנן','Hodu':'הודו','Pesukei Dezimra':'פסוקי דזמרה','Blessings of the Shema':'קריאת שמע וברכותיה','The Amidah':'שמונה עשרה','Amidah':'שמונה עשרה','Tachnun':'תחנון','Tachanun':'תחנון','Torah Reading':'קריאת התורה','Ashrei Uva LeZion':'אשרי ובא לציון','Song of the Day':'שיר של יום',"Mourner's Kaddish":'קדיש יתום','Kaveh':'קוה','Aleinu':'עלינו','Korbanot':'קרבנות','Ashrei':'אשרי','Maariv':'ערבית','Bedtime Shema':'קריאת שמע שעל המטה','Hallel':'הלל','Rosh Chodesh':'מוסף לראש חודש'};
+const TFLSEC={'Upon Arising':'השכמת הבוקר','Morning Blessings':'ברכות השחר','Tzitzit and Tallit':'ציצית וטלית','Tefillin':'תפילין','Morning Prayer':'סדר הקרבנות','Kaddish DeRabbanan':'קדיש דרבנן','Hodu':'הודו','Pesukei Dezimra':'פסוקי דזמרה','Blessings of the Shema':'קריאת שמע וברכותיה','The Amidah':'שמונה עשרה','Amidah':'שמונה עשרה','Tachnun':'תחנון','Tachanun':'תחנון','Torah Reading':'קריאת התורה','Ashrei Uva LeZion':'אשרי ובא לציון','Song of the Day':'שיר של יום',"Mourner's Kaddish":'קדיש יתום','Kaveh':'קוה','Aleinu':'עלינו','Rabbenu Tam':'תפילין דרבינו תם','Six Remembrances':'שש זכירות','Korbanot':'קרבנות','Ashrei':'אשרי','Maariv':'ערבית','Bedtime Shema':'קריאת שמע שעל המטה','Hallel':'הלל','Rosh Chodesh':'מוסף לראש חודש'};
 const smallLead=s=>{ const m=String(s).match(/^\s*<small>([\s\S]*?)<\/small>/); return m?m[1].replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim():''; };
 // choose the right words inside a segment: summer/winter, Ten Days, Rosh Chodesh / Chol HaMoed names
 // ג״פ: the verse before the mark is said three times – write it out three times
@@ -441,3 +441,31 @@ async function partPrayer(kind,now){ const c=tflCtx(kind,now); let secs=TFL[kind
       blocks.push({cls:'par',html:'<p>בָּרוּךְ אַתָּה יְיָ אֱלֹהֵינוּ מֶלֶךְ הָעוֹלָם, אֲשֶׁר קִדְּשָׁנוּ בְּמִצְוֹתָיו וְצִוָּנוּ עַל סְפִירַת הָעֹמֶר:</p><p><b>'+omerWords(n)+':</b></p><p>הָרַחֲמָן הוּא יַחֲזִיר לָנוּ עֲבוֹדַת בֵּית הַמִּקְדָּשׁ לִמְקוֹמָהּ בִּמְהֵרָה בְיָמֵינוּ אָמֵן סֶלָה:</p><p><small>'+SEFIROT[(n-1)%7]+' שב'+SEFIROT[Math.floor((n-1)/7)]+'</small></p>',w:40,mark:'ספירת העומר'}); } });
   const W=blocks.reduce((a,b)=>a+b.w,0); wcSet('tfl:'+kind,W);
   return {title:TFLNAME[kind]+' · '+hebOf(c.d).label, blocks}; }
+
+/* ---- prayer pieces: each part of the prayer on its own, to build your own order (with study) ---- */
+const TPK={s:'shacharit',m:'mincha',v:'maariv',b:'shema'};
+// [key, name, Sefaria section, from-marker, until-marker (exclusive), condition]
+const TPIECES=[
+  ['s_arise','השכמת הבוקר','Shacharit, Upon Arising'],['s_brachot','ברכות השחר','Shacharit, Morning Blessings'],['s_tzitzit','ציצית וטלית','Shacharit, Tzitzit and Tallit'],
+  ['s_tefillin','הנחת תפילין','Shacharit, Tefillin'],['s_korb','קרבנות של שחרית','Shacharit, Morning Prayer'],['s_hodu','הודו','Shacharit, Hodu'],['s_pzd','פסוקי דזמרה','Shacharit, Pesukei Dezimra'],
+  ['s_shemaB','ברכות קריאת שמע','Shacharit, Blessings of the Shema',null,'שמע ישראל'],['s_shema','שמע','Shacharit, Blessings of the Shema','שמע ישראל','והיה אם שמע'],
+  ['s_vehaya','והיה אם שמוע','Shacharit, Blessings of the Shema','והיה אם שמע','ויאמר יי'],['s_vayomer','ויאמר','Shacharit, Blessings of the Shema','ויאמר יי','אמת ויציב'],
+  ['s_emet','אמת ויציב','Shacharit, Blessings of the Shema','אמת ויציב',null],['s_amida','שמונה עשרה – שחרית','Shacharit, The Amidah'],
+  ['s_tach','תחנון – שחרית','Shacharit, Tachnun',null,null,c=>!c.noTach],['s_hallel','הלל','Hallel',null,null,c=>!!c.hallel],['s_torah','קריאת התורה','Shacharit, Torah Reading',null,null,c=>c.torah],
+  ['s_ashrei','אשרי ובא לציון','Shacharit, Ashrei Uva LeZion'],['s_musaf','מוסף לראש חודש','Rosh Chodesh',null,null,c=>c.rc],['s_shir','שיר של יום','Shacharit, Song of the Day'],
+  ['s_kaveh','קוה','Shacharit, Kaveh'],['s_aleinu','עלינו','Shacharit, Aleinu'],['s_rt','תפילין דרבינו תם','Shacharit, Rabbenu Tam'],['s_zchirot','שש זכירות','Shacharit, Six Remembrances'],
+  ['m_korb','קרבנות למנחה','Mincha, Korbanot'],['m_ashrei','אשרי – מנחה','Mincha, Ashrei'],['m_amida','שמונה עשרה – מנחה','Mincha, Amidah'],['m_tach','תחנון – מנחה','Mincha, Tachanun',null,null,c=>!c.noTach],['m_aleinu','עלינו – מנחה','Mincha, Aleinu']];
+const tpStrip=s=>String(s).replace(/<[^>]+>/g,' ').replace(/[\u05BE|]/g,' ').replace(/[\u0591-\u05C7]/g,'').replace(/\s+/g,' ').trim();
+function tpPiece(key){ return TPIECES.find(p=>p[0]===key); }
+function tpKind(key){ return TPK[key[0]]; }
+// pieces that apply today
+function tpToday(){ return TPIECES.filter(p=>{ const c=tflCtx(tpKind(p[0])); return !p[5]||p[5](c); }); }
+async function partPiece(key){ const P=tpPiece(key); if(!P) throw new Error('?'); const kind=tpKind(key), c=tflCtx(kind);
+  const j=await sefJSON(SEF+'/api/texts/'+encodeURIComponent('Weekday Siddur Chabad, '+P[2])+'?context=0'); let segs=flat(j.he).filter(x=>x!=null&&String(x).trim());
+  if(P[3]||P[4]){ const at=m=>segs.findIndex(s=>tpStrip(s).startsWith(m)||tpStrip(s).replace(/^[^א-ת]+/,'').startsWith(m));
+    const a=P[3]?at(P[3]):0, b=P[4]?at(P[4]):segs.length; if(a<0) throw new Error('לא נמצא „'+P[3]+'” בסידור'); segs=segs.slice(a,b<0||b<a?segs.length:b); }
+  const short=P[2].split(', ').pop(); const keep=tflFilter(short,segs,c);
+  const blocks=[{cls:'head',html:'<h3>'+P[1]+'</h3><small>'+TFLNAME[kind]+' · '+hebOf(c.d).label+'</small>',w:2,mark:P[1]}];
+  keep.forEach(x=>{ const h=clean(x); const note=/^\s*<small>[\s\S]*<\/small>\s*$/.test(h)&&h.replace(/<small>[\s\S]*?<\/small>/g,'').trim()===''&&!/[ְ-ּ]/.test(h); blocks.push({cls:note?'tfl-note':'par',html:'<p>'+h+'</p>',w:note?1:wordsOf(h),mark:P[1]}); });
+  if(blocks.length<2) blocks.push({cls:'msg',html:'היום אין צורך בקטע הזה',w:1,mark:P[1]});
+  wcSet('tp:'+key,blocks.reduce((a,b)=>a+b.w,0)); return {title:P[1], blocks}; }
