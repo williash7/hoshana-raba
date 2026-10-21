@@ -452,8 +452,8 @@ const TPIECES=[
   ['s_arise','השכמת הבוקר','Shacharit, Upon Arising'],['s_brachot','ברכות השחר','Shacharit, Morning Blessings'],['s_tzitzit','ציצית וטלית','Shacharit, Tzitzit and Tallit'],
   ['s_tefillin','הנחת תפילין','Shacharit, Tefillin'],['s_korb','קרבנות של שחרית','Shacharit, Morning Prayer'],['s_hodu','הודו','Shacharit, Hodu'],['s_pzd','פסוקי דזמרה','Shacharit, Pesukei Dezimra'],
   ['s_shemaB','ברכות קריאת שמע','Shacharit, Blessings of the Shema',null,'שמע ישראל'],['s_shema','שמע','Shacharit, Blessings of the Shema','שמע ישראל','והיה אם שמע'],
-  ['s_vehaya','והיה אם שמוע','Shacharit, Blessings of the Shema','והיה אם שמע','ויאמר יי'],['s_vayomer','ויאמר','Shacharit, Blessings of the Shema','ויאמר יי','אמת ויציב'],
-  ['s_emet','אמת ויציב','Shacharit, Blessings of the Shema','אמת ויציב',null],['s_amida','שמונה עשרה – שחרית','Shacharit, The Amidah'],
+  ['s_vehaya','והיה אם שמוע','Shacharit, Blessings of the Shema','והיה אם שמע','ויאמר יי'],['s_vayomer','ויאמר','Shacharit, Blessings of the Shema','ויאמר יי','ויציב'],
+  ['s_emet','ויציב ונכון','Shacharit, Blessings of the Shema','ויציב',null],['s_amida','שמונה עשרה – שחרית','Shacharit, The Amidah'],
   ['s_tach','תחנון – שחרית','Shacharit, Tachnun',null,null,c=>!c.noTach],['s_hallel','הלל','Hallel',null,null,c=>!!c.hallel],['s_torah','קריאת התורה','Shacharit, Torah Reading',null,null,c=>c.torah],
   ['s_ashrei','אשרי ובא לציון','Shacharit, Ashrei Uva LeZion'],['s_musaf','מוסף לראש חודש','Rosh Chodesh',null,null,c=>c.rc],['s_shir','שיר של יום','Shacharit, Song of the Day'],
   ['s_kaveh','קוה','Shacharit, Kaveh'],['s_aleinu','עלינו','Shacharit, Aleinu'],['s_rt','תפילין דרבינו תם','Shacharit, Rabbenu Tam'],['s_zchirot','שש זכירות','Shacharit, Six Remembrances'],
@@ -466,7 +466,7 @@ function tpKind(key){ return TPK[key[0]]; }
 function tflWholeId(kind){ return 'tfl:'+kind+':'+tflDate(kind).getDay(); }
 function tflPieceIds(kind){ const pre=kind[0]==='s'&&kind==='shacharit'?'s_':kind==='mincha'?'m_':null; if(!pre) return []; return tpToday().filter(p=>p[0].startsWith(pre)).map(p=>'tp:'+p[0]+':'+tflDate(kind).getDay()); }
 function tflKindDone(kind){ const w=wkFrac(tflWholeId(kind)); const ids=tflPieceIds(kind); const pf=ids.length?ids.filter(id=>wkFrac(id)>=1).length/ids.length:0;
-  let f=Math.max(w,pf>=1?1:0); return {f, pieces:pf}; }
+  return {f:w, pieces:pf}; }
 function tpFrac(id){ const [b]=splitWk(id), a=b.split(':'); if(a[0]==='tp'){ const kind=tpKind(a[1]); let f=wkFrac(id); if(wkFrac(tflWholeId(kind))>=1) f=1;
     if(a[1]==='m_korb'&&getProgress('korbanot',isoDate(new Date()))>=1) f=1; return f; }
   if(a[0]==='tfl') return tflKindDone(a[1]).f; return wkFrac(id); }
@@ -476,8 +476,14 @@ function tpSynced(id,v){ const [b]=splitWk(id), a=b.split(':'); if(v<1) return;
 function tpToday(){ return TPIECES.filter(p=>{ const c=tflCtx(tpKind(p[0])); return !p[5]||p[5](c); }); }
 async function partPiece(key){ const P=tpPiece(key); if(!P) throw new Error('?'); const kind=tpKind(key), c=tflCtx(kind);
   const j=await sefJSON(SEF+'/api/texts/'+encodeURIComponent('Weekday Siddur Chabad, '+P[2])+'?context=0'); let segs=flat(j.he).filter(x=>x!=null&&String(x).trim());
-  if(P[3]||P[4]){ const at=m=>segs.findIndex(s=>tpStrip(s).startsWith(m)||tpStrip(s).replace(/^[^א-ת]+/,'').startsWith(m));
-    const a=P[3]?at(P[3]):0, b=P[4]?at(P[4]):segs.length; if(a<0) throw new Error('לא נמצא „'+P[3]+'” בסידור'); segs=segs.slice(a,b<0||b<a?segs.length:b); }
+  if(P[3]||P[4]){ // a marker word may start a segment or sit inside one (e.g. "…אֱלֹהֵיכֶם: אֱמֶת | וְיַצִּיב וְנָכוֹן")
+    const wre=m=>new RegExp(m.split('').map(ch=>ch===' '?'(?:<[^>]+>|[\\s\\u05BE])+':ch+'[\\u0591-\\u05C7]*(?:<[^>]+>)*').join('')); 
+    const find=m=>{ const re=wre(m); for(let k=0;k<segs.length;k++){ const mm=String(segs[k]).match(re); if(mm) return {k,i:mm.index}; } return null; };
+    const A=P[3]?find(P[3]):{k:0,i:0}, Z=P[4]?find(P[4]):null; if(!A) throw new Error('לא נמצא „'+P[3]+'” בסידור');
+    let out=segs.slice(A.k,Z&&Z.k>=A.k?Z.k+1:segs.length).map(String);
+    if(Z&&Z.k>=A.k){ const last=out.length-1; out[last]=out[last].slice(0,Z.i-(Z.k===A.k?0:0)); }
+    if(A.i>0){ out[0]=(Z&&Z.k===A.k?String(segs[A.k]).slice(A.i,Z.i):String(segs[A.k]).slice(A.i)); }
+    segs=out.filter(x=>x.replace(/<[^>]+>/g,'').trim()); }
   const short=P[2].split(', ').pop(); const keep=tflFilter(short,segs,c);
   const blocks=[{cls:'head',html:'<h3>'+P[1]+'</h3><small>'+TFLNAME[kind]+' · '+hebOf(c.d).label+'</small>',w:2,mark:P[1]}];
   keep.forEach(x=>{ const h=clean(x); const note=/^\s*<small>[\s\S]*<\/small>\s*$/.test(h)&&h.replace(/<small>[\s\S]*?<\/small>/g,'').trim()===''&&!/[ְ-ּ]/.test(h); blocks.push({cls:note?'tfl-note':'par',html:'<p>'+h+'</p>',w:note?1:wordsOf(h),mark:P[1]}); });
