@@ -146,6 +146,12 @@ main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) ca
 .notFit div{display:flex;align-items:center;justify-content:space-between;gap:calc(8px*var(--k));padding:calc(4px*var(--k)) 0}
 .notFit button{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--gold);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(12.5px*var(--k));flex:none}
 .offHd{margin-top:calc(12px*var(--k));font-size:calc(13px*var(--k));color:var(--gold)}
+.mk{border:calc(1.5px*var(--k)) solid #3a3f58;border-radius:calc(14px*var(--k));padding:calc(8px*var(--k)) calc(12px*var(--k));margin-bottom:calc(10px*var(--k));background:var(--night2)}
+.mk summary{font-weight:700;cursor:pointer}.mk summary small{font-weight:400;color:var(--muted)}
+.mkR{display:flex;align-items:center;justify-content:space-between;gap:calc(6px*var(--k));padding:calc(8px*var(--k)) 0;border-top:1px solid #2e3248}
+.mkR:first-child{border-top:0}.mkR span{flex:1}.mkR small{display:block;color:var(--muted);font-weight:400}
+.mkR button{border:1px solid #3a3f58;background:transparent;color:var(--ink);border-radius:calc(10px*var(--k));padding:calc(6px*var(--k)) calc(9px*var(--k));font-size:calc(13.5px*var(--k))}
+.mkR button.on{border-color:var(--gold);color:var(--gold)}
 .offGrp{display:flex;align-items:center;justify-content:space-between;margin-top:calc(8px*var(--k));font-weight:600;font-size:calc(14.5px*var(--k))}
 .offGrp small{color:var(--muted);font-weight:400}
 .offGrp button{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--gold);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(12px*var(--k));font-size:calc(13px*var(--k))}
@@ -224,6 +230,7 @@ footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));pa
       </div>
       <div id="stPlan">
         <h4>מה ללמוד?</h4>
+        <details class="mk" id="mkBox"><summary>📚 השלמה לפי נושא <small>– כל החומש / התניא / הרמב״ם שחסר</small></summary><div id="mkList"></div></details>
         <div class="way" id="pickWay"><button data-v="auto"><b>✨ תבחר לי</b><small>השלמות, חת״ת ורמב״ם לפי הסדר</small></button><button data-v="mine"><b>✋ אבחר בעצמי</b><small>מסמנים רק מה שרוצים</small></button></div>
     <label class="fp korb"><input type="checkbox" id="korbOn"><span>כולל קרבנות למנחה<small id="korbHint"></small></span></label>
     <div class="row korbPos" id="korbPosRow"><span>מתי לומר קרבנות</span><div class="seg dk" id="korbPos"><button data-v="start">קודם קרבנות, ואז לימוד</button><button data-v="end">קודם לימוד, ואז קרבנות</button></div></div>
@@ -492,6 +499,21 @@ function renderModes(){ const m=modeOf(); $('modes').querySelectorAll('button').
     if(P.until){ const d=document.createElement('div'); d.className='lbl'; d.textContent='יש לך '+fmtMin(availMin()); c.appendChild(d); } else { const d=document.createElement('div'); d.className='lbl'; d.textContent='בחר שעה – עד שתבחר, התוכנית לפי '+fmtMin(P.min); c.appendChild(d); } }
   if(m==='open'){ const d=document.createElement('div'); d.className='lbl'; d.textContent='בלי זמן – מתחילים, ועוברים מקטע לקטע כמה שתספיק. השעון רק מודד כמה הספקת.'; c.appendChild(d); }
   if(m==='free'){ const d=document.createElement('div'); d.className='lbl'; d.textContent='כל מה שנשאר מחת״ת ורמב״ם – ואני אגיד לך באיזו שעה תסיים.'; c.appendChild(d); } }
+// make-up by subject: everything missed in one subject – this week only, or since tracking began
+const MKN={chu:'חומש',tan:'תניא',teh:'תהילים',chas:'חסידות על הפרשה'};
+const mkKey=u=>{ const a=splitWk(u.id)[0].split(':'); return a[0]==='dm'?a[1]:a[0]; };
+function renderMakeup(all){ const box=$('mkList'); if(!box) return; box.innerHTML=''; const G=new Map();
+  all.filter(u=>u.f<1&&u.g<=2&&!/^dm:hayomyom/.test(u.id)).forEach(u=>{ const k=mkKey(u); if(!MKN[k]&&!DMNAME[k]) return; if(!G.has(k)) G.set(k,[]); G.get(k).push(u); });
+  const ord=u=>(u.wk||'')+String(u.d!=null?u.d:9);
+  G.forEach((L,k)=>{ L.sort((a,b)=>ord(a)<ord(b)?-1:1); const wkL=L.filter(u=>u.cur), past=L.length>wkL.length;
+    const pick=(ids,tag)=>{ P.manual=true; P.pin=ids.slice(); P.ord=ids.slice(); P.skip=[]; P.force=[]; P.mk=tag; savePlan(); renderFlow(); };
+    const days=n=>n===1?'יום אחד':n+' ימים', tm=X=>fmtMin(mm(X.reduce((a,u)=>a+u.rem,0)));
+    const r=document.createElement('div'); r.className='mkR'; const nm=MKN[k]||DMNAME[k];
+    r.innerHTML='<span>'+nm+'<small>'+(past?'סה״כ חסר '+days(L.length)+' · כ־'+tm(L):'השבוע: '+days(wkL.length)+' · כ־'+tm(wkL))+'</small></span>';
+    if(wkL.length){ const b=document.createElement('button'); b.type='button'; b.textContent='השבוע'+(past?' ('+wkL.length+')':''); if(P.manual&&P.pin.length&&P.mk===k+':w') b.className='on'; b.onclick=()=>pick(wkL.map(u=>u.id),k+':w'); r.appendChild(b); }
+    if(past){ const b=document.createElement('button'); b.type='button'; b.textContent='הכל ('+L.length+')'; if(P.manual&&P.pin.length&&P.mk===k+':a') b.className='on'; b.onclick=()=>pick(L.map(u=>u.id),k+':a'); r.appendChild(b); }
+    box.appendChild(r); });
+  if(!G.size) box.innerHTML='<div class="mkR"><span class="ok">✓ אין מה להשלים – הכל נלמד</span></div>'; }
 function renderFlow(){ renderModes();
   $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; P.korbDay=isoDate(today); savePlan(); renderFlow(); };
   $('korbOn').closest('label').style.display=minchaTime()&&!korbSaid()?'':'none'; $('korbPosRow').style.display=korbOn()?'':'none';
@@ -512,7 +534,7 @@ function renderFlow(){ renderModes();
   if(P.open){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי זמן – מתחילים, ועוברים מקטע לקטע כמה שתספיק. בסוף רואים כמה הספקת'; tb.appendChild(l); }
   else if(P.free){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי הגבלת זמן – כל מה שנשאר מחת״ת ורמב״ם, ואני אגיד לך מתי תסיים'; tb.appendChild(l); }
   else if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent='עד '+P.until+' – יש לך '+fmtMin(a); tb.appendChild(l); }
-  const {sel,all,open,KB,off}=plan(); const box=$('plan'); box.innerHTML='';
+  const {sel,all,open,KB,off}=plan(); const box=$('plan'); box.innerHTML=''; renderMakeup(all);
   const studySel=sel.filter(s=>!s.u.korb&&!s.u.mincha);
   { const bar=document.createElement('div'); bar.className='planBar';
     if(studySel.length) bar.insertAdjacentHTML('beforeend','<button id="cancelAll">✕ בטל הכל</button>');
