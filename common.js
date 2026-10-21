@@ -112,6 +112,14 @@ function wkSet(id,f,force){ const [b,w]=splitWk(id); const T=trk(), u=T[w]||{}; 
   if(!force && f<=(u[b]||0)) return; if(f) u[b]=f; else delete u[b]; T[w]=u;
   const old=isoDate(new Date(Date.now()-90*864e5)); Object.keys(T).forEach(k=>{ if(k<old) delete T[k]; }); lsSet('track-v2',T); }
 
+/* one answer to "how much of this was learned": the weekly tracker, merged with what the older single-day readers saved
+   (Tehillim / Chumash / Tanya / Korbanos) – and copied into the tracker so both always agree from then on */
+function unitFrac(id){ let f=wkFrac(id); try{ const [b,w]=splitWk(id), a=b.split(':'); let g=0;
+    if((a[0]==='chu'||a[0]==='tan')&&a[1]!=null){ const d=weekStart(w); d.setDate(d.getDate()+(+a[1])); g=getProgress(a[0]==='chu'?'chumash':'tanya',isoDate(d)); }
+    else if(a[0]==='teh'){ const t=tehToday(); if(w===wkId()&&+a[1]===t.day) g=getProgress('tehillim',t.key); }
+    else if(b==='korb'&&w===wkId()) g=getProgress('korbanot',isoDate(new Date()));
+    if(g>f+0.004){ wkSet(id,g); f=g; } }catch(e){} return Math.min(1,f||0); }
+
 /* personal Tehillim chapters (set in the Tehillim screen): [{name,k,pos:'before'|'after'}] for the current Hebrew date */
 function personalKapitels(){ const D=lsGet('tehillim-daily-v1',{}); let L=D.list;
   if(!L){ L=(D.people||[]).map(p=>Object.assign({on:true},p)); if(D.rebbe) L.push({name:'הרבי',d:11,m:'nisan',y:5662,on:true}); if(D.rebbetzin) L.push({name:'הרבנית',d:25,m:'adar',y:5661,on:true}); }
@@ -243,8 +251,9 @@ function chasSince(){ let s=lsGet('chas-since',null); if(!s){ const d=weekStart(
 
 /* start a lesson over: clears the weekly tracking, the card's progress and the reader's saved place */
 function resetLesson(full){ const [b,wk]=splitWk(full), a=b.split(':'); wkSet(full,0,true);
-  if(wk!==wkId()) return; const dt=weekStart(wk); if(a[0]==='chu'||a[0]==='tan') dt.setDate(dt.getDate()+(+a[1])); const iso=isoDate(dt);
+  const dt=weekStart(wk); if(a[0]==='chu'||a[0]==='tan') dt.setDate(dt.getDate()+(+a[1])); const iso=isoDate(dt);
   if(a[0]==='chu'||a[0]==='tan'){ const mod=a[0]==='chu'?'chumash':'tanya'; if(getProgress(mod,iso)>0) setProgress(mod,iso,0); const S=lsGet('study-'+mod+'-v1',null); if(S&&S.pos){ delete S.pos[iso]; lsSet('study-'+mod+'-v1',S); } }
+  if(wk!==wkId()) return;
   if(a[0]==='teh'){ const P=lsGet('progress-v1',{}); if(P.tehillim) { P.tehillim.pct=0; P.tehillim.n=0; lsSet('progress-v1',P); } const S=lsGet('tehillim-daily-v1',null); if(S&&S.day===+a[1]){ S.pos=0; lsSet('tehillim-daily-v1',S); } }
   if(a[0]==='korb'){ setProgress('korbanot',isoDate(new Date()),0); } }
 

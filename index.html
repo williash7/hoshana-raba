@@ -14,367 +14,252 @@
 <style>
 :root{
   --k:1;
-  --night:#181b2b; --night2:#22263a; --ink:#ecebe4; --muted:#9aa0b8;
-  --willow:#86a86a; --gold:#d9ad55;
-  --paper:#efe6d1; --pagebg:#e4dbc4; --text:#1f1a12; --textmuted:#7d6e50; --rule:#d3c4a0; --card:#f6efdf;
+  --bg:#181b2b; --bg2:#141726; --sf:#22263a; --sf2:#2a2f47; --ln:#2e3350; --ln2:#3a3f58;
+  --ink:#ecebe4; --mut:#a3a9c0; --gold:#d9ad55; --gold2:#2c2a1e; --ok:#86a86a; --warn:#e8a06a;
   --ui:"Assistant","Segoe UI",Arial,sans-serif;
   --serif:"Frank Ruhl Libre","David","Times New Roman",serif;
+  --navH:calc(62px*var(--k));
 }
-:root[data-theme="dark"]{ --pagebg:#0f0e0b; --paper:#16140f; --text:#e6dcc6; --textmuted:#a39370; --rule:#3a3326; --card:#1d1a14; }
-@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --pagebg:#0f0e0b; --paper:#16140f; --text:#e6dcc6; --textmuted:#a39370; --rule:#3a3326; --card:#1d1a14; } }
+html{font-size:calc(16px*var(--k))}
 *,*::before,*::after{box-sizing:border-box}
-body{margin:0;background:var(--pagebg);font-family:var(--ui);color:var(--text);-webkit-tap-highlight-color:transparent}
-button,a{font:inherit;color:inherit;cursor:pointer}
-button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold);outline-offset:calc(2px*var(--k))}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ui);-webkit-tap-highlight-color:transparent;min-height:100vh}
+button,a,input{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+[hidden]{display:none!important}
 
-.hero{background:var(--night);color:var(--ink);padding:calc(env(safe-area-inset-top,calc(0px*var(--k))) + calc(22px*var(--k))) calc(20px*var(--k)) calc(26px*var(--k))}
-.hero-in{max-width:calc(620px*var(--k));margin:0 auto}
-.date{display:flex;justify-content:space-between;align-items:baseline;gap:calc(10px*var(--k));color:var(--muted);font-size:calc(14px*var(--k))}
-.date b{font-family:var(--serif);font-size:calc(20px*var(--k));color:var(--gold);font-weight:700}
-.hero h1{font-family:var(--serif);font-size:calc(32px*var(--k));line-height:1.15;margin:calc(18px*var(--k)) 0 calc(4px*var(--k));font-weight:700}
-.hero p{margin:0;color:var(--muted);font-size:calc(14.5px*var(--k))}
-.sum{margin-top:calc(16px*var(--k));display:flex;align-items:center;gap:calc(12px*var(--k))}
-.sum .track{flex:1;height:calc(6px*var(--k));background:#34384f;border-radius:calc(3px*var(--k));overflow:hidden}
-.sum .track i{display:block;height:100%;background:var(--willow);width:0}
-.sum span{font-size:calc(13px*var(--k));color:var(--muted);white-space:nowrap}
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--bg);padding:calc(env(safe-area-inset-top,0px) + .9rem) 1rem .6rem;display:flex;align-items:center;gap:.6rem}
+.top .tt{flex:1;min-width:0}
+.top .dl{font-size:.85rem;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .dl b{color:var(--gold);font-family:var(--serif);font-size:1rem}
+.top h1{margin:.1rem 0 0;font-family:var(--serif);font-size:1.75rem;line-height:1.15}
+.ib{width:2.75rem;height:2.75rem;border-radius:.8rem;border:1px solid var(--ln2);background:var(--sf);display:grid;place-items:center;flex:none;text-decoration:none}
+.ib svg{width:1.3rem;height:1.3rem}
+main{max-width:40rem;margin:0 auto;padding:0 .9rem calc(var(--navH) + 1.5rem + env(safe-area-inset-bottom,0px))}
+body.v-today main{padding-bottom:calc(var(--navH) + 11rem + env(safe-area-inset-bottom,0px))}
 
-main{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(18px*var(--k)) calc(16px*var(--k)) calc(40px*var(--k))}
-.card{display:flex;align-items:center;gap:calc(14px*var(--k));text-decoration:none;background:var(--card);border:calc(1px*var(--k)) solid var(--rule);border-radius:calc(16px*var(--k));padding:calc(16px*var(--k)) calc(16px*var(--k)) calc(14px*var(--k));margin-bottom:calc(12px*var(--k));position:relative}
-.card .body{flex:1;min-width:0}
-.card h2{font-family:var(--serif);font-size:calc(22px*var(--k));margin:0;font-weight:700}
-.card .what{font-size:calc(14.5px*var(--k));color:var(--textmuted);margin-top:calc(2px*var(--k));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .prog{display:flex;align-items:center;gap:calc(8px*var(--k));margin-top:calc(10px*var(--k))}
-.card .prog .track{flex:1;height:calc(4px*var(--k));background:var(--rule);border-radius:calc(2px*var(--k));overflow:hidden}
-.card .prog .track i{display:block;height:100%;background:var(--willow);width:0}
-.card .prog span{font-size:calc(12.5px*var(--k));color:var(--textmuted);min-width:calc(56px*var(--k));text-align:left;white-space:nowrap}
-.card .go{font-size:calc(24px*var(--k));color:var(--gold);flex:none}
-.card.done{border-color:var(--willow)}
-.card.done .prog span{color:var(--willow);font-weight:700}
-.card.season{background:var(--gold);border-color:var(--gold);color:#241c08}
+/* bottom tabs */
+nav.tabs{position:fixed;inset:auto 0 0 0;z-index:30;display:flex;background:var(--bg2);border-top:1px solid var(--ln);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs a{flex:1;height:var(--navH);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;font-size:.78rem;color:var(--mut);text-decoration:none}
+nav.tabs a svg{width:1.5rem;height:1.5rem}
+nav.tabs a.on{color:var(--gold)}
+
+/* shared bits */
+.bar{height:.4rem;border-radius:.2rem;background:var(--ln);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--gold)}
+.bar i.ok{background:var(--ok)}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:1rem;padding:.9rem 1rem;margin-bottom:.75rem}
+.card h2{margin:0;font-family:var(--serif);font-size:1.3rem}
+.card .what{font-size:.88rem;color:var(--mut);margin-top:.15rem}
+.card .pr{display:flex;align-items:center;gap:.6rem;margin-top:.6rem}
+.card .pr .bar{flex:1}
+.card .pr span{font-size:.8rem;color:var(--mut);white-space:nowrap}
+.card.done{border-color:#4d6340}
+.card.now{border-color:var(--gold)}
+.card.season{background:var(--gold);color:#241c08;border-color:var(--gold);display:block;text-decoration:none}
 .card.season .what{color:#3b2e10}
-.card.season .go{color:#241c08}
-.card .num{width:calc(30px*var(--k));height:calc(30px*var(--k));border-radius:50%;background:var(--night);color:var(--gold);display:grid;place-items:center;font-family:var(--serif);font-weight:700;flex:none}
-.card.done .num{background:var(--willow);color:#fff}
+.btns{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:.7rem}
+.b{min-height:2.5rem;padding:0 .9rem;border-radius:.65rem;border:1px solid var(--ln2);background:transparent;font-size:.9rem;font-weight:600;display:inline-flex;align-items:center;justify-content:center;text-decoration:none;gap:.3rem}
+.b.main{background:var(--gold);border-color:var(--gold);color:#241c08}
+.b.sm{min-height:2.1rem;padding:0 .65rem;font-size:.82rem;font-weight:600}
+.b.ghost{border-color:transparent;color:var(--gold);padding:0 .3rem}
+.lnk{color:var(--gold);font-size:.85rem;background:none;border:0;padding:.3rem 0;text-decoration:underline}
+.sec{font-size:.8rem;font-weight:700;color:var(--mut);margin:1.1rem .2rem .45rem;display:flex;justify-content:space-between;align-items:center;gap:.5rem}
+.sec .acts{display:flex;gap:.3rem}
+.note{font-size:.88rem;color:var(--mut);line-height:1.5}
+.note b{color:var(--ink)}
+.ok-t{color:var(--ok);font-weight:600}
+.bad-t{color:var(--warn);font-weight:600}
 
-.flow{background:var(--night);color:var(--ink);border-radius:calc(16px*var(--k));padding:calc(14px*var(--k)) calc(16px*var(--k)) calc(16px*var(--k));margin-bottom:calc(16px*var(--k))}
-.flow h3{font-family:var(--serif);font-size:calc(21px*var(--k));margin:0;color:var(--gold)}
-.flow .hint{color:var(--muted);font-size:calc(13px*var(--k));margin:calc(2px*var(--k)) 0 calc(8px*var(--k))}
-.fp{display:flex;align-items:center;gap:calc(10px*var(--k));padding:calc(8px*var(--k)) 0;border-bottom:calc(1px*var(--k)) solid #2c3046;font-size:calc(16px*var(--k))}
-.fp input{width:calc(21px*var(--k));height:calc(21px*var(--k));accent-color:var(--gold)}
-.fp span{flex:1}
-.fp small{color:var(--muted);font-size:calc(13px*var(--k))}
-.fp.done span{color:var(--muted);text-decoration:line-through}
-.planner{position:fixed;inset:0;z-index:60;background:var(--pagebg);overflow:auto;-webkit-overflow-scrolling:touch}
-.planner .plTop{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:calc(12px*var(--k));background:var(--night);color:var(--ink);padding:calc(env(safe-area-inset-top,0px) + calc(12px*var(--k))) calc(14px*var(--k)) calc(12px*var(--k))}
-.planner .plTop b{display:block;font-family:var(--serif);font-size:calc(19px*var(--k));color:var(--gold)}
-.planner .plTop small{display:block;font-size:calc(12.5px*var(--k));color:var(--muted)}
-.plBack{width:calc(40px*var(--k));height:calc(40px*var(--k));border-radius:50%;border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);font-size:calc(22px*var(--k));line-height:1;flex:none}
-.plBody{max-width:calc(620px*var(--k));margin:0 auto;padding:calc(14px*var(--k)) calc(16px*var(--k)) calc(40px*var(--k));background:var(--night);color:var(--ink);min-height:calc(100vh - 70px)}
-.plBody h4{font-family:var(--serif);font-size:calc(19px*var(--k));margin:calc(4px*var(--k)) 0 calc(10px*var(--k));color:var(--ink)}
-.way{display:grid;grid-template-columns:1fr 1fr;gap:calc(10px*var(--k));margin-bottom:calc(10px*var(--k))}
-.way button{border:calc(1.5px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(12px*var(--k)) calc(8px*var(--k));text-align:center}
-.way b{display:block;font-size:calc(16px*var(--k))}
-.way small{display:block;font-size:calc(12px*var(--k));color:var(--muted);margin-top:calc(3px*var(--k))}
-.way button.on{border-color:var(--gold);background:#2c2a1e}
-.way button.on b{color:var(--gold)}
-#stTime .modeCtl{margin-bottom:calc(16px*var(--k))}
-.planBar{display:none!important}
-.pray .modes a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(4px*var(--k));border:calc(1.5px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(16px*var(--k));padding:calc(12px*var(--k));text-align:center;text-decoration:none;min-height:calc(78px*var(--k))}
-.pray .modes a b{font-size:calc(16px*var(--k))}
-.pray .modes a small{font-size:calc(12px*var(--k));color:var(--muted)}
-.pray .modes a.now{border-color:var(--gold);background:#2c2a1e}
-.pray .modes a.now b{color:var(--gold)}
-.pray .modes a .pg{font-size:calc(11.5px*var(--k));color:var(--willow)}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:calc(10px*var(--k));margin:calc(8px*var(--k)) 0 calc(4px*var(--k))}
-.modes button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:calc(4px*var(--k));aspect-ratio:1.25;border:calc(1.5px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(16px*var(--k));padding:calc(10px*var(--k));text-align:center}
-.modes svg{width:calc(38px*var(--k));height:calc(38px*var(--k));color:var(--gold)}
-.modes b{font-size:calc(16px*var(--k));font-weight:700}
-.modes small{font-size:calc(12px*var(--k));color:var(--muted);line-height:1.3}
-.modes button.on{border-color:var(--gold);background:#2c2a1e}
-.modes button.on b{color:var(--gold)}
-.modeCtl{display:flex;flex-wrap:wrap;gap:calc(6px*var(--k));align-items:center;margin:calc(8px*var(--k)) 0 calc(4px*var(--k))}
-.modeCtl:empty{display:none}
-.modeCtl button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(16px*var(--k));padding:calc(6px*var(--k)) calc(12px*var(--k));font-size:calc(14px*var(--k))}
-.modeCtl button.on{background:var(--gold);color:#241c08;border-color:var(--gold)}
-.modeCtl input{width:calc(110px*var(--k));border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(12px*var(--k));padding:calc(6px*var(--k)) calc(10px*var(--k));font:inherit;font-size:calc(15px*var(--k))}
-.modeCtl .lbl{width:100%;font-size:calc(13px*var(--k));color:var(--muted)}
-#times{display:none!important}
-.times{display:flex;flex-wrap:wrap;gap:calc(6px*var(--k));margin-top:calc(12px*var(--k));align-items:center}
-.times b{font-weight:600;font-size:calc(14px*var(--k));margin-left:calc(4px*var(--k))}
-.times button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);border-radius:calc(16px*var(--k));padding:calc(6px*var(--k)) calc(12px*var(--k));font-size:calc(14px*var(--k))}
-.times button.on{background:var(--gold);color:#241c08;border-color:var(--gold)}
-.times input{width:calc(64px*var(--k));background:var(--night2);color:var(--ink);border:calc(1px*var(--k)) solid #3a3f58;border-radius:calc(16px*var(--k));padding:calc(6px*var(--k)) calc(10px*var(--k));font:inherit;font-size:calc(14px*var(--k))}
-.flowSum{margin-top:calc(12px*var(--k));font-size:calc(14.5px*var(--k));line-height:1.5}
-.flowSum .ok{color:var(--willow);font-weight:600}.flowSum .bad{color:#e8a08f;font-weight:600}
-.startBtn{margin-top:calc(12px*var(--k));width:100%;border:0;background:var(--gold);color:#241c08;font-weight:700;font-size:calc(18px*var(--k));border-radius:calc(14px*var(--k));padding:calc(13px*var(--k))}
-.startBtn:disabled{opacity:.4}
-.edit{display:flex;align-items:center;justify-content:center;gap:calc(8px*var(--k));width:100%;margin-top:calc(8px*var(--k));border:calc(1px*var(--k)) dashed var(--rule);background:transparent;border-radius:calc(14px*var(--k));padding:calc(12px*var(--k));color:var(--textmuted);font-size:calc(15px*var(--k))}
-.panel{background:var(--card);border:calc(1px*var(--k)) solid var(--rule);border-radius:calc(16px*var(--k));padding:calc(6px*var(--k)) calc(14px*var(--k)) calc(14px*var(--k));margin-top:calc(12px*var(--k))}
-.panel h3{font-family:var(--serif);font-size:calc(19px*var(--k));margin:calc(12px*var(--k)) 0 calc(4px*var(--k))}
-.panel .hint{color:var(--textmuted);font-size:calc(13px*var(--k));margin:0 0 calc(8px*var(--k))}
-.mod{display:flex;align-items:center;gap:calc(10px*var(--k));padding:calc(10px*var(--k)) 0;border-bottom:calc(1px*var(--k)) solid var(--rule);font-size:calc(16px*var(--k))}
-.mod:last-of-type{border-bottom:0}
-.mod input{width:calc(21px*var(--k));height:calc(21px*var(--k));accent-color:var(--gold)}
-.mod span{flex:1}
-.mod small{display:block;color:var(--textmuted);font-size:calc(12.5px*var(--k))}
-.mod .ord button{border:0;background:transparent;color:var(--textmuted);font-size:calc(13px*var(--k));padding:calc(2px*var(--k)) calc(8px*var(--k));line-height:1}
-.mod .ord button:disabled{opacity:.25}
-.mod .ord{display:flex;flex-direction:column}
-.seg{display:flex;background:var(--pagebg);border-radius:calc(10px*var(--k));padding:calc(3px*var(--k))}
-.seg button{border:0;background:transparent;padding:calc(7px*var(--k)) calc(12px*var(--k));border-radius:calc(8px*var(--k));font-size:calc(14px*var(--k))}
-.seg button.on{background:var(--night);color:var(--gold)}
-.row{display:flex;align-items:center;justify-content:space-between;gap:calc(10px*var(--k));padding:calc(10px*var(--k)) 0;font-size:calc(15px*var(--k))}
-.fp .mk{border:calc(1px*var(--k)) solid #3a3f58;background:transparent;color:var(--muted);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(9px*var(--k));font-size:calc(12.5px*var(--k));flex:none}
-.fp span em{font-style:normal;color:var(--muted);font-size:calc(13px*var(--k))}
-.fp.part small{color:var(--gold)}
-.week{margin-top:calc(14px*var(--k));font-size:calc(13.5px*var(--k));color:var(--muted);line-height:1.6}
-.week button{border:0;background:transparent;color:var(--gold);text-decoration:underline;padding:0;font-size:calc(13.5px*var(--k))}
-.week .track{height:calc(5px*var(--k));background:#34384f;border-radius:calc(3px*var(--k));overflow:hidden;margin:calc(4px*var(--k)) 0}
-.week .track i{display:block;height:100%;background:var(--willow)}
-.more{margin-top:calc(10px*var(--k));border-top:calc(1px*var(--k)) solid #2c3046;padding-top:calc(8px*var(--k))}
-.more summary{cursor:pointer;color:var(--gold);font-size:calc(14.5px*var(--k));padding:calc(4px*var(--k)) 0}
-.more .fp button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(13px*var(--k));flex:none}
-.flow a{color:var(--gold)}
-.restore{border:0;background:transparent;color:var(--gold);text-decoration:underline;font:inherit;padding:0}
-.fp.korb{border-bottom:0;padding-top:0}
-.fp.off span{color:var(--muted)}
-.cardRst{border:calc(1px*var(--k)) solid currentColor;background:transparent;color:var(--textmuted,#888);border-radius:calc(12px*var(--k));font-size:calc(11.5px*var(--k));padding:calc(1px*var(--k)) calc(8px*var(--k));margin-inline-start:calc(6px*var(--k));flex:none}
-.fp .rst{border:0;background:none;color:var(--gold);font-size:calc(12px*var(--k));padding:0;text-decoration:underline}
-.notFit{margin-top:calc(8px*var(--k));font-size:calc(13.5px*var(--k));color:var(--muted)}
-.notFit b{color:var(--gold);font-weight:600}
-.notFit summary{cursor:pointer}
-.notFit div{display:flex;align-items:center;justify-content:space-between;gap:calc(8px*var(--k));padding:calc(4px*var(--k)) 0}
-.notFit button{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--gold);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(10px*var(--k));font-size:calc(12.5px*var(--k));flex:none}
-.offHd{margin-top:calc(12px*var(--k));font-size:calc(13px*var(--k));color:var(--gold)}
-.mk{border:calc(1.5px*var(--k)) solid #3a3f58;border-radius:calc(14px*var(--k));padding:calc(8px*var(--k)) calc(12px*var(--k));margin-bottom:calc(10px*var(--k));background:var(--night2)}
-.mk summary{font-weight:700;cursor:pointer}.mk summary small{font-weight:400;color:var(--muted)}
-.mkR{display:flex;align-items:center;justify-content:space-between;gap:calc(6px*var(--k));padding:calc(8px*var(--k)) 0;border-top:1px solid #2e3248}
-.mkR:first-child{border-top:0}.mkR span{flex:1}.mkR small{display:block;color:var(--muted);font-weight:400}
-.mkR button{border:1px solid #3a3f58;background:transparent;color:var(--ink);border-radius:calc(10px*var(--k));padding:calc(6px*var(--k)) calc(9px*var(--k));font-size:calc(13.5px*var(--k))}
-.mkR button.on{border-color:var(--gold);color:var(--gold)}
-.offGrp{display:flex;align-items:center;justify-content:space-between;margin-top:calc(8px*var(--k));font-weight:600;font-size:calc(14.5px*var(--k))}
-.offGrp small{color:var(--muted);font-weight:400}
-.offGrp button{border:calc(1px*var(--k)) solid var(--gold);background:transparent;color:var(--gold);border-radius:calc(14px*var(--k));padding:calc(3px*var(--k)) calc(12px*var(--k));font-size:calc(13px*var(--k))}
-.fp .ord{display:flex;flex-direction:column;gap:calc(2px*var(--k));flex:none}
-.fp .ord button{border:calc(1px*var(--k)) solid #3a3f58;background:transparent;color:var(--muted);border-radius:calc(6px*var(--k));width:calc(30px*var(--k));height:calc(22px*var(--k));font-size:calc(11px*var(--k));padding:0;line-height:1}
-.fp .ord button:disabled{opacity:.3}
-.planBar{display:flex;gap:calc(8px*var(--k));flex-wrap:wrap;justify-content:flex-start;margin:calc(4px*var(--k)) 0}
-.planBar button{border:calc(1px*var(--k)) solid #3a3f58;background:var(--night2);color:var(--ink);border-radius:calc(14px*var(--k));padding:calc(5px*var(--k)) calc(12px*var(--k));font-size:calc(13px*var(--k))}
-.fp.korb small{display:block}
-.row.korbPos{padding:calc(2px*var(--k)) 0 calc(6px*var(--k));font-size:calc(14px*var(--k));color:var(--muted)}
-.row.korbPos .seg button{font-size:calc(13px*var(--k));padding:calc(6px*var(--k)) calc(9px*var(--k))}
-.times input[type=time]{width:auto}
-.untilLbl{width:100%;font-size:calc(13px*var(--k));color:var(--muted);margin-top:calc(2px*var(--k))}
-.seg.dk{background:var(--night2)}
-.seg.dk button{color:var(--ink)}
-.seg.dk button.on{background:var(--gold);color:#241c08}
-.inst{background:var(--card);border:calc(1px*var(--k)) solid var(--gold);border-radius:calc(16px*var(--k));padding:calc(12px*var(--k)) calc(14px*var(--k));margin-bottom:calc(14px*var(--k));font-size:calc(15px*var(--k))}
-.inst-row{display:flex;align-items:center;gap:calc(10px*var(--k))}
-.inst-row span{flex:1}
-.inst button{border:0;background:var(--gold);color:#241c08;font-weight:700;border-radius:calc(12px*var(--k));padding:calc(9px*var(--k)) calc(16px*var(--k));font-size:calc(15px*var(--k))}
-.inst summary{cursor:pointer;color:var(--textmuted);font-size:calc(14px*var(--k));margin-top:calc(8px*var(--k))}
-.inst ol{margin:calc(8px*var(--k)) 0 0;padding-inline-start:calc(20px*var(--k));line-height:1.6;font-size:calc(14px*var(--k))}
-footer{text-align:center;color:var(--textmuted);font-size:calc(12px*var(--k));padding:0 calc(16px*var(--k)) calc(30px*var(--k))}
-@media (max-width:360px){ .hero h1{font-size:calc(27px*var(--k))} }
+/* plan list (today) */
+.dayp{display:flex;align-items:center;gap:.6rem;margin:.1rem .2rem .3rem;font-size:.85rem;color:var(--mut)}
+.dayp .bar{flex:1}
+.dayp b{color:var(--gold)}
+.plist{position:relative}
+.prow{display:flex;align-items:center;gap:.5rem;min-height:3.2rem;padding:.35rem .5rem .35rem .3rem;border-radius:.8rem;background:var(--sf);margin-bottom:.35rem;border:1px solid transparent;touch-action:pan-y}
+.prow.below{opacity:.5}
+.prow.drag{position:relative;z-index:5;border-color:var(--gold);box-shadow:0 .4rem 1.2rem rgba(0,0,0,.45);opacity:1}
+.prow .cb{width:1.6rem;height:1.6rem;border-radius:.45rem;border:2px solid #4a5070;background:transparent;flex:none;display:grid;place-items:center;padding:0;margin-inline-start:.2rem}
+.prow .cb.on{background:var(--gold);border-color:var(--gold)}
+.prow .cb svg{width:.9rem;height:.9rem}
+.prow .nm{flex:1;min-width:0;background:none;border:0;padding:.2rem 0;text-align:right;display:block}
+.prow .nm b{display:block;font-size:1rem;font-weight:700;line-height:1.25}
+.prow .nm small{display:block;font-size:.78rem;color:var(--mut);line-height:1.3;margin-top:.05rem}
+.prow .nm small.part{color:var(--gold)}
+.prow .tm{font-size:.82rem;color:var(--mut);white-space:nowrap;flex:none}
+.prow .mo{width:2.2rem;height:2.4rem;border:0;background:none;color:var(--mut);font-size:1.2rem;flex:none;padding:0;letter-spacing:-1px}
+.prow .hd{width:1.9rem;height:2.6rem;display:grid;place-items:center;color:#5d6386;flex:none;touch-action:none;cursor:grab}
+.prow .hd svg{width:1rem;height:1.2rem}
+.cut{display:flex;align-items:center;gap:.5rem;margin:.55rem 0 .6rem;color:var(--gold);font-size:.8rem;font-weight:700;text-align:center}
+.cut::before,.cut::after{content:"";flex:1;height:2px;background:var(--gold);border-radius:1px}
+.empty{padding:1rem;border:1px dashed var(--ln2);border-radius:.9rem;text-align:center;color:var(--mut);font-size:.92rem;line-height:1.5}
+
+details.grp{background:var(--sf);border:1px solid var(--ln);border-radius:.9rem;margin-bottom:.5rem;overflow:hidden}
+details.grp>summary{list-style:none;display:flex;align-items:center;gap:.5rem;padding:.75rem .9rem;cursor:pointer;font-weight:700}
+details.grp>summary::-webkit-details-marker{display:none}
+details.grp>summary small{font-weight:400;color:var(--mut);font-size:.8rem}
+details.grp>summary .ch{margin-inline-start:auto;color:var(--mut);transition:transform .15s}
+details.grp[open]>summary .ch{transform:rotate(-90deg)}
+.arow{display:flex;align-items:center;gap:.55rem;min-height:2.9rem;padding:.25rem .9rem;border-top:1px solid var(--ln)}
+.arow .cb{width:1.5rem;height:1.5rem;border-radius:.4rem;border:2px solid #4a5070;background:transparent;flex:none;padding:0}
+.arow .nm{flex:1;min-width:0;font-size:.95rem;background:none;border:0;text-align:right;padding:.3rem 0}
+.arow .nm small{display:block;font-size:.76rem;color:var(--mut)}
+.arow .tm{font-size:.8rem;color:var(--mut);white-space:nowrap}
+.subh{display:flex;align-items:center;justify-content:space-between;gap:.4rem;padding:.55rem .9rem;border-top:1px solid var(--ln);font-size:.88rem;font-weight:700;background:#1e2235}
+.subh small{font-weight:400;color:var(--mut)}
+details.sub{border-top:1px solid var(--ln)}
+details.sub>summary{list-style:none;padding:.55rem .9rem;font-size:.88rem;font-weight:700;cursor:pointer;display:flex;gap:.4rem;align-items:center;background:#1e2235}
+details.sub>summary::-webkit-details-marker{display:none}
+details.sub>summary small{font-weight:400;color:var(--mut)}
+
+/* action area (today) */
+.act{position:fixed;inset:auto 0 calc(var(--navH) + env(safe-area-inset-bottom,0px)) 0;z-index:25;background:var(--bg2);border-top:1px solid var(--ln);padding:.6rem .9rem .65rem}
+.act-in{max-width:40rem;margin:0 auto}
+.tseg{display:flex;gap:.2rem;background:var(--sf);border-radius:.75rem;padding:.2rem}
+.tseg button{flex:1;min-height:2.6rem;border:0;background:transparent;color:var(--mut);border-radius:.6rem;font-size:.88rem;font-weight:600;padding:0 .2rem}
+.tseg button.on{background:var(--gold);color:#241c08}
+.tctl{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:.3rem;align-items:center;margin-top:.45rem;scrollbar-width:none;padding-bottom:.1rem}
+.tctl::-webkit-scrollbar{display:none}
+.tctl>*{flex:none}
+.tctl:empty{display:none}
+.tctl button{min-height:2.2rem;border:1px solid var(--ln2);background:transparent;border-radius:1.1rem;padding:0 .7rem;font-size:.85rem}
+.tctl button.on{background:var(--gold2);border-color:var(--gold);color:var(--gold)}
+.tctl input{min-height:2.2rem;width:5.2rem;border:1px solid var(--ln2);background:var(--sf);border-radius:.6rem;padding:0 .5rem;font-size:.9rem}
+.tctl input[type=time]{width:auto}
+.tctl span{font-size:.85rem;color:var(--mut)}
+.sumL{font-size:.84rem;color:var(--mut);margin-top:.4rem;line-height:1.4;min-height:1.2em}
+.sumL b{color:var(--ink)}
+.go{margin-top:.45rem;width:100%;min-height:3.2rem;border:0;border-radius:.9rem;background:var(--gold);color:#241c08;font-weight:700;font-size:1.15rem;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.go small{font-size:.85rem;font-weight:600}
+.go:disabled{opacity:.4}
+
+/* progress grid */
+.wk{display:flex;align-items:center;gap:.4rem;margin:.2rem 0 .8rem}
+.wk b{flex:1;text-align:center;font-size:1rem}
+.wk button{min-width:2.75rem;min-height:2.6rem;border:1px solid var(--ln2);background:var(--sf);border-radius:.7rem}
+.wk button:disabled{opacity:.3}
+.grid{display:grid;grid-template-columns:5.6rem repeat(7,minmax(0,1fr));gap:.3rem;align-items:center}
+.grid .h{font-size:.78rem;color:var(--mut);text-align:center;font-weight:700}
+.grid .h.td{color:var(--gold)}
+.grid .l{font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid button.c{height:2.1rem;border-radius:.5rem;border:1px solid var(--ln);background:var(--sf);padding:0;position:relative;overflow:hidden}
+.grid .c.d{background:var(--ok);border-color:var(--ok)}
+.grid .c.p i{position:absolute;inset:auto 0 0 0;background:var(--gold)}
+.grid .c.p{border-color:var(--gold)}
+.grid .c.m{border:2px dashed var(--warn);background:transparent}
+.grid .c.fu{opacity:.35}
+.grid .c.td{outline:2px solid var(--gold);outline-offset:1px}
+.grid .c.na{opacity:.25}
+.legend{display:flex;flex-wrap:wrap;gap:.9rem;font-size:.78rem;color:var(--mut);margin:.7rem .1rem}
+.legend span{display:flex;align-items:center;gap:.35rem}
+.legend i{width:.9rem;height:.9rem;border-radius:.25rem;display:inline-block}
+
+/* settings */
+.sg{background:var(--sf);border:1px solid var(--ln);border-radius:.9rem;overflow:hidden}
+.sr{display:flex;align-items:center;justify-content:space-between;gap:.6rem;min-height:3.1rem;padding:.4rem .9rem;border-top:1px solid var(--ln);font-size:.95rem}
+.sr:first-child{border-top:0}
+.sr>span{flex:1;min-width:0}
+.sr small{display:block;color:var(--mut);font-size:.78rem}
+.sr input[type=checkbox]{width:1.35rem;height:1.35rem;accent-color:var(--gold);flex:none}
+.sr a{color:var(--gold);text-decoration:none;font-size:.9rem;white-space:nowrap}
+.seg{display:flex;background:var(--bg);border-radius:.6rem;padding:.15rem;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:.4rem .65rem;border-radius:.5rem;font-size:.84rem;color:var(--mut)}
+.seg button.on{background:var(--gold);color:#241c08;font-weight:600}
+.ord{display:flex;gap:.2rem}
+.ord button{width:2.1rem;height:2.1rem;border:1px solid var(--ln2);background:transparent;border-radius:.5rem;color:var(--mut);font-size:.75rem;padding:0}
+.ord button:disabled{opacity:.25}
+.foot{font-size:.78rem;color:var(--mut);text-align:center;margin:1.2rem .5rem 0;line-height:1.5}
+.inst ol{margin:.4rem 0 .2rem;padding-inline-start:1.2rem;font-size:.85rem;line-height:1.6;color:var(--mut)}
+
+/* sheet + toast */
+.shade{position:fixed;inset:0;z-index:50;background:rgba(5,6,12,.6)}
+.sheet{position:fixed;inset:auto 0 0 0;z-index:51;background:var(--sf);border-radius:1.2rem 1.2rem 0 0;padding:.6rem .9rem calc(1rem + env(safe-area-inset-bottom,0px));max-width:40rem;margin:0 auto}
+.sheet .grab{width:2.8rem;height:.3rem;border-radius:.2rem;background:#4a5070;margin:0 auto .6rem}
+.sheet h3{margin:0 0 .5rem;font-family:var(--serif);font-size:1.2rem}
+.sheet button.it{display:block;width:100%;text-align:right;min-height:3rem;border:0;border-top:1px solid var(--ln);background:none;font-size:1rem;padding:0 .3rem}
+.sheet button.it:first-of-type{border-top:0}
+.toast{position:fixed;inset:auto 1rem calc(var(--navH) + 12rem) 1rem;z-index:60;max-width:30rem;margin:0 auto;background:#0d0f1a;border:1px solid var(--ln2);color:var(--ink);border-radius:.8rem;padding:.7rem .9rem;font-size:.92rem;text-align:center;box-shadow:0 .4rem 1.2rem rgba(0,0,0,.5)}
+@media (min-width:44rem){ .top h1{font-size:2rem} }
 </style>
 </head>
 <body>
-<header class="hero">
-  <div class="hero-in">
-    <div class="date"><b id="hdate"></b><span id="gdate"></span></div>
-    <h1>מה תרצה ללמוד היום?</h1>
-    <p id="parsha"></p>
-    <div class="sum"><div class="track"><i id="sumBar"></i></div><span id="sumTxt"></span></div>
-  </div>
+<header class="top">
+  <a class="ib" id="backS" href="#today" aria-label="חזרה" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></a>
+  <div class="tt"><div class="dl" id="dl"></div><h1 id="title">מה עכשיו?</h1></div>
+  <a class="ib" id="gear" href="#settings" aria-label="הגדרות"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></a>
 </header>
 <main>
-  <div class="inst" id="inst" hidden>
-    <div class="inst-row"><span>📲 אפשר להתקין את "לימוד יומי" כאפליקציה בטלפון</span><button id="instBtn" hidden>התקנה</button></div>
-    <details id="instHelp"><summary>איך מתקינים? / כתוב שכבר מותקן</summary>
-      <ol>
-        <li>בכרום: לחץ על שלוש הנקודות ⋮ למעלה, ואז <b>"התקנת אפליקציה"</b> או <b>"הוספה למסך הבית"</b> ← <b>"התקנה"</b>.</li>
-        <li>אם כתוב שהאפליקציה כבר מותקנת אבל אין אייקון: היכנס ל<b>הגדרות הטלפון ← אפליקציות</b>, חפש <b>"הושענא רבה"</b> או <b>"לימוד יומי"</b> והסר אותה. אחר כך חזור לכאן והתקן שוב.</li>
-        <li>אם זה עדיין לא עובד: בכרום ⋮ ← הגדרות ← הגדרות אתרים ← כל האתרים ← <b>williash7.github.io</b> ← "ניקוי ואיפוס", ואז פתח שוב את הקישור.</li>
-      </ol>
-    </details>
-  </div>
-  <section class="flow" id="flow">
-    <h3>ללמוד עכשיו</h3>
-    <p class="hint">איך תרצה ללמוד? בחר, ואחר כך תבחר מה ללמוד – או שאני אבחר בשבילך.</p>
-    <div class="modes" id="modes">
-      <button data-m="open"><svg viewBox="0 0 24 24"><path d="M3 5.5c2.5-1 5.5-1 9 1v13c-3.5-2-6.5-2-9-1z M21 5.5c-2.5-1-5.5-1-9 1v13c3.5-2 6.5-2 9-1z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg><b>לימוד חופשי</b><small>מקטע לקטע, כמה שיוצא</small></button>
-      <button data-m="until"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><b>עד שעה מסוימת</b><small id="mUntil">למשל עד 20:30</small></button>
-      <button data-m="dur"><svg viewBox="0 0 24 24"><path d="M7 3h10M7 21h10M8 3c0 5 8 5 8 9s-8 4-8 9M16 3c0 5-8 5-8 9s8 4 8 9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><b>משך זמן</b><small id="mDur">10 דק׳, חצי שעה…</small></button>
-      <button data-m="free"><svg viewBox="0 0 24 24"><path d="M5 20V4M5 4h11l-2 3.5L16 11H5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></svg><b>כמה שיקח</b><small>כל חת״ת ורמב״ם, ושעת סיום</small></button>
-    </div>
-    <div class="week" id="week"></div>
-  </section>
-  <section class="flow pray" id="pray">
-    <h3>תפילה</h3>
-    <p class="hint" id="prayToday"></p>
-    <div class="modes" id="prayTiles">
-      <a data-k="shacharit"><b>שחרית</b><small>כולל ברכות השחר וקרבנות</small></a>
-      <a data-k="mincha"><b>מנחה</b><small>קרבנות, אשרי, שמונה עשרה</small></a>
-      <a data-k="maariv"><b>ערבית</b><small>קריאת שמע ושמונה עשרה</small></a>
-      <a data-k="shema"><b>קריאת שמע שעל המטה</b><small>לפני השינה</small></a>
-    </div>
-    <button class="startBtn" id="compose" style="margin-top:calc(10px*var(--k))">🧩 להרכיב בעצמי – קטעי תפילה ולימוד</button>
-  </section>
-  <div class="planner" id="planner" hidden>
-    <div class="plTop"><button class="plBack" id="plBack" aria-label="חזרה">›</button><div><b id="plTitle"></b><small id="plSub"></small></div></div>
-    <div class="plBody">
-      <div id="stTime">
-        <h4 id="stTimeQ"></h4>
-        <div class="modeCtl" id="modeCtl"></div>
-        <button class="startBtn" id="toPlan">המשך ‹</button>
-      </div>
-      <div id="stPlan">
-        <h4>מה ללמוד?</h4>
-        <details class="mk" id="mkBox"><summary>📚 השלמה לפי נושא <small>– כל החומש / התניא / הרמב״ם שחסר</small></summary><div id="mkList"></div></details>
-        <div class="way" id="pickWay"><button data-v="auto"><b>✨ תבחר לי</b><small>השלמות, חת״ת ורמב״ם לפי הסדר</small></button><button data-v="mine"><b>✋ אבחר בעצמי</b><small>מסמנים רק מה שרוצים</small></button></div>
-    <label class="fp korb"><input type="checkbox" id="korbOn"><span>כולל קרבנות למנחה<small id="korbHint"></small></span></label>
-    <div class="row korbPos" id="korbPosRow"><span>מתי לומר קרבנות</span><div class="seg dk" id="korbPos"><button data-v="start">קודם קרבנות, ואז לימוד</button><button data-v="end">קודם לימוד, ואז קרבנות</button></div></div>
-        <div class="times" id="times"></div>
-        <div id="plan"></div>
-        <div class="flowSum" id="flowSum"></div>
-        <button class="startBtn" id="startFlow">התחל ▶</button>
-        <details class="more" id="setBox"><summary id="setSum">הגדרות</summary>
-    <label class="fp"><input type="checkbox" id="prayPick"><span>להציג קטעי תפילה ברשימת הבחירה<small>ב„אבחר בעצמי” – שחרית, מנחה, שמע, קרבנות וכו׳</small></span></label>
-    <div class="row" style="padding:calc(4px*var(--k)) 0"><span>לומד מתוך</span><div class="seg dk" id="mode"><button data-v="screen">המסך</button><button data-v="print">החוברת המודפסת</button></div></div>
-        </details>
-    <details class="more" id="addBox"><summary>הוספת משהו אחר לתוכנית</summary><div id="addList"></div></details>
-    <details class="more" id="doneBox"><summary id="doneSum">נלמד השבוע</summary><div id="doneList"></div></details>
-      </div>
-    </div>
-  </div>
-  <div id="cards"></div>
-  <button class="edit" id="editBtn">✎ התאמת מסך הבית</button>
-  <div class="panel" id="panel" hidden>
-    <h3>מה ייכנס למערכת</h3>
-    <p class="hint">סמן את השיעורים שתרצה, וסדר אותם בחיצים.</p>
-    <div id="mods"></div>
-    <h3>שיעורים מתוך דבר מלכות</h3>
-    <p class="hint">יופיעו בלימוד ברצף כשחוברת השבוע טעונה.</p>
-    <div id="dmMods"></div>
-    <h3>מראה המסך</h3>
-    <div class="row"><span>צבעים</span><div class="seg" id="themeSeg"><button data-v="auto">לפי הטלפון</button><button data-v="light">בהיר</button><button data-v="dark">כהה</button></div></div>
-    <h3>פרשת השבוע לפי</h3>
-    <div class="row"><span>חומש – מקור הטקסט</span><div class="seg" data-src="chu"><button data-v="sefaria">ספריא</button><button data-v="booklet">החוברת</button></div></div>
-    <div class="row"><span>תניא – מקור הטקסט</span><div class="seg" data-src="tan"><button data-v="sefaria">ספריא</button><button data-v="booklet">החוברת</button></div></div>
-    <div class="row"><span>רמב״ם – מקור הטקסט</span><div class="seg" data-src="rmb"><button data-v="sefaria">ספריא</button><button data-v="booklet">החוברת</button></div></div>
-    <div class="row"><span>רמב״ם מספריא – ביאור שטיינזלץ</span><div class="seg" data-src="stz"><button data-v="on">עם ביאור</button><button data-v="off">בלי</button></div></div>
-    <div class="hint" style="font-size:calc(12.5px*var(--k));color:var(--textmuted);margin:-2px 0 6px">"החוברת" – כשחוברת השבוע טעונה; אם לא, נטען מספריא. אפשר להחליף גם תוך כדי לימוד.</div>
-    <div class="row"><span>חסידות על הפרשה</span><div class="seg" id="chasMode"><button data-v="daily">חלק יומי</button><button data-v="free">חופשי</button></div></div>
-    <div class="row"><span>מנהג המקום</span><div class="seg" id="dia"><button data-v="0">ארץ ישראל</button><button data-v="1">חוץ לארץ</button></div></div>
-  </div>
+  <section id="v-today" class="view"></section>
+  <section id="v-learn" class="view" hidden></section>
+  <section id="v-pray" class="view" hidden></section>
+  <section id="v-progress" class="view" hidden></section>
+  <section id="v-settings" class="view" hidden></section>
 </main>
-<footer>הטקסטים של החומש, רש״י, התניא, הרמב״ם, שניים מקרא והקרבנות נטענים מספריא (Sefaria) ודורשים חיבור לאינטרנט.</footer>
-<script src="common.js?v=7ed67d2b"></script>
+<div class="act" id="act" hidden><div class="act-in">
+  <div class="tseg" id="tseg"><button data-m="open">חופשי</button><button data-m="dur">משך</button><button data-m="until">עד שעה</button><button data-m="free">כמה שיקח</button></div>
+  <div class="tctl" id="tctl"></div>
+  <div class="sumL" id="sumL"></div>
+  <button class="go" id="go">▶ התחל</button>
+</div></div>
+<nav class="tabs" id="tabs">
+  <a href="#today" data-v="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>היום</a>
+  <a href="#learn" data-v="learn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 4 4.5v14c3 0 6 .5 8 2 2-1.5 5-2 8-2v-14c-3 0-6 .5-8 2zM12 6.5v14"/></svg>לימוד</a>
+  <a href="#pray" data-v="pray"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M3 18.5h18M6 18.5a6 6 0 0 1 12 0M12 4v3M4.9 8.9l2 2M19.1 8.9l-2 2"/></svg>תפילה</a>
+  <a href="#progress" data-v="progress"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M5 20V11M11 20V5M17 20v-7M3 20h18"/></svg>התקדמות</a>
+</nav>
+<script src="common.js?v=b468eb4f"></script>
 <script>
 SCHED={"il":{"2025-09-27":["Vayeilech"],"2025-10-04":["Ha'azinu"],"2025-10-11":null,"2025-10-18":["Bereshit"],"2025-10-25":["Noach"],"2025-11-01":["Lech-Lecha"],"2025-11-08":["Vayera"],"2025-11-15":["Chayei Sara"],"2025-11-22":["Toldot"],"2025-11-29":["Vayetzei"],"2025-12-06":["Vayishlach"],"2025-12-13":["Vayeshev"],"2025-12-20":["Miketz"],"2025-12-27":["Vayigash"],"2026-01-03":["Vayechi"],"2026-01-10":["Shemot"],"2026-01-17":["Vaera"],"2026-01-24":["Bo"],"2026-01-31":["Beshalach"],"2026-02-07":["Yitro"],"2026-02-14":["Mishpatim"],"2026-02-21":["Terumah"],"2026-02-28":["Tetzaveh"],"2026-03-07":["Ki Tisa"],"2026-03-14":["Vayakhel","Pekudei"],"2026-03-21":["Vayikra"],"2026-03-28":["Tzav"],"2026-04-04":null,"2026-04-11":["Shmini"],"2026-04-18":["Tazria","Metzora"],"2026-04-25":["Achrei Mot","Kedoshim"],"2026-05-02":["Emor"],"2026-05-09":["Behar","Bechukotai"],"2026-05-16":["Bamidbar"],"2026-05-23":["Nasso"],"2026-05-30":["Beha'alotcha"],"2026-06-06":["Sh'lach"],"2026-06-13":["Korach"],"2026-06-20":["Chukat"],"2026-06-27":["Balak"],"2026-07-04":["Pinchas"],"2026-07-11":["Matot","Masei"],"2026-07-18":["Devarim"],"2026-07-25":["Vaetchanan"],"2026-08-01":["Eikev"],"2026-08-08":["Re'eh"],"2026-08-15":["Shoftim"],"2026-08-22":["Ki Teitzei"],"2026-08-29":["Ki Tavo"],"2026-09-05":["Nitzavim","Vayeilech"],"2026-09-12":null,"2026-09-19":["Ha'azinu"],"2026-09-26":null,"2026-10-03":null,"2026-10-10":["Bereshit"],"2026-10-17":["Noach"],"2026-10-24":["Lech-Lecha"],"2026-10-31":["Vayera"],"2026-11-07":["Chayei Sara"],"2026-11-14":["Toldot"],"2026-11-21":["Vayetzei"],"2026-11-28":["Vayishlach"],"2026-12-05":["Vayeshev"],"2026-12-12":["Miketz"],"2026-12-19":["Vayigash"],"2026-12-26":["Vayechi"],"2027-01-02":["Shemot"],"2027-01-09":["Vaera"],"2027-01-16":["Bo"],"2027-01-23":["Beshalach"],"2027-01-30":["Yitro"],"2027-02-06":["Mishpatim"],"2027-02-13":["Terumah"],"2027-02-20":["Tetzaveh"],"2027-02-27":["Ki Tisa"],"2027-03-06":["Vayakhel"],"2027-03-13":["Pekudei"],"2027-03-20":["Vayikra"],"2027-03-27":["Tzav"],"2027-04-03":["Shmini"],"2027-04-10":["Tazria"],"2027-04-17":["Metzora"],"2027-04-24":null,"2027-05-01":["Achrei Mot"],"2027-05-08":["Kedoshim"],"2027-05-15":["Emor"],"2027-05-22":["Behar"],"2027-05-29":["Bechukotai"],"2027-06-05":["Bamidbar"],"2027-06-12":["Nasso"],"2027-06-19":["Beha'alotcha"],"2027-06-26":["Sh'lach"],"2027-07-03":["Korach"],"2027-07-10":["Chukat"],"2027-07-17":["Balak"],"2027-07-24":["Pinchas"],"2027-07-31":["Matot","Masei"],"2027-08-07":["Devarim"],"2027-08-14":["Vaetchanan"],"2027-08-21":["Eikev"],"2027-08-28":["Re'eh"],"2027-09-04":["Shoftim"],"2027-09-11":["Ki Teitzei"],"2027-09-18":["Ki Tavo"],"2027-09-25":["Nitzavim","Vayeilech"],"2027-10-02":null,"2027-10-09":["Ha'azinu"],"2027-10-16":null,"2027-10-23":null,"2027-10-30":["Bereshit"],"2027-11-06":["Noach"],"2027-11-13":["Lech-Lecha"],"2027-11-20":["Vayera"],"2027-11-27":["Chayei Sara"],"2027-12-04":["Toldot"],"2027-12-11":["Vayetzei"],"2027-12-18":["Vayishlach"],"2027-12-25":["Vayeshev"],"2028-01-01":["Miketz"],"2028-01-08":["Vayigash"],"2028-01-15":["Vayechi"],"2028-01-22":["Shemot"],"2028-01-29":["Vaera"],"2028-02-05":["Bo"],"2028-02-12":["Beshalach"],"2028-02-19":["Yitro"],"2028-02-26":["Mishpatim"],"2028-03-04":["Terumah"],"2028-03-11":["Tetzaveh"],"2028-03-18":["Ki Tisa"],"2028-03-25":["Vayakhel","Pekudei"],"2028-04-01":["Vayikra"],"2028-04-08":["Tzav"],"2028-04-15":null,"2028-04-22":["Shmini"],"2028-04-29":["Tazria","Metzora"],"2028-05-06":["Achrei Mot","Kedoshim"],"2028-05-13":["Emor"],"2028-05-20":["Behar","Bechukotai"],"2028-05-27":["Bamidbar"],"2028-06-03":["Nasso"],"2028-06-10":["Beha'alotcha"],"2028-06-17":["Sh'lach"],"2028-06-24":["Korach"],"2028-07-01":["Chukat"],"2028-07-08":["Balak"],"2028-07-15":["Pinchas"],"2028-07-22":["Matot","Masei"],"2028-07-29":["Devarim"],"2028-08-05":["Vaetchanan"],"2028-08-12":["Eikev"],"2028-08-19":["Re'eh"],"2028-08-26":["Shoftim"],"2028-09-02":["Ki Teitzei"],"2028-09-09":["Ki Tavo"],"2028-09-16":["Nitzavim","Vayeilech"],"2028-09-23":["Ha'azinu"],"2028-09-30":null,"2028-10-07":null,"2028-10-14":["Bereshit"],"2028-10-21":["Noach"],"2028-10-28":["Lech-Lecha"],"2028-11-04":["Vayera"],"2028-11-11":["Chayei Sara"],"2028-11-18":["Toldot"],"2028-11-25":["Vayetzei"],"2028-12-02":["Vayishlach"],"2028-12-09":["Vayeshev"],"2028-12-16":["Miketz"],"2028-12-23":["Vayigash"],"2028-12-30":["Vayechi"],"2029-01-06":["Shemot"],"2029-01-13":["Vaera"],"2029-01-20":["Bo"],"2029-01-27":["Beshalach"],"2029-02-03":["Yitro"],"2029-02-10":["Mishpatim"],"2029-02-17":["Terumah"],"2029-02-24":["Tetzaveh"],"2029-03-03":["Ki Tisa"],"2029-03-10":["Vayakhel","Pekudei"],"2029-03-17":["Vayikra"],"2029-03-24":["Tzav"],"2029-03-31":null,"2029-04-07":["Shmini"],"2029-04-14":["Tazria","Metzora"],"2029-04-21":["Achrei Mot","Kedoshim"],"2029-04-28":["Emor"],"2029-05-05":["Behar"],"2029-05-12":["Bechukotai"],"2029-05-19":["Bamidbar"],"2029-05-26":["Nasso"],"2029-06-02":["Beha'alotcha"],"2029-06-09":["Sh'lach"],"2029-06-16":["Korach"],"2029-06-23":["Chukat"],"2029-06-30":["Balak"],"2029-07-07":["Pinchas"],"2029-07-14":["Matot","Masei"],"2029-07-21":["Devarim"],"2029-07-28":["Vaetchanan"],"2029-08-04":["Eikev"],"2029-08-11":["Re'eh"],"2029-08-18":["Shoftim"],"2029-08-25":["Ki Teitzei"],"2029-09-01":["Ki Tavo"],"2029-09-08":["Nitzavim"],"2029-09-15":["Vayeilech"],"2029-09-22":["Ha'azinu"],"2029-09-29":null,"2029-10-06":["Bereshit"],"2029-10-13":["Noach"],"2029-10-20":["Lech-Lecha"],"2029-10-27":["Vayera"],"2029-11-03":["Chayei Sara"],"2029-11-10":["Toldot"],"2029-11-17":["Vayetzei"],"2029-11-24":["Vayishlach"],"2029-12-01":["Vayeshev"],"2029-12-08":["Miketz"],"2029-12-15":["Vayigash"],"2029-12-22":["Vayechi"],"2029-12-29":["Shemot"],"2030-01-05":["Vaera"],"2030-01-12":["Bo"],"2030-01-19":["Beshalach"],"2030-01-26":["Yitro"],"2030-02-02":["Mishpatim"],"2030-02-09":["Terumah"],"2030-02-16":["Tetzaveh"],"2030-02-23":["Ki Tisa"],"2030-03-02":["Vayakhel"],"2030-03-09":["Pekudei"],"2030-03-16":["Vayikra"],"2030-03-23":["Tzav"],"2030-03-30":["Shmini"],"2030-04-06":["Tazria"],"2030-04-13":["Metzora"],"2030-04-20":null,"2030-04-27":["Achrei Mot"],"2030-05-04":["Kedoshim"],"2030-05-11":["Emor"],"2030-05-18":["Behar"],"2030-05-25":["Bechukotai"],"2030-06-01":["Bamidbar"],"2030-06-08":["Nasso"],"2030-06-15":["Beha'alotcha"],"2030-06-22":["Sh'lach"],"2030-06-29":["Korach"],"2030-07-06":["Chukat"],"2030-07-13":["Balak"],"2030-07-20":["Pinchas"],"2030-07-27":["Matot","Masei"],"2030-08-03":["Devarim"],"2030-08-10":["Vaetchanan"],"2030-08-17":["Eikev"],"2030-08-24":["Re'eh"],"2030-08-31":["Shoftim"],"2030-09-07":["Ki Teitzei"],"2030-09-14":["Ki Tavo"],"2030-09-21":["Nitzavim","Vayeilech"],"2030-09-28":null,"2030-10-05":["Ha'azinu"],"2030-10-12":null,"2030-10-19":null,"2030-10-26":["Bereshit"],"2030-11-02":["Noach"],"2030-11-09":["Lech-Lecha"],"2030-11-16":["Vayera"],"2030-11-23":["Chayei Sara"],"2030-11-30":["Toldot"],"2030-12-07":["Vayetzei"],"2030-12-14":["Vayishlach"],"2030-12-21":["Vayeshev"],"2030-12-28":["Miketz"],"2031-01-04":["Vayigash"],"2031-01-11":["Vayechi"],"2031-01-18":["Shemot"],"2031-01-25":["Vaera"],"2031-02-01":["Bo"],"2031-02-08":["Beshalach"],"2031-02-15":["Yitro"],"2031-02-22":["Mishpatim"],"2031-03-01":["Terumah"],"2031-03-08":["Tetzaveh"],"2031-03-15":["Ki Tisa"],"2031-03-22":["Vayakhel","Pekudei"],"2031-03-29":["Vayikra"],"2031-04-05":["Tzav"],"2031-04-12":null,"2031-04-19":["Shmini"],"2031-04-26":["Tazria","Metzora"],"2031-05-03":["Achrei Mot","Kedoshim"],"2031-05-10":["Emor"],"2031-05-17":["Behar","Bechukotai"],"2031-05-24":["Bamidbar"],"2031-05-31":["Nasso"],"2031-06-07":["Beha'alotcha"],"2031-06-14":["Sh'lach"],"2031-06-21":["Korach"],"2031-06-28":["Chukat"],"2031-07-05":["Balak"],"2031-07-12":["Pinchas"],"2031-07-19":["Matot","Masei"],"2031-07-26":["Devarim"],"2031-08-02":["Vaetchanan"],"2031-08-09":["Eikev"],"2031-08-16":["Re'eh"],"2031-08-23":["Shoftim"],"2031-08-30":["Ki Teitzei"],"2031-09-06":["Ki Tavo"],"2031-09-13":["Nitzavim","Vayeilech"],"2031-09-20":["Ha'azinu"],"2031-09-27":null,"2031-10-04":null,"2031-10-11":["Bereshit"],"2031-10-18":["Noach"],"2031-10-25":["Lech-Lecha"],"2031-11-01":["Vayera"],"2031-11-08":["Chayei Sara"],"2031-11-15":["Toldot"],"2031-11-22":["Vayetzei"],"2031-11-29":["Vayishlach"],"2031-12-06":["Vayeshev"],"2031-12-13":["Miketz"],"2031-12-20":["Vayigash"],"2031-12-27":["Vayechi"],"2032-01-03":["Shemot"],"2032-01-10":["Vaera"],"2032-01-17":["Bo"],"2032-01-24":["Beshalach"],"2032-01-31":["Yitro"],"2032-02-07":["Mishpatim"],"2032-02-14":["Terumah"],"2032-02-21":["Tetzaveh"],"2032-02-28":["Ki Tisa"],"2032-03-06":["Vayakhel","Pekudei"],"2032-03-13":["Vayikra"],"2032-03-20":["Tzav"],"2032-03-27":null,"2032-04-03":["Shmini"],"2032-04-10":["Tazria","Metzora"],"2032-04-17":["Achrei Mot","Kedoshim"],"2032-04-24":["Emor"],"2032-05-01":["Behar"],"2032-05-08":["Bechukotai"],"2032-05-15":["Bamidbar"],"2032-05-22":["Nasso"],"2032-05-29":["Beha'alotcha"],"2032-06-05":["Sh'lach"],"2032-06-12":["Korach"],"2032-06-19":["Chukat"],"2032-06-26":["Balak"],"2032-07-03":["Pinchas"],"2032-07-10":["Matot","Masei"],"2032-07-17":["Devarim"],"2032-07-24":["Vaetchanan"],"2032-07-31":["Eikev"],"2032-08-07":["Re'eh"],"2032-08-14":["Shoftim"],"2032-08-21":["Ki Teitzei"],"2032-08-28":["Ki Tavo"],"2032-09-04":["Nitzavim"],"2032-09-11":["Vayeilech"],"2032-09-18":["Ha'azinu"],"2032-09-25":null,"2032-10-02":["Bereshit"],"2032-10-09":["Noach"],"2032-10-16":["Lech-Lecha"],"2032-10-23":["Vayera"],"2032-10-30":["Chayei Sara"],"2032-11-06":["Toldot"],"2032-11-13":["Vayetzei"],"2032-11-20":["Vayishlach"],"2032-11-27":["Vayeshev"],"2032-12-04":["Miketz"],"2032-12-11":["Vayigash"],"2032-12-18":["Vayechi"],"2032-12-25":["Shemot"],"2033-01-01":["Vaera"],"2033-01-08":["Bo"],"2033-01-15":["Beshalach"],"2033-01-22":["Yitro"],"2033-01-29":["Mishpatim"],"2033-02-05":["Terumah"],"2033-02-12":["Tetzaveh"],"2033-02-19":["Ki Tisa"],"2033-02-26":["Vayakhel"],"2033-03-05":["Pekudei"],"2033-03-12":["Vayikra"],"2033-03-19":["Tzav"],"2033-03-26":["Shmini"],"2033-04-02":["Tazria"],"2033-04-09":["Metzora"],"2033-04-16":null,"2033-04-23":["Achrei Mot"],"2033-04-30":["Kedoshim"],"2033-05-07":["Emor"],"2033-05-14":["Behar"],"2033-05-21":["Bechukotai"],"2033-05-28":["Bamidbar"],"2033-06-04":["Nasso"],"2033-06-11":["Beha'alotcha"],"2033-06-18":["Sh'lach"],"2033-06-25":["Korach"],"2033-07-02":["Chukat"],"2033-07-09":["Balak"],"2033-07-16":["Pinchas"],"2033-07-23":["Matot","Masei"],"2033-07-30":["Devarim"],"2033-08-06":["Vaetchanan"],"2033-08-13":["Eikev"],"2033-08-20":["Re'eh"],"2033-08-27":["Shoftim"],"2033-09-03":["Ki Teitzei"],"2033-09-10":["Ki Tavo"],"2033-09-17":["Nitzavim","Vayeilech"],"2033-09-24":null,"2033-10-01":["Ha'azinu"],"2033-10-08":null,"2033-10-15":null,"2033-10-22":["Bereshit"],"2033-10-29":["Noach"],"2033-11-05":["Lech-Lecha"],"2033-11-12":["Vayera"],"2033-11-19":["Chayei Sara"],"2033-11-26":["Toldot"],"2033-12-03":["Vayetzei"],"2033-12-10":["Vayishlach"],"2033-12-17":["Vayeshev"],"2033-12-24":["Miketz"],"2033-12-31":["Vayigash"],"2034-01-07":["Vayechi"],"2034-01-14":["Shemot"],"2034-01-21":["Vaera"],"2034-01-28":["Bo"],"2034-02-04":["Beshalach"],"2034-02-11":["Yitro"],"2034-02-18":["Mishpatim"],"2034-02-25":["Terumah"],"2034-03-04":["Tetzaveh"],"2034-03-11":["Ki Tisa"],"2034-03-18":["Vayakhel","Pekudei"],"2034-03-25":["Vayikra"],"2034-04-01":["Tzav"],"2034-04-08":null,"2034-04-15":["Shmini"],"2034-04-22":["Tazria","Metzora"],"2034-04-29":["Achrei Mot","Kedoshim"],"2034-05-06":["Emor"],"2034-05-13":["Behar","Bechukotai"],"2034-05-20":["Bamidbar"],"2034-05-27":["Nasso"],"2034-06-03":["Beha'alotcha"],"2034-06-10":["Sh'lach"],"2034-06-17":["Korach"],"2034-06-24":["Chukat"],"2034-07-01":["Balak"],"2034-07-08":["Pinchas"],"2034-07-15":["Matot","Masei"],"2034-07-22":["Devarim"],"2034-07-29":["Vaetchanan"],"2034-08-05":["Eikev"],"2034-08-12":["Re'eh"],"2034-08-19":["Shoftim"],"2034-08-26":["Ki Teitzei"],"2034-09-02":["Ki Tavo"],"2034-09-09":["Nitzavim","Vayeilech"],"2034-09-16":["Ha'azinu"],"2034-09-23":null,"2034-09-30":null,"2034-10-07":["Bereshit"],"2034-10-14":["Noach"],"2034-10-21":["Lech-Lecha"],"2034-10-28":["Vayera"],"2034-11-04":["Chayei Sara"],"2034-11-11":["Toldot"],"2034-11-18":["Vayetzei"],"2034-11-25":["Vayishlach"],"2034-12-02":["Vayeshev"],"2034-12-09":["Miketz"],"2034-12-16":["Vayigash"],"2034-12-23":["Vayechi"],"2034-12-30":["Shemot"],"2035-01-06":["Vaera"],"2035-01-13":["Bo"],"2035-01-20":["Beshalach"],"2035-01-27":["Yitro"],"2035-02-03":["Mishpatim"],"2035-02-10":["Terumah"],"2035-02-17":["Tetzaveh"],"2035-02-24":["Ki Tisa"],"2035-03-03":["Vayakhel"],"2035-03-10":["Pekudei"],"2035-03-17":["Vayikra"],"2035-03-24":["Tzav"],"2035-03-31":["Shmini"],"2035-04-07":["Tazria"],"2035-04-14":["Metzora"],"2035-04-21":["Achrei Mot"],"2035-04-28":null,"2035-05-05":["Kedoshim"],"2035-05-12":["Emor"],"2035-05-19":["Behar"],"2035-05-26":["Bechukotai"],"2035-06-02":["Bamidbar"],"2035-06-09":["Nasso"],"2035-06-16":["Beha'alotcha"],"2035-06-23":["Sh'lach"],"2035-06-30":["Korach"],"2035-07-07":["Chukat"],"2035-07-14":["Balak"],"2035-07-21":["Pinchas"],"2035-07-28":["Matot"],"2035-08-04":["Masei"],"2035-08-11":["Devarim"],"2035-08-18":["Vaetchanan"],"2035-08-25":["Eikev"],"2035-09-01":["Re'eh"],"2035-09-08":["Shoftim"],"2035-09-15":["Ki Teitzei"],"2035-09-22":["Ki Tavo"],"2035-09-29":["Nitzavim","Vayeilech"]},"dia":{"2025-09-27":["Vayeilech"],"2025-10-04":["Ha'azinu"],"2025-10-11":null,"2025-10-18":["Bereshit"],"2025-10-25":["Noach"],"2025-11-01":["Lech-Lecha"],"2025-11-08":["Vayera"],"2025-11-15":["Chayei Sara"],"2025-11-22":["Toldot"],"2025-11-29":["Vayetzei"],"2025-12-06":["Vayishlach"],"2025-12-13":["Vayeshev"],"2025-12-20":["Miketz"],"2025-12-27":["Vayigash"],"2026-01-03":["Vayechi"],"2026-01-10":["Shemot"],"2026-01-17":["Vaera"],"2026-01-24":["Bo"],"2026-01-31":["Beshalach"],"2026-02-07":["Yitro"],"2026-02-14":["Mishpatim"],"2026-02-21":["Terumah"],"2026-02-28":["Tetzaveh"],"2026-03-07":["Ki Tisa"],"2026-03-14":["Vayakhel","Pekudei"],"2026-03-21":["Vayikra"],"2026-03-28":["Tzav"],"2026-04-04":null,"2026-04-11":["Shmini"],"2026-04-18":["Tazria","Metzora"],"2026-04-25":["Achrei Mot","Kedoshim"],"2026-05-02":["Emor"],"2026-05-09":["Behar","Bechukotai"],"2026-05-16":["Bamidbar"],"2026-05-23":null,"2026-05-30":["Nasso"],"2026-06-06":["Beha'alotcha"],"2026-06-13":["Sh'lach"],"2026-06-20":["Korach"],"2026-06-27":["Chukat","Balak"],"2026-07-04":["Pinchas"],"2026-07-11":["Matot","Masei"],"2026-07-18":["Devarim"],"2026-07-25":["Vaetchanan"],"2026-08-01":["Eikev"],"2026-08-08":["Re'eh"],"2026-08-15":["Shoftim"],"2026-08-22":["Ki Teitzei"],"2026-08-29":["Ki Tavo"],"2026-09-05":["Nitzavim","Vayeilech"],"2026-09-12":null,"2026-09-19":["Ha'azinu"],"2026-09-26":null,"2026-10-03":null,"2026-10-10":["Bereshit"],"2026-10-17":["Noach"],"2026-10-24":["Lech-Lecha"],"2026-10-31":["Vayera"],"2026-11-07":["Chayei Sara"],"2026-11-14":["Toldot"],"2026-11-21":["Vayetzei"],"2026-11-28":["Vayishlach"],"2026-12-05":["Vayeshev"],"2026-12-12":["Miketz"],"2026-12-19":["Vayigash"],"2026-12-26":["Vayechi"],"2027-01-02":["Shemot"],"2027-01-09":["Vaera"],"2027-01-16":["Bo"],"2027-01-23":["Beshalach"],"2027-01-30":["Yitro"],"2027-02-06":["Mishpatim"],"2027-02-13":["Terumah"],"2027-02-20":["Tetzaveh"],"2027-02-27":["Ki Tisa"],"2027-03-06":["Vayakhel"],"2027-03-13":["Pekudei"],"2027-03-20":["Vayikra"],"2027-03-27":["Tzav"],"2027-04-03":["Shmini"],"2027-04-10":["Tazria"],"2027-04-17":["Metzora"],"2027-04-24":null,"2027-05-01":["Achrei Mot"],"2027-05-08":["Kedoshim"],"2027-05-15":["Emor"],"2027-05-22":["Behar"],"2027-05-29":["Bechukotai"],"2027-06-05":["Bamidbar"],"2027-06-12":null,"2027-06-19":["Nasso"],"2027-06-26":["Beha'alotcha"],"2027-07-03":["Sh'lach"],"2027-07-10":["Korach"],"2027-07-17":["Chukat","Balak"],"2027-07-24":["Pinchas"],"2027-07-31":["Matot","Masei"],"2027-08-07":["Devarim"],"2027-08-14":["Vaetchanan"],"2027-08-21":["Eikev"],"2027-08-28":["Re'eh"],"2027-09-04":["Shoftim"],"2027-09-11":["Ki Teitzei"],"2027-09-18":["Ki Tavo"],"2027-09-25":["Nitzavim","Vayeilech"],"2027-10-02":null,"2027-10-09":["Ha'azinu"],"2027-10-16":null,"2027-10-23":null,"2027-10-30":["Bereshit"],"2027-11-06":["Noach"],"2027-11-13":["Lech-Lecha"],"2027-11-20":["Vayera"],"2027-11-27":["Chayei Sara"],"2027-12-04":["Toldot"],"2027-12-11":["Vayetzei"],"2027-12-18":["Vayishlach"],"2027-12-25":["Vayeshev"],"2028-01-01":["Miketz"],"2028-01-08":["Vayigash"],"2028-01-15":["Vayechi"],"2028-01-22":["Shemot"],"2028-01-29":["Vaera"],"2028-02-05":["Bo"],"2028-02-12":["Beshalach"],"2028-02-19":["Yitro"],"2028-02-26":["Mishpatim"],"2028-03-04":["Terumah"],"2028-03-11":["Tetzaveh"],"2028-03-18":["Ki Tisa"],"2028-03-25":["Vayakhel","Pekudei"],"2028-04-01":["Vayikra"],"2028-04-08":["Tzav"],"2028-04-15":null,"2028-04-22":["Shmini"],"2028-04-29":["Tazria","Metzora"],"2028-05-06":["Achrei Mot","Kedoshim"],"2028-05-13":["Emor"],"2028-05-20":["Behar","Bechukotai"],"2028-05-27":["Bamidbar"],"2028-06-03":["Nasso"],"2028-06-10":["Beha'alotcha"],"2028-06-17":["Sh'lach"],"2028-06-24":["Korach"],"2028-07-01":["Chukat"],"2028-07-08":["Balak"],"2028-07-15":["Pinchas"],"2028-07-22":["Matot","Masei"],"2028-07-29":["Devarim"],"2028-08-05":["Vaetchanan"],"2028-08-12":["Eikev"],"2028-08-19":["Re'eh"],"2028-08-26":["Shoftim"],"2028-09-02":["Ki Teitzei"],"2028-09-09":["Ki Tavo"],"2028-09-16":["Nitzavim","Vayeilech"],"2028-09-23":["Ha'azinu"],"2028-09-30":null,"2028-10-07":null,"2028-10-14":["Bereshit"],"2028-10-21":["Noach"],"2028-10-28":["Lech-Lecha"],"2028-11-04":["Vayera"],"2028-11-11":["Chayei Sara"],"2028-11-18":["Toldot"],"2028-11-25":["Vayetzei"],"2028-12-02":["Vayishlach"],"2028-12-09":["Vayeshev"],"2028-12-16":["Miketz"],"2028-12-23":["Vayigash"],"2028-12-30":["Vayechi"],"2029-01-06":["Shemot"],"2029-01-13":["Vaera"],"2029-01-20":["Bo"],"2029-01-27":["Beshalach"],"2029-02-03":["Yitro"],"2029-02-10":["Mishpatim"],"2029-02-17":["Terumah"],"2029-02-24":["Tetzaveh"],"2029-03-03":["Ki Tisa"],"2029-03-10":["Vayakhel","Pekudei"],"2029-03-17":["Vayikra"],"2029-03-24":["Tzav"],"2029-03-31":null,"2029-04-07":null,"2029-04-14":["Shmini"],"2029-04-21":["Tazria","Metzora"],"2029-04-28":["Achrei Mot","Kedoshim"],"2029-05-05":["Emor"],"2029-05-12":["Behar","Bechukotai"],"2029-05-19":["Bamidbar"],"2029-05-26":["Nasso"],"2029-06-02":["Beha'alotcha"],"2029-06-09":["Sh'lach"],"2029-06-16":["Korach"],"2029-06-23":["Chukat"],"2029-06-30":["Balak"],"2029-07-07":["Pinchas"],"2029-07-14":["Matot","Masei"],"2029-07-21":["Devarim"],"2029-07-28":["Vaetchanan"],"2029-08-04":["Eikev"],"2029-08-11":["Re'eh"],"2029-08-18":["Shoftim"],"2029-08-25":["Ki Teitzei"],"2029-09-01":["Ki Tavo"],"2029-09-08":["Nitzavim"],"2029-09-15":["Vayeilech"],"2029-09-22":["Ha'azinu"],"2029-09-29":null,"2029-10-06":["Bereshit"],"2029-10-13":["Noach"],"2029-10-20":["Lech-Lecha"],"2029-10-27":["Vayera"],"2029-11-03":["Chayei Sara"],"2029-11-10":["Toldot"],"2029-11-17":["Vayetzei"],"2029-11-24":["Vayishlach"],"2029-12-01":["Vayeshev"],"2029-12-08":["Miketz"],"2029-12-15":["Vayigash"],"2029-12-22":["Vayechi"],"2029-12-29":["Shemot"],"2030-01-05":["Vaera"],"2030-01-12":["Bo"],"2030-01-19":["Beshalach"],"2030-01-26":["Yitro"],"2030-02-02":["Mishpatim"],"2030-02-09":["Terumah"],"2030-02-16":["Tetzaveh"],"2030-02-23":["Ki Tisa"],"2030-03-02":["Vayakhel"],"2030-03-09":["Pekudei"],"2030-03-16":["Vayikra"],"2030-03-23":["Tzav"],"2030-03-30":["Shmini"],"2030-04-06":["Tazria"],"2030-04-13":["Metzora"],"2030-04-20":null,"2030-04-27":["Achrei Mot"],"2030-05-04":["Kedoshim"],"2030-05-11":["Emor"],"2030-05-18":["Behar"],"2030-05-25":["Bechukotai"],"2030-06-01":["Bamidbar"],"2030-06-08":null,"2030-06-15":["Nasso"],"2030-06-22":["Beha'alotcha"],"2030-06-29":["Sh'lach"],"2030-07-06":["Korach"],"2030-07-13":["Chukat","Balak"],"2030-07-20":["Pinchas"],"2030-07-27":["Matot","Masei"],"2030-08-03":["Devarim"],"2030-08-10":["Vaetchanan"],"2030-08-17":["Eikev"],"2030-08-24":["Re'eh"],"2030-08-31":["Shoftim"],"2030-09-07":["Ki Teitzei"],"2030-09-14":["Ki Tavo"],"2030-09-21":["Nitzavim","Vayeilech"],"2030-09-28":null,"2030-10-05":["Ha'azinu"],"2030-10-12":null,"2030-10-19":null,"2030-10-26":["Bereshit"],"2030-11-02":["Noach"],"2030-11-09":["Lech-Lecha"],"2030-11-16":["Vayera"],"2030-11-23":["Chayei Sara"],"2030-11-30":["Toldot"],"2030-12-07":["Vayetzei"],"2030-12-14":["Vayishlach"],"2030-12-21":["Vayeshev"],"2030-12-28":["Miketz"],"2031-01-04":["Vayigash"],"2031-01-11":["Vayechi"],"2031-01-18":["Shemot"],"2031-01-25":["Vaera"],"2031-02-01":["Bo"],"2031-02-08":["Beshalach"],"2031-02-15":["Yitro"],"2031-02-22":["Mishpatim"],"2031-03-01":["Terumah"],"2031-03-08":["Tetzaveh"],"2031-03-15":["Ki Tisa"],"2031-03-22":["Vayakhel","Pekudei"],"2031-03-29":["Vayikra"],"2031-04-05":["Tzav"],"2031-04-12":null,"2031-04-19":["Shmini"],"2031-04-26":["Tazria","Metzora"],"2031-05-03":["Achrei Mot","Kedoshim"],"2031-05-10":["Emor"],"2031-05-17":["Behar","Bechukotai"],"2031-05-24":["Bamidbar"],"2031-05-31":["Nasso"],"2031-06-07":["Beha'alotcha"],"2031-06-14":["Sh'lach"],"2031-06-21":["Korach"],"2031-06-28":["Chukat"],"2031-07-05":["Balak"],"2031-07-12":["Pinchas"],"2031-07-19":["Matot","Masei"],"2031-07-26":["Devarim"],"2031-08-02":["Vaetchanan"],"2031-08-09":["Eikev"],"2031-08-16":["Re'eh"],"2031-08-23":["Shoftim"],"2031-08-30":["Ki Teitzei"],"2031-09-06":["Ki Tavo"],"2031-09-13":["Nitzavim","Vayeilech"],"2031-09-20":["Ha'azinu"],"2031-09-27":null,"2031-10-04":null,"2031-10-11":["Bereshit"],"2031-10-18":["Noach"],"2031-10-25":["Lech-Lecha"],"2031-11-01":["Vayera"],"2031-11-08":["Chayei Sara"],"2031-11-15":["Toldot"],"2031-11-22":["Vayetzei"],"2031-11-29":["Vayishlach"],"2031-12-06":["Vayeshev"],"2031-12-13":["Miketz"],"2031-12-20":["Vayigash"],"2031-12-27":["Vayechi"],"2032-01-03":["Shemot"],"2032-01-10":["Vaera"],"2032-01-17":["Bo"],"2032-01-24":["Beshalach"],"2032-01-31":["Yitro"],"2032-02-07":["Mishpatim"],"2032-02-14":["Terumah"],"2032-02-21":["Tetzaveh"],"2032-02-28":["Ki Tisa"],"2032-03-06":["Vayakhel","Pekudei"],"2032-03-13":["Vayikra"],"2032-03-20":["Tzav"],"2032-03-27":null,"2032-04-03":null,"2032-04-10":["Shmini"],"2032-04-17":["Tazria","Metzora"],"2032-04-24":["Achrei Mot","Kedoshim"],"2032-05-01":["Emor"],"2032-05-08":["Behar","Bechukotai"],"2032-05-15":["Bamidbar"],"2032-05-22":["Nasso"],"2032-05-29":["Beha'alotcha"],"2032-06-05":["Sh'lach"],"2032-06-12":["Korach"],"2032-06-19":["Chukat"],"2032-06-26":["Balak"],"2032-07-03":["Pinchas"],"2032-07-10":["Matot","Masei"],"2032-07-17":["Devarim"],"2032-07-24":["Vaetchanan"],"2032-07-31":["Eikev"],"2032-08-07":["Re'eh"],"2032-08-14":["Shoftim"],"2032-08-21":["Ki Teitzei"],"2032-08-28":["Ki Tavo"],"2032-09-04":["Nitzavim"],"2032-09-11":["Vayeilech"],"2032-09-18":["Ha'azinu"],"2032-09-25":null,"2032-10-02":["Bereshit"],"2032-10-09":["Noach"],"2032-10-16":["Lech-Lecha"],"2032-10-23":["Vayera"],"2032-10-30":["Chayei Sara"],"2032-11-06":["Toldot"],"2032-11-13":["Vayetzei"],"2032-11-20":["Vayishlach"],"2032-11-27":["Vayeshev"],"2032-12-04":["Miketz"],"2032-12-11":["Vayigash"],"2032-12-18":["Vayechi"],"2032-12-25":["Shemot"],"2033-01-01":["Vaera"],"2033-01-08":["Bo"],"2033-01-15":["Beshalach"],"2033-01-22":["Yitro"],"2033-01-29":["Mishpatim"],"2033-02-05":["Terumah"],"2033-02-12":["Tetzaveh"],"2033-02-19":["Ki Tisa"],"2033-02-26":["Vayakhel"],"2033-03-05":["Pekudei"],"2033-03-12":["Vayikra"],"2033-03-19":["Tzav"],"2033-03-26":["Shmini"],"2033-04-02":["Tazria"],"2033-04-09":["Metzora"],"2033-04-16":null,"2033-04-23":["Achrei Mot"],"2033-04-30":["Kedoshim"],"2033-05-07":["Emor"],"2033-05-14":["Behar"],"2033-05-21":["Bechukotai"],"2033-05-28":["Bamidbar"],"2033-06-04":null,"2033-06-11":["Nasso"],"2033-06-18":["Beha'alotcha"],"2033-06-25":["Sh'lach"],"2033-07-02":["Korach"],"2033-07-09":["Chukat","Balak"],"2033-07-16":["Pinchas"],"2033-07-23":["Matot","Masei"],"2033-07-30":["Devarim"],"2033-08-06":["Vaetchanan"],"2033-08-13":["Eikev"],"2033-08-20":["Re'eh"],"2033-08-27":["Shoftim"],"2033-09-03":["Ki Teitzei"],"2033-09-10":["Ki Tavo"],"2033-09-17":["Nitzavim","Vayeilech"],"2033-09-24":null,"2033-10-01":["Ha'azinu"],"2033-10-08":null,"2033-10-15":null,"2033-10-22":["Bereshit"],"2033-10-29":["Noach"],"2033-11-05":["Lech-Lecha"],"2033-11-12":["Vayera"],"2033-11-19":["Chayei Sara"],"2033-11-26":["Toldot"],"2033-12-03":["Vayetzei"],"2033-12-10":["Vayishlach"],"2033-12-17":["Vayeshev"],"2033-12-24":["Miketz"],"2033-12-31":["Vayigash"],"2034-01-07":["Vayechi"],"2034-01-14":["Shemot"],"2034-01-21":["Vaera"],"2034-01-28":["Bo"],"2034-02-04":["Beshalach"],"2034-02-11":["Yitro"],"2034-02-18":["Mishpatim"],"2034-02-25":["Terumah"],"2034-03-04":["Tetzaveh"],"2034-03-11":["Ki Tisa"],"2034-03-18":["Vayakhel","Pekudei"],"2034-03-25":["Vayikra"],"2034-04-01":["Tzav"],"2034-04-08":null,"2034-04-15":["Shmini"],"2034-04-22":["Tazria","Metzora"],"2034-04-29":["Achrei Mot","Kedoshim"],"2034-05-06":["Emor"],"2034-05-13":["Behar","Bechukotai"],"2034-05-20":["Bamidbar"],"2034-05-27":["Nasso"],"2034-06-03":["Beha'alotcha"],"2034-06-10":["Sh'lach"],"2034-06-17":["Korach"],"2034-06-24":["Chukat"],"2034-07-01":["Balak"],"2034-07-08":["Pinchas"],"2034-07-15":["Matot","Masei"],"2034-07-22":["Devarim"],"2034-07-29":["Vaetchanan"],"2034-08-05":["Eikev"],"2034-08-12":["Re'eh"],"2034-08-19":["Shoftim"],"2034-08-26":["Ki Teitzei"],"2034-09-02":["Ki Tavo"],"2034-09-09":["Nitzavim","Vayeilech"],"2034-09-16":["Ha'azinu"],"2034-09-23":null,"2034-09-30":null,"2034-10-07":["Bereshit"],"2034-10-14":["Noach"],"2034-10-21":["Lech-Lecha"],"2034-10-28":["Vayera"],"2034-11-04":["Chayei Sara"],"2034-11-11":["Toldot"],"2034-11-18":["Vayetzei"],"2034-11-25":["Vayishlach"],"2034-12-02":["Vayeshev"],"2034-12-09":["Miketz"],"2034-12-16":["Vayigash"],"2034-12-23":["Vayechi"],"2034-12-30":["Shemot"],"2035-01-06":["Vaera"],"2035-01-13":["Bo"],"2035-01-20":["Beshalach"],"2035-01-27":["Yitro"],"2035-02-03":["Mishpatim"],"2035-02-10":["Terumah"],"2035-02-17":["Tetzaveh"],"2035-02-24":["Ki Tisa"],"2035-03-03":["Vayakhel"],"2035-03-10":["Pekudei"],"2035-03-17":["Vayikra"],"2035-03-24":["Tzav"],"2035-03-31":["Shmini"],"2035-04-07":["Tazria"],"2035-04-14":["Metzora"],"2035-04-21":["Achrei Mot"],"2035-04-28":null,"2035-05-05":["Kedoshim"],"2035-05-12":["Emor"],"2035-05-19":["Behar"],"2035-05-26":["Bechukotai"],"2035-06-02":["Bamidbar"],"2035-06-09":["Nasso"],"2035-06-16":["Beha'alotcha"],"2035-06-23":["Sh'lach"],"2035-06-30":["Korach"],"2035-07-07":["Chukat"],"2035-07-14":["Balak"],"2035-07-21":["Pinchas"],"2035-07-28":["Matot"],"2035-08-04":["Masei"],"2035-08-11":["Devarim"],"2035-08-18":["Vaetchanan"],"2035-08-25":["Eikev"],"2035-09-01":["Re'eh"],"2035-09-08":["Shoftim"],"2035-09-15":["Ki Teitzei"],"2035-09-22":["Ki Tavo"],"2035-09-29":["Nitzavim","Vayeilech"]},"aliyot":{"Bereshit":[["Genesis","1:1","2:3"],["Genesis","2:4","2:19"],["Genesis","2:20","3:21"],["Genesis","3:22","4:18"],["Genesis","4:19","4:22"],["Genesis","4:23","5:24"],["Genesis","5:25","6:8"]],"Noach":[["Genesis","6:9","6:22"],["Genesis","7:1","7:16"],["Genesis","7:17","8:14"],["Genesis","8:15","9:7"],["Genesis","9:8","9:17"],["Genesis","9:18","10:32"],["Genesis","11:1","11:32"]],"Lech-Lecha":[["Genesis","12:1","12:13"],["Genesis","12:14","13:4"],["Genesis","13:5","13:18"],["Genesis","14:1","14:20"],["Genesis","14:21","15:6"],["Genesis","15:7","17:6"],["Genesis","17:7","17:27"]],"Vayera":[["Genesis","18:1","18:14"],["Genesis","18:15","18:33"],["Genesis","19:1","19:20"],["Genesis","19:21","21:4"],["Genesis","21:5","21:21"],["Genesis","21:22","21:34"],["Genesis","22:1","22:24"]],"Chayei Sara":[["Genesis","23:1","23:16"],["Genesis","23:17","24:9"],["Genesis","24:10","24:26"],["Genesis","24:27","24:52"],["Genesis","24:53","24:67"],["Genesis","25:1","25:11"],["Genesis","25:12","25:18"]],"Toldot":[["Genesis","25:19","26:5"],["Genesis","26:6","26:12"],["Genesis","26:13","26:22"],["Genesis","26:23","26:29"],["Genesis","26:30","27:27"],["Genesis","27:28","28:4"],["Genesis","28:5","28:9"]],"Vayetzei":[["Genesis","28:10","28:22"],["Genesis","29:1","29:17"],["Genesis","29:18","30:13"],["Genesis","30:14","30:27"],["Genesis","30:28","31:16"],["Genesis","31:17","31:42"],["Genesis","31:43","32:3"]],"Vayishlach":[["Genesis","32:4","32:13"],["Genesis","32:14","32:30"],["Genesis","32:31","33:5"],["Genesis","33:6","33:20"],["Genesis","34:1","35:11"],["Genesis","35:12","36:19"],["Genesis","36:20","36:43"]],"Vayeshev":[["Genesis","37:1","37:11"],["Genesis","37:12","37:22"],["Genesis","37:23","37:36"],["Genesis","38:1","38:30"],["Genesis","39:1","39:6"],["Genesis","39:7","39:23"],["Genesis","40:1","40:23"]],"Miketz":[["Genesis","41:1","41:14"],["Genesis","41:15","41:38"],["Genesis","41:39","41:52"],["Genesis","41:53","42:18"],["Genesis","42:19","43:15"],["Genesis","43:16","43:29"],["Genesis","43:30","44:17"]],"Vayigash":[["Genesis","44:18","44:30"],["Genesis","44:31","45:7"],["Genesis","45:8","45:18"],["Genesis","45:19","45:27"],["Genesis","45:28","46:27"],["Genesis","46:28","47:10"],["Genesis","47:11","47:27"]],"Vayechi":[["Genesis","47:28","48:9"],["Genesis","48:10","48:16"],["Genesis","48:17","48:22"],["Genesis","49:1","49:18"],["Genesis","49:19","49:26"],["Genesis","49:27","50:20"],["Genesis","50:21","50:26"]],"Shemot":[["Exodus","1:1","1:17"],["Exodus","1:18","2:10"],["Exodus","2:11","2:25"],["Exodus","3:1","3:15"],["Exodus","3:16","4:17"],["Exodus","4:18","4:31"],["Exodus","5:1","6:1"]],"Vaera":[["Exodus","6:2","6:13"],["Exodus","6:14","6:28"],["Exodus","6:29","7:7"],["Exodus","7:8","8:6"],["Exodus","8:7","8:18"],["Exodus","8:19","9:16"],["Exodus","9:17","9:35"]],"Bo":[["Exodus","10:1","10:11"],["Exodus","10:12","10:23"],["Exodus","10:24","11:3"],["Exodus","11:4","12:20"],["Exodus","12:21","12:28"],["Exodus","12:29","12:51"],["Exodus","13:1","13:16"]],"Beshalach":[["Exodus","13:17","14:8"],["Exodus","14:9","14:14"],["Exodus","14:15","14:25"],["Exodus","14:26","15:26"],["Exodus","15:27","16:10"],["Exodus","16:11","16:36"],["Exodus","17:1","17:16"]],"Yitro":[["Exodus","18:1","18:12"],["Exodus","18:13","18:23"],["Exodus","18:24","18:27"],["Exodus","19:1","19:6"],["Exodus","19:7","19:19"],["Exodus","19:20","20:14"],["Exodus","20:15","20:23"]],"Mishpatim":[["Exodus","21:1","21:19"],["Exodus","21:20","22:3"],["Exodus","22:4","22:26"],["Exodus","22:27","23:5"],["Exodus","23:6","23:19"],["Exodus","23:20","23:25"],["Exodus","23:26","24:18"]],"Terumah":[["Exodus","25:1","25:16"],["Exodus","25:17","25:40"],["Exodus","26:1","26:14"],["Exodus","26:15","26:30"],["Exodus","26:31","26:37"],["Exodus","27:1","27:8"],["Exodus","27:9","27:19"]],"Tetzaveh":[["Exodus","27:20","28:12"],["Exodus","28:13","28:30"],["Exodus","28:31","28:43"],["Exodus","29:1","29:18"],["Exodus","29:19","29:37"],["Exodus","29:38","29:46"],["Exodus","30:1","30:10"]],"Ki Tisa":[["Exodus","30:11","31:17"],["Exodus","31:18","33:11"],["Exodus","33:12","33:16"],["Exodus","33:17","33:23"],["Exodus","34:1","34:9"],["Exodus","34:10","34:26"],["Exodus","34:27","34:35"]],"Vayakhel":[["Exodus","35:1","35:20"],["Exodus","35:21","35:29"],["Exodus","35:30","36:7"],["Exodus","36:8","36:19"],["Exodus","36:20","37:16"],["Exodus","37:17","37:29"],["Exodus","38:1","38:20"]],"Pekudei":[["Exodus","38:21","39:1"],["Exodus","39:2","39:21"],["Exodus","39:22","39:32"],["Exodus","39:33","39:43"],["Exodus","40:1","40:16"],["Exodus","40:17","40:27"],["Exodus","40:28","40:38"]],"Vayikra":[["Leviticus","1:1","1:13"],["Leviticus","1:14","2:6"],["Leviticus","2:7","2:16"],["Leviticus","3:1","3:17"],["Leviticus","4:1","4:26"],["Leviticus","4:27","5:10"],["Leviticus","5:11","5:26"]],"Tzav":[["Leviticus","6:1","6:11"],["Leviticus","6:12","7:10"],["Leviticus","7:11","7:38"],["Leviticus","8:1","8:13"],["Leviticus","8:14","8:21"],["Leviticus","8:22","8:29"],["Leviticus","8:30","8:36"]],"Shmini":[["Leviticus","9:1","9:16"],["Leviticus","9:17","9:23"],["Leviticus","9:24","10:11"],["Leviticus","10:12","10:15"],["Leviticus","10:16","10:20"],["Leviticus","11:1","11:32"],["Leviticus","11:33","11:47"]],"Tazria":[["Leviticus","12:1","13:5"],["Leviticus","13:6","13:17"],["Leviticus","13:18","13:23"],["Leviticus","13:24","13:28"],["Leviticus","13:29","13:39"],["Leviticus","13:40","13:54"],["Leviticus","13:55","13:59"]],"Metzora":[["Leviticus","14:1","14:12"],["Leviticus","14:13","14:20"],["Leviticus","14:21","14:32"],["Leviticus","14:33","14:53"],["Leviticus","14:54","15:15"],["Leviticus","15:16","15:28"],["Leviticus","15:29","15:33"]],"Achrei Mot":[["Leviticus","16:1","16:17"],["Leviticus","16:18","16:24"],["Leviticus","16:25","16:34"],["Leviticus","17:1","17:7"],["Leviticus","17:8","18:5"],["Leviticus","18:6","18:21"],["Leviticus","18:22","18:30"]],"Kedoshim":[["Leviticus","19:1","19:14"],["Leviticus","19:15","19:22"],["Leviticus","19:23","19:32"],["Leviticus","19:33","19:37"],["Leviticus","20:1","20:7"],["Leviticus","20:8","20:22"],["Leviticus","20:23","20:27"]],"Emor":[["Leviticus","21:1","21:15"],["Leviticus","21:16","22:16"],["Leviticus","22:17","22:33"],["Leviticus","23:1","23:22"],["Leviticus","23:23","23:32"],["Leviticus","23:33","23:44"],["Leviticus","24:1","24:23"]],"Behar":[["Leviticus","25:1","25:13"],["Leviticus","25:14","25:18"],["Leviticus","25:19","25:24"],["Leviticus","25:25","25:28"],["Leviticus","25:29","25:38"],["Leviticus","25:39","25:46"],["Leviticus","25:47","26:2"]],"Bechukotai":[["Leviticus","26:3","26:5"],["Leviticus","26:6","26:9"],["Leviticus","26:10","26:46"],["Leviticus","27:1","27:15"],["Leviticus","27:16","27:21"],["Leviticus","27:22","27:28"],["Leviticus","27:29","27:34"]],"Bamidbar":[["Numbers","1:1","1:19"],["Numbers","1:20","1:54"],["Numbers","2:1","2:34"],["Numbers","3:1","3:13"],["Numbers","3:14","3:39"],["Numbers","3:40","3:51"],["Numbers","4:1","4:20"]],"Nasso":[["Numbers","4:21","4:37"],["Numbers","4:38","4:49"],["Numbers","5:1","5:10"],["Numbers","5:11","6:27"],["Numbers","7:1","7:41"],["Numbers","7:42","7:71"],["Numbers","7:72","7:89"]],"Beha'alotcha":[["Numbers","8:1","8:14"],["Numbers","8:15","8:26"],["Numbers","9:1","9:14"],["Numbers","9:15","10:10"],["Numbers","10:11","10:34"],["Numbers","10:35","11:29"],["Numbers","11:30","12:16"]],"Sh'lach":[["Numbers","13:1","13:20"],["Numbers","13:21","14:7"],["Numbers","14:8","14:25"],["Numbers","14:26","15:7"],["Numbers","15:8","15:16"],["Numbers","15:17","15:26"],["Numbers","15:27","15:41"]],"Korach":[["Numbers","16:1","16:13"],["Numbers","16:14","16:19"],["Numbers","16:20","17:8"],["Numbers","17:9","17:15"],["Numbers","17:16","17:24"],["Numbers","17:25","18:20"],["Numbers","18:21","18:32"]],"Chukat":[["Numbers","19:1","19:17"],["Numbers","19:18","20:6"],["Numbers","20:7","20:13"],["Numbers","20:14","20:21"],["Numbers","20:22","21:9"],["Numbers","21:10","21:20"],["Numbers","21:21","22:1"]],"Balak":[["Numbers","22:2","22:12"],["Numbers","22:13","22:20"],["Numbers","22:21","22:38"],["Numbers","22:39","23:12"],["Numbers","23:13","23:26"],["Numbers","23:27","24:13"],["Numbers","24:14","25:9"]],"Pinchas":[["Numbers","25:10","26:4"],["Numbers","26:5","26:51"],["Numbers","26:52","27:5"],["Numbers","27:6","27:23"],["Numbers","28:1","28:15"],["Numbers","28:16","29:11"],["Numbers","29:12","30:1"]],"Matot":[["Numbers","30:2","30:17"],["Numbers","31:1","31:12"],["Numbers","31:13","31:24"],["Numbers","31:25","31:41"],["Numbers","31:42","31:54"],["Numbers","32:1","32:19"],["Numbers","32:20","32:42"]],"Masei":[["Numbers","33:1","33:10"],["Numbers","33:11","33:49"],["Numbers","33:50","34:15"],["Numbers","34:16","34:29"],["Numbers","35:1","35:8"],["Numbers","35:9","35:34"],["Numbers","36:1","36:13"]],"Devarim":[["Deuteronomy","1:1","1:10"],["Deuteronomy","1:11","1:21"],["Deuteronomy","1:22","1:38"],["Deuteronomy","1:39","2:1"],["Deuteronomy","2:2","2:30"],["Deuteronomy","2:31","3:14"],["Deuteronomy","3:15","3:22"]],"Vaetchanan":[["Deuteronomy","3:23","4:4"],["Deuteronomy","4:5","4:40"],["Deuteronomy","4:41","4:49"],["Deuteronomy","5:1","5:18"],["Deuteronomy","5:19","6:3"],["Deuteronomy","6:4","6:25"],["Deuteronomy","7:1","7:11"]],"Eikev":[["Deuteronomy","7:12","8:10"],["Deuteronomy","8:11","9:3"],["Deuteronomy","9:4","9:29"],["Deuteronomy","10:1","10:11"],["Deuteronomy","10:12","11:9"],["Deuteronomy","11:10","11:21"],["Deuteronomy","11:22","11:25"]],"Re'eh":[["Deuteronomy","11:26","12:10"],["Deuteronomy","12:11","12:28"],["Deuteronomy","12:29","13:19"],["Deuteronomy","14:1","14:21"],["Deuteronomy","14:22","14:29"],["Deuteronomy","15:1","15:18"],["Deuteronomy","15:19","16:17"]],"Shoftim":[["Deuteronomy","16:18","17:13"],["Deuteronomy","17:14","17:20"],["Deuteronomy","18:1","18:5"],["Deuteronomy","18:6","18:13"],["Deuteronomy","18:14","19:13"],["Deuteronomy","19:14","20:9"],["Deuteronomy","20:10","21:9"]],"Ki Teitzei":[["Deuteronomy","21:10","21:21"],["Deuteronomy","21:22","22:7"],["Deuteronomy","22:8","23:7"],["Deuteronomy","23:8","23:24"],["Deuteronomy","23:25","24:4"],["Deuteronomy","24:5","24:13"],["Deuteronomy","24:14","25:19"]],"Ki Tavo":[["Deuteronomy","26:1","26:11"],["Deuteronomy","26:12","26:15"],["Deuteronomy","26:16","26:19"],["Deuteronomy","27:1","27:10"],["Deuteronomy","27:11","28:6"],["Deuteronomy","28:7","28:69"],["Deuteronomy","29:1","29:8"]],"Nitzavim":[["Deuteronomy","29:9","29:11"],["Deuteronomy","29:12","29:14"],["Deuteronomy","29:15","29:28"],["Deuteronomy","30:1","30:6"],["Deuteronomy","30:7","30:10"],["Deuteronomy","30:11","30:14"],["Deuteronomy","30:15","30:20"]],"Vayeilech":[["Deuteronomy","31:1","31:3"],["Deuteronomy","31:4","31:6"],["Deuteronomy","31:7","31:9"],["Deuteronomy","31:10","31:13"],["Deuteronomy","31:14","31:19"],["Deuteronomy","31:20","31:24"],["Deuteronomy","31:25","31:30"]],"Ha'azinu":[["Deuteronomy","32:1","32:6"],["Deuteronomy","32:7","32:12"],["Deuteronomy","32:13","32:18"],["Deuteronomy","32:19","32:28"],["Deuteronomy","32:29","32:39"],["Deuteronomy","32:40","32:43"],["Deuteronomy","32:44","32:52"]],"Vezot Haberakhah":[["Deuteronomy","33:1","33:7"],["Deuteronomy","33:8","33:12"],["Deuteronomy","33:13","33:17"],["Deuteronomy","33:18","33:21"],["Deuteronomy","33:22","33:26"],["Deuteronomy","33:27","33:29"],["Deuteronomy","34:1","34:12"]]},"he":{"Bereshit":"בראשית","Noach":"נח","Lech-Lecha":"לך־לך","Vayera":"וירא","Chayei Sara":"חיי שרה","Toldot":"תולדות","Vayetzei":"ויצא","Vayishlach":"וישלח","Vayeshev":"וישב","Miketz":"מקץ","Vayigash":"ויגש","Vayechi":"ויחי","Shemot":"שמות","Vaera":"וארא","Bo":"בא","Beshalach":"בשלח","Yitro":"יתרו","Mishpatim":"משפטים","Terumah":"תרומה","Tetzaveh":"תצוה","Ki Tisa":"כי תשא","Vayakhel":"ויקהל","Pekudei":"פקודי","Vayikra":"ויקרא","Tzav":"צו","Shmini":"שמיני","Tazria":"תזריע","Metzora":"מצרע","Achrei Mot":"אחרי מות","Kedoshim":"קדשים","Emor":"אמור","Behar":"בהר","Bechukotai":"בחקתי","Bamidbar":"במדבר","Nasso":"נשא","Beha'alotcha":"בהעלתך","Sh'lach":"שלח־לך","Korach":"קרח","Chukat":"חקת","Balak":"בלק","Pinchas":"פינחס","Matot":"מטות","Masei":"מסעי","Devarim":"דברים","Vaetchanan":"ואתחנן","Eikev":"עקב","Re'eh":"ראה","Shoftim":"שופטים","Ki Teitzei":"כי־תצא","Ki Tavo":"כי־תבוא","Nitzavim":"נצבים","Vayeilech":"וילך","Ha'azinu":"האזינו","Vezot Haberakhah":"וזאת הברכה"}}; TW={"cw": [57, 77, 63, 68, 98, 74, 124, 66, 150, 147, 62, 72, 48, 64, 44, 78, 116, 345, 113, 62, 92, 224, 50, 81, 133, 73, 126, 80, 81, 87, 200, 99, 137, 139, 203, 81, 259, 144, 108, 168, 104, 114, 46, 173, 139, 87, 64, 100, 144, 149, 137, 82, 67, 58, 175, 107, 94, 85, 134, 102, 60, 96, 81, 74, 101, 131, 49, 295, 251, 43, 174, 140, 171, 174, 77, 78, 141, 473, 115, 124, 111, 51, 109, 101, 83, 128, 47, 131, 341, 125, 99, 100, 41, 146, 77, 95, 84, 67, 77, 36, 70, 183, 141, 233, 256, 288, 253, 85, 201, 55, 68, 72, 51, 47, 118, 109, 12, 178, 946, 42, 46, 57, 35, 54, 43, 45, 49, 43, 50, 47, 27, 109, 29, 20, 144, 159, 68, 62, 160, 104, 81, 68, 102, 120, 126, 74, 126, 87, 57, 34], "v119": [5, 5, 5, 5, 5, 4, 6, 4, 5, 4, 6, 5, 4, 5, 4, 5, 5, 4, 6, 5, 5, 7, 8, 4, 5, 5, 4, 5, 5, 4, 4, 5, 6, 5, 5, 4, 6, 5, 7, 5, 5, 5, 7, 5, 5, 6, 4, 6, 5, 6, 6, 5, 5, 5, 6, 5, 5, 5, 5, 5, 6, 7, 6, 6, 5, 7, 7, 4, 8, 6, 5, 5, 6, 6, 6, 5, 5, 7, 5, 6, 5, 6, 6, 6, 6, 5, 6, 5, 5, 6, 6, 6, 6, 5, 6, 7, 5, 6, 6, 5, 7, 4, 5, 6, 4, 5, 5, 6, 6, 7, 6, 6, 4, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 5, 4, 5, 5, 7, 5, 5, 5, 5, 5, 5, 5, 6, 5, 5, 5, 5, 6, 5, 4, 5, 6, 4, 5, 5, 6, 5, 5, 6, 5, 5, 6, 5, 6, 7, 6, 5, 6, 6, 5, 6, 6, 5, 5, 6, 6, 5, 6, 6, 5, 5, 4, 9]};
 computeK(); applyTheme();
 const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CHK='<svg viewBox="0 0 24 24" fill="none" stroke="#241c08" stroke-width="3.5" stroke-linecap="round" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>';
+const GRIP='<svg viewBox="0 0 10 16" fill="currentColor" aria-hidden="true"><circle cx="2.5" cy="3" r="1.5"/><circle cx="7.5" cy="3" r="1.5"/><circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/><circle cx="2.5" cy="13" r="1.5"/><circle cx="7.5" cy="13" r="1.5"/></svg>';
+let toastT=null; function toast(t){ let d=$('toastEl'); if(!d){ d=document.createElement('div'); d.id='toastEl'; d.className='toast'; d.setAttribute('role','status'); document.body.appendChild(d); } d.textContent=t; d.hidden=false; clearTimeout(toastT); toastT=setTimeout(()=>{ d.hidden=true; },3200); }
+function sheet(title,items){ closeSheet(); const sh=document.createElement('div'); sh.className='shade'; sh.id='shade'; sh.onclick=closeSheet;
+  const s=document.createElement('div'); s.className='sheet'; s.id='sheet'; s.setAttribute('role','dialog'); s.innerHTML='<div class="grab"></div><h3></h3>'; s.querySelector('h3').textContent=title;
+  items.filter(Boolean).forEach(([t,fn])=>{ const b=document.createElement('button'); b.className='it'; b.type='button'; b.textContent=t; b.onclick=()=>{ closeSheet(); fn(); }; s.appendChild(b); });
+  document.body.appendChild(sh); document.body.appendChild(s); }
+function closeSheet(){ ['shade','sheet'].forEach(i=>{ const e=$(i); if(e) e.remove(); }); }
+
+/* ---------- what's in my program (home-v1) ---------- */
 const MODS={
-  tehillim:{name:'תהילים יומי', href:'tehillim.html'},
-  // when the booklet is chosen as the source, the card opens the study screen that can show the booklet
-  chumash:{name:'חומש עם רש״י', get href(){ return srcGet().chu==='booklet'?'session.html?u=chu:'+new Date().getDay()+'&min=30&free=1':'study.html?m=chumash'; }},
-  tanya:{name:'תניא יומי', get href(){ return srcGet().tan==='booklet'?'session.html?u=tan:'+new Date().getDay()+'&min=30&free=1':'study.html?m=tanya'; }},
-  rambam:{name:'רמב״ם יומי', get href(){ return 'session.html?u=dm:'+rmbSubj()+':'+new Date().getDay()+'&min=60&free=1'; }},
-  dvar:{name:'דבר מלכות', href:'dvar.html'},
-  chas:{name:'חסידות על הפרשה', get href(){ const cd=chasDay(); return 'session.html?u=chas'+(H.chasMode!=='free'&&!cd.done?'~e'+cd.target.toFixed(4):'')+'&min=30&free=1'; }},
-  korbanot:{name:'קרבנות למנחה', href:'study.html?m=korbanot'},
-  shnayim:{name:'שניים מקרא ואחד תרגום', href:'session.html?u=shm:0,shm:1,shm:2,shm:3,shm:4,shm:5,shm:6,shm:7&min=70'},
-  hoshana:{name:'סדר ליל הושענא רבה', href:'hoshana.html', opt:1}
+  tehillim:{name:'תהילים יומי'}, chumash:{name:'חומש עם רש״י'}, tanya:{name:'תניא יומי'}, rambam:{name:'רמב״ם יומי'},
+  dvar:{name:'דבר מלכות'}, chas:{name:'חסידות על הפרשה'}, korbanot:{name:'קרבנות למנחה'}, shnayim:{name:'שניים מקרא ואחד תרגום'},
+  hoshana:{name:'סדר ליל הושענא רבה', opt:1}
 };
 let H=Object.assign({order:['tehillim','chumash','tanya','dvar','korbanot','hoshana'], on:{tehillim:1,chumash:1,tanya:1,dvar:1,korbanot:1,hoshana:0}, diaspora:0, dm:['rambam3']},lsGet('home-v1',{}));
-// order of Chitas: Tehillim, Chumash, Tanya (once, for screens saved with the old default)
 if(!H.ordV){ const i=H.order.indexOf('tehillim'), j=H.order.indexOf('chumash'); if(i>j&&j>=0){ H.order.splice(i,1); H.order.splice(j,0,'tehillim'); } H.ordV=2; lsSet('home-v1',H); }
 if(H.on.dvar==null) H.on.dvar=1; if(H.on.korbanot==null) H.on.korbanot=1; if(H.on.shnayim==null) H.on.shnayim=1; if(!H.dm) H.dm=['rambam3'];
 if(H.on.rambam==null) H.on.rambam=1; if(H.on.chas==null) H.on.chas=1; if(!H.chasMode) H.chasMode='daily';
 if(!H.order.includes('chas')){ const i=H.order.indexOf('rambam'); H.order.splice(i<0?H.order.length:i+1,0,'chas'); }
 if(!H.order.includes('rambam')){ const i=H.order.indexOf('tanya'); H.order.splice(i<0?H.order.length:i+1,0,'rambam'); }
-const rmbSubj=()=>(H.dm||[]).find(s=>RMB_TITLE[s])||'rambam3';
 if(!H.order.includes('shnayim')){ const i=H.order.indexOf('korbanot'); H.order.splice(i<0?H.order.length:i,0,'shnayim'); }
 if(!H.order.includes('korbanot')){ const i=H.order.indexOf('hoshana'); H.order.splice(i<0?H.order.length:i,0,'korbanot'); }
 Object.keys(MODS).forEach(k=>{ if(!H.order.includes(k)) H.order.push(k); });
 function save(){ lsSet('home-v1',H); }
+const rmbSubj=()=>(H.dm||[]).find(s=>RMB_TITLE[s])||'rambam3';
 const T=tehToday(), today=new Date(); today.setHours(12,0,0,0);
 const hs=T.heb;
 function season(){ if(hs.men!=='Tishri') return 0; if(hs.day===20) return 1; if(hs.day===21 && (T.night||new Date().getHours()<10)) return 2; return 0; }
-let tanyaLabel='כ״ף ';
-// card progress: the furthest of what this screen saved and what was learned anywhere this week (plans, sessions, printed booklet)
-function best(pct,pi,id){ const f=wkFrac(id); if(!(f>(pct||0)+0.005)) return {pct,pi}; const t=pi&&pi.t; return {pct:f, pi:t?Object.assign({},pi,{pct:f,n:f>=1?t:Math.round(f*t)}):null}; }
-function info(k){ const r=info0(k); if(!r) return r;
-  const id=k==='tehillim'?'teh:'+T.day:k==='chumash'?'chu:'+today.getDay():k==='tanya'?'tan:'+today.getDay():null; if(id&&r.pct!=null){ const b=best(r.pct,r.pi,id); r.pct=b.pct; r.pi=b.pi; } return r; }
-function info0(k){
-  if(k==='tehillim'){ const pct=getProgress('tehillim',T.key); return {what:'יום '+gq(T.day)+' לחודש · מזמורים '+T.range, pct, pi:getProgressInfo('tehillim',T.key)}; }
-  if(k==='chumash'){ const c=chumashFor(today,!!H.diaspora); return {what:c?'פרשת '+c.he+' · '+c.aliyahName:'—', pct:getProgress('chumash',isoDate(today)), pi:getProgressInfo('chumash',isoDate(today))}; }
-  if(k==='chas'){ const P=chasParsha(), cd=chasDay(); if(!P) return {what:'—',pct:null}; const wkp=Math.round(cd.f*100);
-    if(H.chasMode==='free') return {what:P.bookHe+' · פרשת '+P.he+' · לימוד חופשי לאורך השבוע', pct:cd.f, pi:null};
-    const rel=cd.target>cd.base?Math.min(1,(cd.f-cd.base)/(cd.target-cd.base)):1; return {what:P.bookHe+' · פרשת '+P.he+' · חלק היום (נשארו '+(7-today.getDay())+' ימים) · השבוע '+wkp+'%', pct:rel, pi:null}; }
-  if(k==='rambam'){ const id='dm:'+rmbSubj()+':'+today.getDay(), f=wkFrac(id), c=(lsGet('chap-v1',{})[id]); const ok=c&&c.d===isoDate(new Date()); return {what:(rmbSubj()==='rambam1'?'פרק אחד':'ג׳ פרקים')+' · '+rambamText, pct:f, pi:ok?{n:f>=1?c.t:c.n,t:c.t,u:'פרקים'}:null}; }
-  if(k==='tanya'){ return {what:tanyaText, pct:getProgress('tanya',isoDate(today)), pi:getProgressInfo('tanya',isoDate(today))}; }
-  if(k==='dvar'){ if(!DMI) return {what:DMSTATE||'טען את חוברת השבוע', pct:null}; const n=Object.keys(DMI.subjects).length; return {what:'יום '+['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת קודש'][DMI.day]+' · '+n+' שיעורים בחוברת', pct:null}; }
-  if(k==='shnayim'){ const R=shnayimRefs(0,today); let n=0; for(let i=0;i<8;i++) if(wkFrac('shm:'+i)>=1) n++; return {what:(R?'פרשת '+R.he+' · ':'')+'מליל שישי ועד שבת · כולל הפטרה', pct:n/8, pi:{n,t:8,u:'חלקים'}}; }
-  if(k==='korbanot'){ return {what:'פרשת התמיד, הקטורת ופיטום הקטורת – לפני אשרי', pct:getProgress('korbanot',isoDate(today)), pi:getProgressInfo('korbanot',isoDate(today))}; }
-  if(k==='hoshana'){ return {what:'חומש דברים, תהילים וזהר – עם ספירה לחצות', pct:null}; }
-}
-let tanyaText=hebOf(today).label, rambamText='…';
-rambamRef(rmbSubj(),today).then(R=>{ rambamText=R.he; render(); }).catch(()=>{ rambamText='מספריא'; });
-let DMI=null, DMSTATE='';
-function render(){
-  $('hdate').textContent=(T.night?'ליל ':'')+hs.label+' '+gq(hs.year%1000);
-  $('gdate').textContent='יום '+WEEKDAYS[today.getDay()]+' · '+today.toLocaleDateString('he-IL',{day:'numeric',month:'long'});
-  const c=chumashFor(today,!!H.diaspora); $('parsha').textContent=c?'פרשת השבוע: '+c.he:'';
-  const box=$('cards'); box.innerHTML=''; let n=0, sum=0, cnt=0;
-  const s=season();
-  const list=H.order.filter(k=>(H.on[k]&&(k!=='shnayim'||shnayimTime())) || (k==='hoshana'&&s));
-  if(s && list.includes('hoshana')){ list.splice(list.indexOf('hoshana'),1); list.unshift('hoshana'); }
-  list.forEach(k=>{ const m=MODS[k], i=info(k); const a=document.createElement('a'); a.href=m.href;
-    const isSeason=k==='hoshana'&&s; a.className='card'+(isSeason?' season':'')+(i.pct>=1?' done':'');
-    const title=isSeason?(s===1&&!T.night?'הערב: ליל הושענא רבה':'הלילה: ליל הושענא רבה'):m.name;
-    a.innerHTML=(k==='hoshana'?'':'<div class="num">'+(i.pct>=1?'✓':gem(++n))+'</div>')+'<div class="body"><h2></h2><div class="what"></div>'+
-      (i.pct==null?'':'<div class="prog"><div class="track"><i style="width:'+Math.round(i.pct*100)+'%"></i></div><span>'+(i.pct>=1?'הושלם ✓'+(i.pi&&i.pi.t?' · '+i.pi.t+' '+i.pi.u:''):i.pct>0?progTxt(i.pct,i.pi?i.pi.n:0,i.pi&&i.pi.t,i.pi&&i.pi.u):'טרם התחלת'+(i.pi&&i.pi.t?' · 0/'+i.pi.t+' '+i.pi.u:''))+'</span></div>')+
-      '</div><div class="go">‹</div>';
-    a.querySelector('h2').textContent=title; a.querySelector('.what').textContent=i.what; box.appendChild(a);
-    // started (or marked) by mistake? start over
-    const rid=k==='tehillim'?'teh:'+T.day:k==='chumash'?'chu:'+today.getDay():k==='tanya'?'tan:'+today.getDay():k==='rambam'?'dm:'+rmbSubj()+':'+today.getDay():k==='korbanot'?'korb':null;
-    if(rid&&i.pct>0){ const b=document.createElement('button'); b.type='button'; b.className='cardRst'; b.textContent='↺ איפוס'; b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); if(confirm('לאפס את ההתקדמות של היום ב'+m.name+'?')){ resetLesson(rid); render(); try{ renderFlow(); }catch(_){} } }; a.querySelector('.prog').appendChild(b); }
-    if(i.pct!=null){ sum+=Math.min(1,i.pct); cnt++; } });
-  if(!list.length){ box.innerHTML='<p style="text-align:center;color:var(--textmuted)">לא נבחרו שיעורים. לחץ על "התאמת מסך הבית".</p>'; }
-  const done=list.filter(k=>{ const i=info(k); return i.pct!=null&&i.pct>=1; }).length;
-  $('sumBar').style.width=(cnt?sum/cnt*100:0)+'%'; $('sumTxt').textContent=cnt?(done===cnt?'כל השיעורים הושלמו ✓':done+' מתוך '+cnt+' הושלמו'):'';
-  renderPanel(); }
-function renderPanel(){ const box=$('mods'); box.innerHTML='';
-  H.order.forEach((k,i)=>{ const m=MODS[k]; const d=document.createElement('div'); d.className='mod';
-    d.innerHTML='<input type="checkbox"'+(H.on[k]?' checked':'')+'><span>'+m.name+(m.opt?'<small>מופיע תמיד בערב הושענא רבה</small>':k==='shnayim'?'<small>מופיע מליל שישי ועד שבת</small>':'')+'</span><div class="ord"><button'+(i===0?' disabled':'')+' aria-label="למעלה">▲</button><button'+(i===H.order.length-1?' disabled':'')+' aria-label="למטה">▼</button></div>';
-    d.querySelector('input').onchange=e=>{ H.on[k]=e.target.checked?1:0; save(); render(); };
-    const [u,dn]=d.querySelectorAll('.ord button'); u.onclick=()=>mv(i,-1); dn.onclick=()=>mv(i,1); box.appendChild(d); });
-  renderDmPanel();
-  $('themeSeg').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===(MAIN.theme||'auto')); b.onclick=()=>{ MAIN.theme=b.dataset.v; const A=lsGet('hoshana-raba-v2',{}); A.theme=MAIN.theme; lsSet('hoshana-raba-v2',A);
-    if(MAIN.theme==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',MAIN.theme); renderPanel(); }; });
-  document.querySelectorAll('[data-src]').forEach(g=>{ const k=g.dataset.src, cur=srcGet()[k]; g.querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===cur); b.onclick=()=>{ srcSet(k,b.dataset.v); render(); }; }); });
-  $('chasMode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===(H.chasMode||'daily')); b.onclick=()=>{ H.chasMode=b.dataset.v; save(); render(); try{ renderFlow(); }catch(e){} }; });
-  $('dia').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',+b.dataset.v===(H.diaspora?1:0)); b.onclick=()=>{ H.diaspora=+b.dataset.v; save(); render(); }; }); }
 const DMS=[['chumash','חומש'],['tanya','תניא'],['hayomyom','היום יום'],['rambam3','רמב״ם – ג׳ פרקים'],['rambam1','רמב״ם – פרק אחד'],['sm','ספר המצוות'],['halacha','הלכה יומית ברמב״ם'],['mishna','משנה'],['gemara','גמרא יומית'],['rav','שו״ע הרב – רב יומי']];
-function renderDmPanel(){ const box=$('dmMods'); box.innerHTML='';
-  DMS.forEach(([id,n])=>{ const d=document.createElement('label'); d.className='mod'; d.innerHTML='<input type="checkbox"'+(H.dm.includes(id)?' checked':'')+'><span>'+n+'</span>';
-    d.querySelector('input').onchange=e=>{ H.dm=H.dm.filter(x=>x!==id); if(e.target.checked) H.dm.push(id); save(); renderFlow(); }; box.appendChild(d); }); }
-function mv(i,d){ const j=i+d; if(j<0||j>=H.order.length) return; [H.order[i],H.order[j]]=[H.order[j],H.order[i]]; save(); render(); }
-$('editBtn').onclick=()=>{ const p=$('panel'); p.hidden=!p.hidden; $('editBtn').textContent=p.hidden?'✎ התאמת מסך הבית':'סיום התאמה'; if(!p.hidden) p.scrollIntoView({behavior:'smooth',block:'start'}); };
-/* ---------- study planner ---------- */
-let P=Object.assign({min:30,day:'',skip:[],pin:[],mode:'screen'},lsGet('plan-v1',{}));
+let tanyaText=hebOf(today).label, rambamText='…';
+rambamRef(rmbSubj(),today).then(R=>{ rambamText=R.he; renderView(); }).catch(()=>{ rambamText='מספריא'; });
+let DMI=null, DMSTATE='';
+
+/* ---------- the plan (plan-v1) ---------- */
+let P=Object.assign({min:30,day:'',mode:'screen'},lsGet('plan-v1',{}));
 if(!P.korbPos) P.korbPos='start';
-// "continue learning" from a finished plan: index.html?go=1&min=..&until=..
+// "continue learning" after a finished session: index.html?go=1&min=..&until=..
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
-// these values are for this one plan only – the saved settings stay as they were
-let GOTMP=GO?{min:P.min,until:P.until||null,korb:P.korb,free:!!P.free,open:!!P.open}:null;
-if(GO){ P.free=false; P.open=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); P.korb=false; P.korbDay=isoDate(new Date()); history.replaceState(null,'','./'); }
+let GOTMP=GO?{min:P.min,until:P.until||null,free:!!P.free,open:!!P.open,pendU:!!P.pendU}:null;
+if(GO){ P.free=false; P.open=false; P.pendU=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
 function availMin(){ if(P.free||P.open) return Infinity; if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
-if(P.day!==isoDate(today)){ P.day=isoDate(today); P.skip=[]; P.pin=[]; P.manual=false; P.ord=[]; P.force=[]; }
-if(!P.ord) P.ord=[]; if(!P.force) P.force=[];
+if(P.day!==isoDate(today)){ P.day=isoDate(today); P.sel=null; P.selDay=null; }
 const savePlan=()=>lsSet('plan-v1',GOTMP?Object.assign({},P,GOTMP):P);
 let DMX=null;   // {DM, index, day} = this week's booklet; DMX.byWk[<sunday>] = every archived booklet's index
 const WD=today.getDay(), CURWK=wkId();
@@ -411,7 +296,7 @@ function weekUnits(wk,cur){ const out=[], sfx=cur?'':'@'+wk, ix=cur?(DMX&&DMX.da
     else if(wk>=chasSince()&&wkFrac('chas@'+wk)<1) out.push({id:'chas@'+wk,g:1,wk,cur,name:P.bookHe+' – פרשת '+P.he+' (השלמה)',w:W,est:!wcGet('chas:'+wk)}); }
   if(cur){ try{ for(const k of ['shacharit','mincha','maariv','shema']){ const id='tfl:'+k+':'+tflDate(k).getDay(); out.push({id,g:5,tp:TFLNAME[k],wk,cur,dt:today,name:TFLNAME[k]+' – כולה',w:wcGet('tfl:'+k)||(k==='shacharit'?4500:k==='mincha'?1500:k==='maariv'?1200:900),est:!wcGet('tfl:'+k)}); }
       tpToday().forEach(p=>{ const k=tpKind(p[0]); out.push({id:'tp:'+p[0]+':'+tflDate(k).getDay(),g:5,tp:TFLNAME[k],piece:1,wk,cur,dt:today,name:p[1],w:wcGet('tp:'+p[0])||300,est:!wcGet('tp:'+p[0])}); }); }catch(e){} }
-  out.forEach(u=>{ u.f=u.chasEnd?0:u.g===5?tpFrac(u.id):wkFrac(u.id); if(u.piece&&u.f>=1){ u.said=1; u.f=0; } u.rem=Math.max(1,u.w*(1-u.f));
+  out.forEach(u=>{ u.f=u.chasEnd?0:u.g===5?tpFrac(u.id):unitFrac(u.id); if(u.piece&&u.f>=1){ u.said=1; u.f=0; } u.rem=Math.max(1,u.w*(1-u.f));
     // printed booklet: estimate by measured time per line / verse / halacha
     if(PR()&&ok){ const sl=slOf(u.id); if(sl&&sl.length){ const U=DMX.DM.unitPoints(ix,sl); const n=U.pts.filter(p=>p.f>=u.f-0.0005).length;
       u.rem=Math.max(1,estMinPrint(U.W*(1-u.f),U.kind,n)*pace()); u.est=false; } } });
@@ -431,198 +316,348 @@ function cleanArchive(all){ if(!DMX||!DMX.byWk) return; Object.keys(DMX.byWk).fo
 // Mincha time: from midday (chatzot) until a little after sunset – only then is Korbanos offered
 function minchaTime(){ try{ const n=new Date(); return n.getTime()>=noonMs(n) && n.getTime()<sunsetMs(n)+20*6e4; }catch(e){ return false; } }
 const korbSaid=()=>getProgress('korbanot',isoDate(today))>=1||(()=>{ try{ return tpFrac('tp:m_korb:'+today.getDay())>=1||tflKindDone('mincha').f>=1; }catch(e){ return false; } })();
-function korbOn(){ if(!minchaTime()||korbSaid()) return false; if(P.korb!=null&&P.korbDay===isoDate(today)) return !!P.korb; return getProgress('korbanot',isoDate(today))<1; }
-function plan(){ const all=catalog(), open=all.filter(u=>u.f<1);
-  // manual: after "cancel all" – only what you ticked yourself
-  const priAll=open.filter(u=>u.g<=1&&!P.pin.includes(u.id)), pri=P.manual?[]:priAll.filter(u=>!P.skip.includes(u.id));
-  const pins=P.pin.map(id=>open.find(u=>u.id===id)).filter(Boolean);
-  const rest=open.filter(u=>(u.g===2||u.g===3)&&!P.skip.includes(u.id)&&!P.pin.includes(u.id));
-  const wpm=pace(); let budget=availMin()*wpm, acc=0; const sel=[];
-  let KB=null; if(korbOn()&&!P.manual){ const kw=KORB_WORDS()*(PR()?pace()/printWpm():1); KB={u:{id:'korb',name:'קרבנות למנחה',g:-1,f:0,w:kw,rem:kw,korb:1},w:kw}; budget-=kw; }
-  // 1) Chitas, Rambam and added items: everything that fits whole, in order (a short Tehillim is not pushed out by a long Rambam)
-  //    first today's, then what was missed this week (+ added items); a day's group is finished before moving on
-  const first=pri.concat(pins); let skipped=null;
-  const keys=[...new Set(pri.filter(u=>u.g!==0).map(u=>u.wk+'|'+u.d))].sort(); const dayGroups=keys.map(k=>pri.filter(u=>u.g!==0&&u.wk+'|'+u.d===k));
-  for(const grp of [...dayGroups, pri.filter(u=>u.g===0), pins]){   // make-up day by day (oldest first), then today, then added items
-    // if the whole day doesn't fit, take the most complete lessons (shorter first), then part of the first one left out
-    const tot=grp.reduce((a,u)=>a+u.rem,0), byLen=acc+tot<=budget*1.05?grp:grp.slice().sort((x,y)=>x.rem-y.rem);
-    for(const u of byLen){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; } }
-    const out=grp.filter(u=>!sel.some(x=>x.u===u)); if(out.length){ skipped=out[0]; break; } }
-  const left=()=>budget-acc;
-  // 2) the time left goes to the first one that did not fit (part of it); only if all fit, to the rest of the booklet
-  if(skipped){ if(left()>=3*wpm){ sel.push({u:skipped,w:left(),partial:true}); acc=budget; } }
-  else if((!P.free||P.open)&&!P.manual) for(const u of rest){ if(acc+u.rem<=budget*1.05){ sel.push({u,w:u.rem}); acc+=u.rem; }
-    else { if(left()>=3*wpm) sel.push({u,w:left(),partial:true}); break; } }
-  // added with "+ בכל זאת": in the plan even if the time is short (the session drops / keeps by your pace)
-  P.force.forEach(id=>{ const u=open.find(x=>x.id===id); if(!u) return; const s=sel.find(x=>x.u===u); if(s){ s.w=u.rem; s.partial=false; } else sel.push({u,w:u.rem}); });
-  const ord=first.concat(rest); sel.sort((x,y)=>ord.indexOf(x.u)-ord.indexOf(y.u));
-  // your own order (arrows): those you moved by your order, the rest after them in the usual order
-  if(P.ord.length){ const key=(s,i)=>{ const j=P.ord.indexOf(s.u.id); return j>=0?j:1000+i; }; const k=sel.map((s,i)=>[s,key(s,i)]).sort((a,b)=>a[1]-b[1]).map(a=>a[0]); sel.length=0; sel.push(...k); }
-  if(KB){ if(P.korbPos==='start') sel.unshift(KB); else sel.push(KB); }
-  // in "I'll choose" the prayer pieces can be picked too (and mixed with study)
-  const off=P.manual?priAll.concat(H.prayPick===0?[]:open.filter(u=>u.g===5&&!P.pin.includes(u.id))):priAll.filter(u=>P.skip.includes(u.id));
-  return {sel,all,open,KB,off}; }
-const label=u=>u.name+(u.shm?' <em>· פרשת '+((shnayimRefs(0,today)||{}).he||'')+'</em>':u.mincha?' <em>· אחרי הקרבנות</em>':u.korb?(P.korbPos==='start'?' <em>· קודם, ואז לימוד</em>':' <em>· בסוף, לפני אשרי</em>'):u.d!=null?' <em>· '+(u.cur?dayTag(u.d):'יום '+WEEKDAYS[u.d]+' '+hebOf(u.dt).label)+'</em>':!u.cur&&u.sec?' <em>· מחוברת '+hebOf(weekStart(u.wk)).label+'</em>':u.sec?' <em>· מהחוברת</em>':'');
-function row(box,html,small,btn,onBtn,check,onCheck,cls){ const d=document.createElement('label'); d.className='fp'+(cls?' '+cls:'');
-  d.innerHTML=(check!=null?'<input type="checkbox"'+(check?' checked':'')+'>':'')+'<span>'+html+'</span><small>'+small+'</small>'+(btn?'<button class="mk" type="button">'+btn+'</button>':'');
-  if(check!=null) d.querySelector('input').onchange=onCheck; if(btn) d.querySelector('button').onclick=e=>{ e.preventDefault(); onBtn(); }; box.appendChild(d); }
-// lessons that didn't fit – the session offers them if you turn out faster
-function moreIds(sel,off){ if(P.manual) return ''; const inSel=new Set(sel.map(s=>s.u.id)), offS=new Set(off.map(u=>u.id)); const all=catalog().filter(u=>u.f<1&&!inSel.has(u.id)&&!offS.has(u.id)&&u.g<=3);
-  all.sort((a,b)=>(a.g<=1?0:a.g)-(b.g<=1?0:b.g)); const L=all.slice(0,6).map(u=>u.id); return L.length?'&more='+L.join(','):''; }
-// the planner opens as its own window: (time →) what to learn → start
-let PSTEP=null;
-function openPlanner(step,noPush){ PSTEP=step; $('planner').hidden=false; $('stTime').hidden=step!=='time'; $('stPlan').hidden=step!=='plan'; document.body.style.overflow='hidden'; $('planner').scrollTop=0; if(!noPush) history.pushState({pl:step},''); }
-function closePlanner(){ PSTEP=null; $('planner').hidden=true; document.body.style.overflow=''; }
-$('plBack').onclick=()=>history.back();
-$('toPlan').onclick=()=>openPlanner('plan');
-addEventListener('popstate',e=>{ const st=e.state&&e.state.pl; if(st) openPlanner(st,true); else closePlanner(); });
-// the four ways to study: free (no time), until a clock time, for a length of time, as long as it takes
-const modeOf=()=>P.open?'open':P.free?'free':(P.until||P.pendU)?'until':'dur';
-function renderModes(){ const m=modeOf(); $('modes').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.m===m);
-    b.onclick=()=>{ GOTMP=null; const v=b.dataset.m; P.open=v==='open'; P.free=v==='free'; if(v!=='until'){ P.until=null; P.pendU=false; } else { P.pendU=true; } savePlan(); renderFlow();
-      openPlanner(v==='until'||v==='dur'?'time':'plan');
-      if(v==='until'){ const ti=$('modeCtl').querySelector('input[type=time]'); if(ti){ try{ ti.showPicker(); }catch(e){ ti.focus(); } } } }; });
-  // the planner window: its title, the way to choose, the settings line
-  const MT={open:['📖 לימוד חופשי','מקטע לקטע, כמה שיוצא'],until:['🕐 עד שעה מסוימת',P.until?'עד '+P.until+' · יש לך '+fmtMin(availMin()):'בחר שעה'],dur:['⏳ משך זמן',(P.min<60?P.min+' דק׳':fmtMin(P.min))],free:['🏁 כמה שיקח','כל חת״ת ורמב״ם, ושעת סיום']};
-  $('plTitle').textContent=MT[m][0]; $('plSub').textContent=MT[m][1]+(m==='until'||m==='dur'?' · לשינוי – חזרה':'');
-  $('stTimeQ').textContent=m==='until'?'עד איזו שעה?':'כמה זמן יש לך?';
-  $('pickWay').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',(b.dataset.v==='mine')===!!P.manual);
-    b.onclick=()=>{ if(b.dataset.v==='mine'){ if(!P.manual){ P.manual=true; P.pin=[]; P.skip=[]; P.ord=[]; P.force=[]; } } else { P.manual=false; P.pin=[]; P.skip=[]; P.ord=[]; P.force=[]; } savePlan(); renderFlow(); }; });
-  $('prayPick').checked=H.prayPick!==0; $('prayPick').onchange=e=>{ H.prayPick=e.target.checked?1:0; save(); renderFlow(); };
-  $('setSum').textContent='הגדרות · לומד מתוך '+(PR()?'החוברת המודפסת':'המסך');
-  $('mUntil').textContent=P.until?'עד '+P.until:'למשל עד 20:30'; $('mDur').textContent=m==='dur'?(P.min<60?P.min+' דק׳':P.min===60?'שעה':fmtMin(P.min)):'10 דק׳, חצי שעה…';
-  const c=$('modeCtl'); c.innerHTML='';
-  if(m==='dur'){ [10,15,20,30,45,60,90].forEach(x=>{ const b=document.createElement('button'); b.textContent=x<60?x+' דק׳':x===60?'שעה':'שעה וחצי'; b.className=P.min===x?'on':''; b.onclick=()=>{ GOTMP=null; P.min=x; savePlan(); renderFlow(); }; c.appendChild(b); });
-    const i=document.createElement('input'); i.type='number'; i.min=1; i.max=300; i.inputMode='numeric'; i.placeholder='אחר (דק׳)'; if(![10,15,20,30,45,60,90].includes(P.min)) i.value=P.min; i.onchange=()=>{ const v=+i.value; if(v>0){ GOTMP=null; P.min=v; savePlan(); renderFlow(); } }; c.appendChild(i); }
-  if(m==='until'){ const l=document.createElement('span'); l.textContent='עד השעה:'; c.appendChild(l); const ti=document.createElement('input'); ti.type='time'; ti.value=P.until||'';
-    const set=()=>{ if(ti.value&&ti.value!==P.until){ GOTMP=null; P.until=ti.value; P.pendU=false; savePlan(); renderFlow(); } }; ti.onchange=set; ti.oninput=set; ti.onblur=set; c.appendChild(ti);
-    if(P.until){ const d=document.createElement('div'); d.className='lbl'; d.textContent='יש לך '+fmtMin(availMin()); c.appendChild(d); } else { const d=document.createElement('div'); d.className='lbl'; d.textContent='בחר שעה – עד שתבחר, התוכנית לפי '+fmtMin(P.min); c.appendChild(d); } }
-  if(m==='open'){ const d=document.createElement('div'); d.className='lbl'; d.textContent='בלי זמן – מתחילים, ועוברים מקטע לקטע כמה שתספיק. השעון רק מודד כמה הספקת.'; c.appendChild(d); }
-  if(m==='free'){ const d=document.createElement('div'); d.className='lbl'; d.textContent='כל מה שנשאר מחת״ת ורמב״ם – ואני אגיד לך באיזו שעה תסיים.'; c.appendChild(d); } }
-// make-up by subject: everything missed in one subject – this week only, or since tracking began
 const MKN={chu:'חומש',tan:'תניא',teh:'תהילים',chas:'חסידות על הפרשה'};
 const mkKey=u=>{ const a=splitWk(u.id)[0].split(':'); return a[0]==='dm'?a[1]:a[0]; };
-function renderMakeup(all){ const box=$('mkList'); if(!box) return; box.innerHTML=''; const G=new Map();
-  all.filter(u=>u.f<1&&u.g<=2&&!/^dm:hayomyom/.test(u.id)).forEach(u=>{ const k=mkKey(u); if(!MKN[k]&&!DMNAME[k]) return; if(!G.has(k)) G.set(k,[]); G.get(k).push(u); });
-  const ord=u=>(u.wk||'')+String(u.d!=null?u.d:9);
-  G.forEach((L,k)=>{ L.sort((a,b)=>ord(a)<ord(b)?-1:1); const wkL=L.filter(u=>u.cur), past=L.length>wkL.length;
-    const pick=(ids,tag)=>{ P.manual=true; P.pin=ids.slice(); P.ord=ids.slice(); P.skip=[]; P.force=[]; P.mk=tag; savePlan(); renderFlow(); };
-    const days=n=>n===1?'יום אחד':n+' ימים', tm=X=>fmtMin(mm(X.reduce((a,u)=>a+u.rem,0)));
-    const r=document.createElement('div'); r.className='mkR'; const nm=MKN[k]||DMNAME[k];
-    r.innerHTML='<span>'+nm+'<small>'+(past?'סה״כ חסר '+days(L.length)+' · כ־'+tm(L):'השבוע: '+days(wkL.length)+' · כ־'+tm(wkL))+'</small></span>';
-    if(wkL.length){ const b=document.createElement('button'); b.type='button'; b.textContent='השבוע'+(past?' ('+wkL.length+')':''); if(P.manual&&P.pin.length&&P.mk===k+':w') b.className='on'; b.onclick=()=>pick(wkL.map(u=>u.id),k+':w'); r.appendChild(b); }
-    if(past){ const b=document.createElement('button'); b.type='button'; b.textContent='הכל ('+L.length+')'; if(P.manual&&P.pin.length&&P.mk===k+':a') b.className='on'; b.onclick=()=>pick(L.map(u=>u.id),k+':a'); r.appendChild(b); }
-    box.appendChild(r); });
-  if(!G.size) box.innerHTML='<div class="mkR"><span class="ok">✓ אין מה להשלים – הכל נלמד</span></div>'; }
-function renderFlow(){ renderModes();
-  $('korbOn').checked=korbOn(); $('korbOn').onchange=e=>{ P.korb=e.target.checked; P.korbDay=isoDate(today); savePlan(); renderFlow(); };
-  $('korbOn').closest('label').style.display=minchaTime()&&!korbSaid()?'':'none'; $('korbPosRow').style.display=korbOn()?'':'none';
-  $('korbPos').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.korbPos); b.onclick=()=>{ P.korbPos=b.dataset.v; savePlan(); renderFlow(); }; });
-  $('korbHint').textContent=getProgress('korbanot',isoDate(today))>=1?'כבר נאמרו היום ✓':'כ־'+fmtMin(mm(KORB_WORDS()*(PR()?pace()/printWpm():1)))+' לקרבנות, והשאר ללימוד – עד התפילה';
-  $('mode').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.v===P.mode); b.onclick=()=>{ P.mode=b.dataset.v; savePlan(); renderFlow(); }; });
-  $('startFlow').textContent=PR()?'התחל – עם מדידת זמן ⏱':'התחל ▶';
-  const tb=$('times'); tb.innerHTML='<b>יש לי:</b>'; const TM=[10,15,20,30,45,60];
-  const ob=document.createElement('button'); ob.textContent='בלי זמן'; ob.className=P.open?'on':''; ob.onclick=()=>{ GOTMP=null; P.open=true; P.free=false; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(ob);
-  const fb=document.createElement('button'); fb.textContent='כמה שיקח'; fb.className=P.free&&!P.open?'on':''; fb.onclick=()=>{ GOTMP=null; P.free=true; P.open=false; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(fb);
-  TM.forEach(m=>{ const b=document.createElement('button'); b.textContent=m<60?m+' דק׳':'שעה'; b.className=!P.free&&!P.open&&!P.until&&P.min===m?'on':''; b.onclick=()=>{ GOTMP=null; P.free=false; P.open=false; P.min=m; P.until=null; savePlan(); renderFlow(); }; tb.appendChild(b); });
-  const inp=document.createElement('input'); inp.type='number'; inp.min=1; inp.max=300; inp.placeholder='אחר'; inp.inputMode='numeric'; if(!P.free&&!P.until&&!TM.includes(P.min)) inp.value=P.min;
-  inp.onchange=()=>{ const v=+inp.value; if(v>0){ GOTMP=null; P.free=false; P.open=false; P.min=v; P.until=null; savePlan(); renderFlow(); } }; tb.appendChild(inp);
-  const ub=document.createElement('button'); ub.textContent=P.until?'עד '+P.until:'עד שעה…'; ub.className=!P.free&&P.until?'on':''; tb.appendChild(ub);
-  const ti=document.createElement('input'); ti.type='time'; ti.hidden=true; ti.value=P.until||''; tb.appendChild(ti);
-  ub.onclick=()=>{ ti.hidden=false; try{ ti.showPicker(); }catch(e){ ti.focus(); } };
-  const setUntil=()=>{ if(ti.value&&(ti.value!==P.until||P.free)){ GOTMP=null; P.free=false; P.open=false; P.until=ti.value; savePlan(); renderFlow(); } }; ti.onchange=setUntil; ti.oninput=setUntil; ti.onblur=setUntil;
-  if(P.open){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי זמן – מתחילים, ועוברים מקטע לקטע כמה שתספיק. בסוף רואים כמה הספקת'; tb.appendChild(l); }
-  else if(P.free){ const l=document.createElement('div'); l.className='untilLbl'; l.textContent='בלי הגבלת זמן – כל מה שנשאר מחת״ת ורמב״ם, ואני אגיד לך מתי תסיים'; tb.appendChild(l); }
-  else if(P.until){ const l=document.createElement('div'); l.className='untilLbl'; const a=availMin(); l.textContent='עד '+P.until+' – יש לך '+fmtMin(a); tb.appendChild(l); }
-  const {sel,all,open,KB,off}=plan(); const box=$('plan'); box.innerHTML=''; renderMakeup(all);
-  const studySel=sel.filter(s=>!s.u.korb&&!s.u.mincha);
-  { const bar=document.createElement('div'); bar.className='planBar';
-    if(studySel.length) bar.insertAdjacentHTML('beforeend','<button id="cancelAll">✕ בטל הכל</button>');
-    if(P.manual||P.skip.length||P.ord.length||P.pin.length||P.force.length) bar.insertAdjacentHTML('beforeend','<button id="autoPlan">↺ חזרה לתוכנית הרגילה</button>');
-    if(bar.children.length) box.appendChild(bar);
-    if($('cancelAll')) $('cancelAll').onclick=()=>{ P.manual=true; P.pin=[]; P.skip=[]; P.ord=[]; if(KB){ P.korb=false; P.korbDay=isoDate(today); } savePlan(); renderFlow(); };
-    if($('autoPlan')) $('autoPlan').onclick=()=>{ P.manual=false; P.pin=[]; P.skip=[]; P.ord=[]; P.force=[]; savePlan(); renderFlow(); }; }
-  const move=(id,d)=>{ const ids=studySel.map(s=>s.u.id), i=ids.indexOf(id), j=i+d; if(i<0||j<0||j>=ids.length) return; [ids[i],ids[j]]=[ids[j],ids[i]]; P.ord=ids; savePlan(); renderFlow(); };
-  const SHOWN=P.open?12:1e9;
-  sel.forEach((s,si)=>{ const u=s.u; if(si>=SHOWN){ if(si===SHOWN){ const d=document.createElement('div'); d.className='hint'; d.style.margin='6px 0'; d.textContent='ועוד '+(sel.length-SHOWN)+' קטעים בתור – יגיעו בהמשך הלימוד'; box.appendChild(d); } return; }
-    row(box,label(u), s.partial?'חלק: כ־'+fmtMin(mm(s.w))+' מתוך '+fmtMin(mm(u.rem)):(u.est?'כ־':'')+fmtMin(mm(s.w))+(u.f>0?' · המשך ('+Math.round(u.f*100)+'% נלמד)':''),
-      u.mincha?'':u.korb?'✓ אמרתי':'✓ למדתי',()=>{ if(u.korb){ setProgress('korbanot',isoDate(today),1); P.korb=null; } else wkSet(u.id,u.chasEnd?u.chasEnd(1):1,true); savePlan(); renderFlow(); render(); }, true, ()=>{ if(u.korb||u.mincha){ P.korb=false; P.korbDay=isoDate(today); savePlan(); renderFlow(); return; } if(P.force.includes(u.id)) P.force=P.force.filter(x=>x!==u.id); if(P.pin.includes(u.id)) P.pin=P.pin.filter(x=>x!==u.id); else P.skip.push(u.id); savePlan(); renderFlow(); }, s.partial?'part':'');
-    if(!u.korb&&!u.mincha&&studySel.length>1){ const k=studySel.indexOf(s), o=document.createElement('div'); o.className='ord';
-      o.innerHTML='<button type="button" aria-label="למעלה"'+(k===0?' disabled':'')+'>▲</button><button type="button" aria-label="למטה"'+(k===studySel.length-1?' disabled':'')+'>▼</button>';
-      const [up,dn]=o.querySelectorAll('button'); up.onclick=e=>{ e.preventDefault(); move(u.id,-1); }; dn.onclick=e=>{ e.preventDefault(); move(u.id,1); };
-      const r=box.lastElementChild; r.insertBefore(o,r.querySelector('small')); } });
-  // partly learned: start over
-  sel.forEach((s,k)=>{ const u=s.u; if(!(u.f>0&&u.f<1)||u.korb||u.mincha) return; const r=box.querySelectorAll('label.fp:not(.off)')[k]; if(!r) return; const sm=r.querySelector('small'); if(!sm) return;
-    const b=document.createElement('button'); b.type='button'; b.className='rst'; b.textContent='↺ מההתחלה'; b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); if(confirm('לאפס את ההתקדמות ב'+u.name+' ולהתחיל מההתחלה?')){ resetLesson(u.id); renderFlow(); render(); } }; sm.appendChild(document.createElement('br')); sm.appendChild(b); });
-  // not in the plan now – tick to bring it back
-  const bring=ids=>{ ids.forEach(id=>{ if(P.manual){ if(!P.pin.includes(id)) P.pin.push(id); } else P.skip=P.skip.filter(x=>x!==id); }); savePlan(); renderFlow(); };
-  const GK=u=>/^tfl:/.test(u.id)?'תפילות שלמות':u.tp?'תפילה – '+u.tp:u.shm?'שניים מקרא':u.name, groups=new Map(); off.forEach(u=>{ const k=GK(u); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(u); });
-  if(off.length){ const t=document.createElement('div'); t.className='offHd'; t.textContent=P.manual?'לבחירה:':'הורדת מהתוכנית:'; box.appendChild(t); }
-  groups.forEach((L,k)=>{ if(L.length>1){ const g=document.createElement('div'); g.className='offGrp'; g.innerHTML='<span>'+k+' <small>('+L.length+' · כ־'+fmtMin(mm(L.reduce((a,u)=>a+u.rem,0)))+')</small></span><button type="button">+ כולם</button>'; g.querySelector('button').onclick=()=>bring(L.map(u=>u.id)); box.appendChild(g); }
-    L.forEach(u=>row(box,label(u),'כ־'+fmtMin(mm(u.rem))+(u.said?' · ✓ כבר נאמר היום':u.f>0?' · המשך':''),null,null,false,()=>bring([u.id]),'off')); });
-  // today's lessons already done: shown (greyed) so it's clear why they are not in the plan
-  all.filter(u=>u.g===0&&u.f>=1).forEach(u=>row(box,label(u),'✓ נלמד היום','בטל',()=>{ wkSet(u.id,0,true); const a=u.id.split(':'); if(a[0]==='teh') setProgress('tehillim',T.key,0); if(a[0]==='chu') setProgress('chumash',isoDate(today),0); if(a[0]==='tan') setProgress('tanya',isoDate(today),0); renderFlow(); render(); },null,null,'done'));
-  if(P.skip.length&&sel.length){ const d=document.createElement('div'); d.className='hint'; d.style.marginTop='6px'; d.innerHTML='הורדת '+(P.skip.length===1?'שיעור אחד':P.skip.length+' שיעורים')+' מהתוכנית להיום. <button class="restore">החזר אותם</button>'; d.querySelector('button').onclick=()=>{ P.skip=[]; savePlan(); renderFlow(); }; box.appendChild(d); }
-  const tot=sel.reduce((a,s)=>a+s.w,0);
-  $('startFlow').disabled=!sel.length;
-  const studyN=sel.filter(s=>!s.u.korb&&!s.u.mincha).length;
-  const lostPins=P.pin.filter(id=>open.find(u=>u.id===id)&&!sel.find(s=>s.u.id===id)).map(id=>open.find(u=>u.id===id).name);
-  $('flowSum').innerHTML=P.manual&&!studyN?'סמן ✓ ליד מה שאתה רוצה ללמוד עכשיו, וסדר בחצים ▲▼':(sel.length&&!studyN&&korbOn()?'<span class="bad">אין מספיק זמן ללימוד מלבד הקרבנות</span><br>':'')+(!sel.length?(availMin()<3?'אין מספיק זמן – בחר זמן ארוך יותר.':P.skip.length?'הורדת את השיעורים מהתוכנית. <button class="restore" id="restore">החזר את כולם</button>':open.length?'אין שיעור שנכנס בזמן הזה – בחר זמן ארוך יותר.':'<span class="ok">✓ חת״ת ורמב״ם של השבוע עד היום – הושלמו</span>'):
-    (P.open?'בתור: <b>'+sel.length+'</b> קטעים, לפי הסדר – לומדים כמה שיוצא':'התוכנית: <b>'+fmtMin(mm(tot))+'</b>'+(P.free?'':' מתוך '+fmtMin(availMin()))+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>')+(PR()?paceTxt():' (בקצב '+pace()+' מילים לדקה)')+(sel.some(s=>s.u.est)?' – הערכה':'')+
-    (lostPins.length?'<br><span class="bad">אין מספיק זמן גם ל: '+lostPins.join(', ')+'</span>':''));
-  // what didn't fit in the time you chose – say so, with a way to add it anyway
-  if(!P.free&&!P.open&&!P.manual&&sel.length){ const inS=new Set(sel.map(s=>s.u.id)); const out=open.filter(u=>u.g<=1&&!inS.has(u.id)&&!P.skip.includes(u.id));
-    if(out.length){ const d=document.createElement('details'); d.className='notFit'; d.innerHTML='<summary><b>לא נכנס בזמן הזה ('+out.length+')</b> – אפשר להוסיף</summary>'; out.slice(0,6).forEach(u=>{ const r=document.createElement('div'); r.innerHTML='<span>'+label(u)+' <small>(כ־'+fmtMin(mm(u.rem))+')</small></span><button type="button">+ בכל זאת</button>'; r.querySelector('button').onclick=()=>{ if(!P.force.includes(u.id)) P.force.push(u.id); savePlan(); renderFlow(); }; d.appendChild(r); });
-      if(out.length>6) d.insertAdjacentHTML('beforeend','<small>ועוד '+(out.length-6)+'</small>'); $('flowSum').appendChild(d); } }
-  if($('restore')) $('restore').onclick=()=>{ P.skip=[]; P.pin=[]; savePlan(); renderFlow(); };
-  $('startFlow').onclick=()=>{ sel.forEach(s=>{ if(s.u.said) wkSet(s.u.id,0,true); });
-    if(P.open){ const ids=sel.map(s=>s.u.id); location.href=(PR()?'track.html':'session.html')+'?u='+ids.slice(0,3).join(',')+'&open=1&min=60'+(ids.length>3?'&more='+ids.slice(3,80).join(','):''); return; }
-    location.href=(PR()?'track.html':'session.html')+'?u='+sel.map(s=>{ const x=s.partial?(s.u.f+(1-s.u.f)*s.w/s.u.rem):1; return s.u.id+(s.u.chasEnd?'~e'+s.u.chasEnd(x).toFixed(4):s.partial?'~e'+x.toFixed(4):''); }).join(',')+'&min='+(P.free?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&!P.free?'&until='+P.until:'')+(P.free?'':moreIds(sel,off)); };
-  // weekly status
-  cleanArchive(all);
-  const core=all.filter(u=>u.g<=1&&u.cur), cd=core.filter(u=>u.f>=1).length, missed=all.filter(u=>u.g===1&&u.f<1&&u.cur), pastL=all.filter(u=>!u.cur&&u.g<=1&&u.f<1), pastOpen=pastL.length;
-  let wk='<div>חת״ת'+(H.dm.some(s=>RAMBAM.includes(s))?' ורמב״ם':'')+' השבוע: נלמדו <b>'+cd+'</b> מתוך '+core.length+'</div><div class="track"><i style="width:'+(core.length?cd/core.length*100:0)+'%"></i></div>';
-  if(pastOpen) wk+='<div>'+pastOpen+' שיעורים משבועות קודמים להשלמה – הם ראשונים בתוכנית. <button id="pastDone">כבר למדתי אותם</button></div>';
-  if(missed.length) wk+='<div>'+missed.length+' שיעורים מימים קודמים השבוע עדיין פתוחים. <button id="allDone">כבר למדתי אותם</button></div>';
-  if(!(DMX&&DMX.day>=0)) wk+='<div>רמב״ם נלקח מספריא. כדי לכלול גם את שאר החוברת – <a href="dvar.html">טען את חוברת השבוע</a></div>';
-  const wt=weekTime(); if(wt>6e4) wk+='<div>זמן לימוד השבוע: <b>'+fmtMin(wt/6e4)+'</b></div>';
-  $('week').innerHTML=wk;
-  if($('pastDone')) $('pastDone').onclick=()=>{ if(confirm('לסמן את כל '+pastOpen+' השיעורים משבועות קודמים כנלמדו?')){ pastL.forEach(u=>wkSet(u.id,1,true)); renderFlow(); } };
-  if($('allDone')) $('allDone').onclick=()=>{ if(confirm('לסמן את כל '+missed.length+' השיעורים מהימים הקודמים כנלמדו?')){ missed.forEach(u=>wkSet(u.id,1,true)); renderFlow(); } };
-  // add list
-  const al=$('addList'); al.innerHTML=''; const inSel=new Set(sel.map(s=>s.u.id));
-  const inOff=new Set(off.map(u=>u.id)); open.filter(u=>!inSel.has(u.id)&&!inOff.has(u.id)).forEach(u=>row(al,label(u),'כ־'+fmtMin(mm(u.rem))+(u.f>0?' · המשך':''),'+ הוסף',()=>{ P.skip=P.skip.filter(x=>x!==u.id); if(!P.pin.includes(u.id)) P.pin.push(u.id); savePlan(); renderFlow(); }));
-  if(!al.children.length) al.innerHTML='<div class="hint">אין עוד מה להוסיף.</div>';
-  const dn=all.filter(u=>u.f>=1&&u.cur), dl=$('doneList'); dl.innerHTML=''; $('doneSum').textContent='נלמד השבוע ('+dn.length+')';
-  dn.forEach(u=>row(dl,label(u),'✓','בטל',()=>{ wkSet(u.id,0,true); renderFlow(); }));
-  $('doneBox').hidden=!dn.length; }
-// prayers: the one for this time of day is marked; each opens date-adjusted
-function renderPray(){ const now=new Date(), t=now.getTime(), noon=noonMs(now), set=sunsetMs(now); const cur=t<noon?'shacharit':t<set+20*6e4?'mincha':now.getHours()>=22||now.getHours()<4?'shema':'maariv';
-  document.querySelectorAll('#prayTiles a').forEach(a=>{ const k=a.dataset.k, wd=tflDate(k).getDay(), id='tfl:'+k+':'+wd; a.href='session.html?u='+id+'&min=30&free=1'; a.classList.toggle('now',k===cur);
-    const f=tflKindDone(k).f||wkFrac(id); let pg=a.querySelector('.pg'); if(f>0){ if(!pg){ pg=document.createElement('span'); pg.className='pg'; a.appendChild(pg); } pg.textContent=f>=1?'✓ נאמר':Math.round(f*100)+'%'; } else if(pg) pg.remove(); });
-  try{ const c=tflCtx(cur); $('prayToday').textContent='היום: '+tflNotes(c).join(' · '); }catch(e){} }
-render(); renderFlow(); renderPray();
-// build your own: prayer pieces + study, in your order, no time limit
-$('compose').onclick=()=>{ GOTMP=null; P.open=true; P.free=false; P.until=null; P.pendU=false; P.manual=true; P.pin=[]; P.skip=[]; P.ord=[]; P.force=[]; savePlan(); renderFlow(); openPlanner('plan'); };
-if(GO){ history.replaceState(null,''); openPlanner('plan'); }
-setInterval(()=>{ if((P.until||P.free)&&document.visibilityState==='visible') renderFlow(); },30000);
-// Dvar Malchus booklet stored on this device
-import('./dm.js?v=7ed67d2b').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTATE='טען את חוברת השבוע'; render(); return; }
-  const dd=m.wk===CURWK?today.getDay():-1; DMI=DM.todayInfo(m.index, hebOf(today).label, dd); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; DMX={DM,index:m.index,day:dd,byWk:{}}; try{ (await DM.loadAll()).forEach(b=>{ DMX.byWk[b.wk]=b.index; }); }catch(e){} render(); renderFlow(); }).catch(()=>{}).finally(()=>{ if(GO){ const b=$('startFlow'); if(!b.disabled) b.click(); else $('flow').scrollIntoView(); } });
-// count words of today's Chumash / Tanya in the background for accurate estimates
+
+/* ---------- units, default plan, my plan ---------- */
+const KORB=()=>({id:'korb',name:'קרבנות למנחה',g:-1,f:0,w:KORB_WORDS()*(PR()?pace()/printWpm():1),rem:KORB_WORDS()*(PR()?pace()/printWpm():1),korb:1,tp:'מנחה'});
+const korbAvail=()=>minchaTime()&&!korbSaid()&&H.on.korbanot!==0;
+let UCACHE=null, UCT=0;
+function units(){ if(UCACHE&&Date.now()-UCT<400) return UCACHE; const all=catalog(); if(korbAvail()) all.unshift(KORB()); UCACHE=all; UCT=Date.now(); return all; }
+const dirty=()=>{ UCACHE=null; };
+const byDay=(a,b)=>((a.wk||'')+(a.d!=null?a.d:9))<((b.wk||'')+(b.d!=null?b.d:9))?-1:1;
+function defaultSel(all){ const ids=[]; const k=all.find(u=>u.korb);
+  if(k&&P.korbPos!=='end') ids.push(k.id);
+  all.filter(u=>u.g===0&&u.f<1).forEach(u=>ids.push(u.id));
+  all.filter(u=>u.g===1&&u.cur&&u.f<1).sort(byDay).forEach(u=>ids.push(u.id));
+  if(k&&P.korbPos==='end') ids.push(k.id); return ids; }
+const isCustom=()=>P.selDay===isoDate(today)&&Array.isArray(P.sel);
+function curSel(all){ return isCustom()?P.sel.slice():defaultSel(all); }
+function setSel(ids){ P.sel=[...new Set(ids)]; P.selDay=isoDate(today); savePlan(); }
+function resetSel(){ P.sel=null; P.selDay=null; savePlan(); }
+function addToPlan(ids,front){ const all=units(); const cur=curSel(all).filter(id=>!ids.includes(id)); setSel(front?ids.concat(cur):cur.concat(ids)); }
+function removeFromPlan(id){ const all=units(); setSel(curSel(all).filter(x=>x!==id)); }
+// the plan in order, with the gold line where the time runs out
+function layout(){ const all=units(), byId=new Map(all.map(u=>[u.id,u]));
+  const ids=curSel(all).filter(id=>byId.has(id)&&byId.get(id).f<1);
+  const wpm=pace(), budget=availMin()*wpm; let acc=0, cut=-1; const rows=[];
+  ids.forEach((id,i)=>{ const u=byId.get(id); if(cut>=0){ rows.push({u,w:u.rem,below:true}); return; }
+    if(acc+u.rem<=budget*1.05){ rows.push({u,w:u.rem}); acc+=u.rem; return; }
+    const left=budget-acc; if(left>=3*wpm&&!u.korb){ rows.push({u,w:left,partial:true}); acc=budget; cut=i+1; } else { rows.push({u,w:u.rem,below:true}); cut=i; } });
+  return {all,byId,ids,rows,cut,acc}; }
+const label=u=>u.d!=null?(u.cur?(u.d===WD?'':'מיום '+WEEKDAYS[u.d]):'יום '+WEEKDAYS[u.d]+' '+hebOf(u.dt).label):!u.cur&&u.sec?'מחוברת '+hebOf(weekStart(u.wk)).label:u.sec?'מהחוברת':u.shm?'פרשת '+((shnayimRefs(0,today)||{}).he||''):u.korb?(P.korbPos==='start'?'לפני הלימוד':'בסוף, לפני אשרי'):'';
+const subTxt=u=>[label(u), u.said?'✓ כבר נאמר היום':u.f>0?'המשך · '+Math.round(u.f*100)+'% נלמד':''].filter(Boolean).join(' · ');
+const tmTxt=w=>fmtMin(mm(w));
+const READER=()=>PR()?'track.html':'session.html';
+function openOne(u){ if(u.said) wkSet(u.id,0,true); location.href=READER()+'?u='+u.id+(u.chasEnd?'~e'+u.chasEnd(1).toFixed(4):'')+'&min='+Math.max(1,Math.ceil(mm(u.rem||u.w||600)))+'&free=1'; }
+function markDone(u){ if(u.korb){ setProgress('korbanot',isoDate(today),1); } else wkSet(u.id,u.chasEnd?u.chasEnd(1):1,true); dirty(); renderView(); toast('סומן ✓ '+u.name); }
+function rowMenu(u,L){ const ids=L.rows.map(r=>r.u.id), i=ids.indexOf(u.id);
+  sheet(u.name,[
+    ['▶ לפתוח עכשיו רק את זה',()=>openOne(u)],
+    i>0?['⤒ להעביר לראש התוכנית',()=>{ setSel([u.id].concat(ids.filter(x=>x!==u.id))); renderView(); }]:null,
+    i>0?['▲ למעלה',()=>{ const a=ids.slice(); [a[i-1],a[i]]=[a[i],a[i-1]]; setSel(a); renderView(); }]:null,
+    i<ids.length-1?['▼ למטה',()=>{ const a=ids.slice(); [a[i+1],a[i]]=[a[i],a[i+1]]; setSel(a); renderView(); }]:null,
+    [u.korb?'✓ אמרתי – לסמן כנאמר':'✓ למדתי – לסמן כנלמד',()=>markDone(u)],
+    u.f>0&&!u.korb?['↺ להתחיל מההתחלה',()=>{ if(confirm('לאפס את ההתקדמות ב'+u.name+'?')){ resetLesson(u.id); dirty(); renderView(); } }]:null,
+    ['✕ להוריד מהתוכנית',()=>{ removeFromPlan(u.id); renderView(); }] ]); }
+
+/* ---------- views ---------- */
+let VIEW='today';
+const TITLES={today:'מה עכשיו?',learn:'לימוד',pray:'תפילה',progress:'התקדמות',settings:'הגדרות'};
+function go(v){ if(location.hash!=='#'+v) location.hash=v; else showView(); }
+function showView(){ let v=(location.hash||'#today').slice(1).split('&')[0]; if(!TITLES[v]) v='today'; VIEW=v;
+  document.querySelectorAll('.view').forEach(s=>{ s.hidden=s.id!=='v-'+v; });
+  document.body.className='v-'+v; $('act').hidden=v!=='today'; $('title').textContent=TITLES[v];
+  $('backS').hidden=v!=='settings'; $('gear').hidden=v==='settings';
+  document.querySelectorAll('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
+  renderView(); }
+addEventListener('hashchange',()=>{ closeSheet(); showView(); scrollTo(0,0); });
+function renderView(){ $('dl').innerHTML='<b>'+(T.night?'ליל ':'')+esc(hs.label)+'</b> · יום '+WEEKDAYS[today.getDay()]+(()=>{ const c=chumashFor(today,!!H.diaspora); return c?' · פרשת '+esc(c.he):''; })();
+  try{ ({today:renderToday,learn:renderLearn,pray:renderPray,progress:renderProgress,settings:renderSettings})[VIEW](); }catch(e){ console.error(e); } }
+
+/* ===== TODAY: one list + one time line ===== */
+const modeOf=()=>P.open?'open':P.free?'free':(P.until||P.pendU)?'until':'dur';
+const curKind=()=>{ const now=new Date(), t=now.getTime(); try{ const noon=noonMs(now), set=sunsetMs(now); return t<noon?'shacharit':t<set+20*6e4?'mincha':now.getHours()>=22||now.getHours()<4?'shema':'maariv'; }catch(e){ return 'shacharit'; } };
+let OPENG=new Set(lsGet('home-open-v1',[]));
+const keepOpen=(key,el)=>{ el.open=OPENG.has(key); el.addEventListener('toggle',()=>{ if(el.open) OPENG.add(key); else OPENG.delete(key); lsSet('home-open-v1',[...OPENG]); }); };
+function renderToday(){ const box=$('v-today'); const L=layout(); const {all,rows,cut}=L; box.innerHTML='';
+  // season: Hoshana Raba
+  const s=season(); if(s){ const a=document.createElement('a'); a.className='card season'; a.href='hoshana.html'; a.innerHTML='<h2>'+(s===1&&!T.night?'הערב: ליל הושענא רבה':'הלילה: ליל הושענא רבה')+'</h2><div class="what">חומש דברים, תהילים וזהר – עם ספירה לחצות ‹</div>'; box.appendChild(a); }
+  // today so far
+  const core=all.filter(u=>u.g===0); if(core.length){ const dn=core.filter(u=>u.f>=1).length, av=core.reduce((a,u)=>a+Math.min(1,u.f),0)/core.length;
+    box.insertAdjacentHTML('beforeend','<div class="dayp"><span>היום</span><div class="bar"><i class="'+(dn===core.length?'ok':'')+'" style="width:'+Math.round(av*100)+'%"></i></div><b>'+(dn===core.length?'הכל ✓':dn+' מתוך '+core.length)+'</b></div>'); }
+  // the plan
+  const sec=document.createElement('div'); sec.className='sec'; sec.innerHTML='<span>התוכנית שלי'+(rows.length?' ('+rows.length+')':'')+'</span><span class="acts"></span>'; box.appendChild(sec);
+  const acts=sec.querySelector('.acts');
+  if(isCustom()){ const b=document.createElement('button'); b.className='b ghost sm'; b.textContent='↺ תוכנית רגילה'; b.onclick=()=>{ resetSel(); renderView(); toast('חזרה לתוכנית הרגילה של היום'); }; acts.appendChild(b); }
+  if(rows.length){ const b=document.createElement('button'); b.className='b ghost sm'; b.textContent='✕ נקה'; b.onclick=()=>{ setSel([]); renderView(); }; acts.appendChild(b); }
+  const list=document.createElement('div'); list.className='plist'; box.appendChild(list);
+  const lim=!P.free&&!P.open;
+  if(!rows.length) list.innerHTML='<div class="empty">'+(all.some(u=>u.g===0)&&all.filter(u=>u.g===0).every(u=>u.f>=1)?'<span class="ok-t">✓ כל השיעורים של היום נלמדו</span><br>':'')+'התוכנית ריקה – סמן למטה מה ללמוד או להגיד</div>';
+  rows.forEach((r,i)=>{ if(lim&&i===cut&&cut>0) list.appendChild(cutLine(L));
+    const u=r.u, d=document.createElement('div'); d.className='prow'+(r.below&&lim?' below':''); d.dataset.id=u.id;
+    const st=r.partial?'<small class="part">חלק: '+tmTxt(r.w)+' מתוך '+tmTxt(u.rem)+'</small>':subTxt(u)?'<small>'+esc(subTxt(u))+'</small>':'';
+    d.innerHTML='<button class="cb on" type="button" aria-label="להוריד מהתוכנית">'+CHK+'</button><button class="nm" type="button"><b>'+esc(u.name)+'</b>'+st+'</button><span class="tm">'+(u.est?'כ־':'')+tmTxt(r.partial?r.w:u.rem)+'</span><button class="mo" type="button" aria-label="אפשרויות">⋯</button><span class="hd" aria-label="גרירה לשינוי הסדר">'+GRIP+'</span>';
+    d.querySelector('.cb').onclick=()=>{ removeFromPlan(u.id); renderView(); };
+    d.querySelector('.nm').onclick=()=>openOne(u);
+    d.querySelector('.mo').onclick=()=>rowMenu(u,L);
+    dragHandle(d.querySelector('.hd'),d,list);
+    list.appendChild(d); });
+  if(lim&&rows.length&&cut<0) list.appendChild(cutLine(L));
+  // past weeks still open
+  const pastL=all.filter(u=>!u.cur&&u.g<=1&&u.f<1);
+  if(pastL.length){ const n=document.createElement('div'); n.className='note'; n.style.margin='.5rem .2rem'; n.innerHTML='יש <b>'+pastL.length+'</b> שיעורים משבועות קודמים להשלים – ב„השלמות” למטה, או בלשונית „לימוד”.'; box.appendChild(n); }
+  // add more
+  renderAdd(box,L);
+  renderBottom(L); }
+function cutLine(L){ const d=document.createElement('div'); d.className='cut';
+  const m=modeOf(), t=m==='until'&&P.until?'עד '+P.until:fmtMin(availMin());
+  d.textContent=L.cut<0?'הכל נכנס ב־'+t:'כאן נגמר הזמן ('+t+')'+(L.rows[L.cut-1]&&L.rows[L.cut-1].partial?' – החלק האחרון בקיצור':''); return d; }
+// drag a row by its handle to change the order
+function dragHandle(h,row,list){ h.addEventListener('pointerdown',e=>{ e.preventDefault(); h.setPointerCapture(e.pointerId); const rows=[...list.querySelectorAll('.prow')], i0=rows.indexOf(row);
+    const y0=e.clientY, mids=rows.map(r=>{ const b=r.getBoundingClientRect(); return b.top+b.height/2; }), hgt=row.getBoundingClientRect().height+6; let to=i0;
+    row.classList.add('drag');
+    const mv=ev=>{ const dy=ev.clientY-y0; row.style.transform='translateY('+dy+'px)'; const y=mids[i0]+dy; to=0; mids.forEach((m,j)=>{ if(j!==i0&&y>m) to=j>i0?j:j+1; }); if(to>i0) to=Math.min(to,rows.length-1);
+      rows.forEach((r,j)=>{ if(r===row) return; let s=0; if(i0<to&&j>i0&&j<=to) s=-hgt; if(i0>to&&j>=to&&j<i0) s=hgt; r.style.transform=s?'translateY('+s+'px)':''; r.style.transition='transform .12s'; }); };
+    const up=()=>{ h.removeEventListener('pointermove',mv); h.removeEventListener('pointerup',up); h.removeEventListener('pointercancel',up);
+      rows.forEach(r=>{ r.style.transform=''; r.style.transition=''; }); row.classList.remove('drag');
+      if(to!==i0){ const ids=rows.map(r=>r.dataset.id); const [x]=ids.splice(i0,1); ids.splice(to,0,x); setSel(ids); renderView(); } };
+    h.addEventListener('pointermove',mv); h.addEventListener('pointerup',up); h.addEventListener('pointercancel',up); }); }
+// everything not in the plan, by kind – tick to add
+function renderAdd(box,L){ const inP=new Set(L.rows.map(r=>r.u.id)); const open=L.all.filter(u=>u.f<1&&!inP.has(u.id));
+  const sec=document.createElement('div'); sec.className='sec'; sec.innerHTML='<span>להוסיף לתוכנית</span>'; box.appendChild(sec);
+  const arow=(par,u,extra)=>{ const r=document.createElement('div'); r.className='arow';
+    r.innerHTML='<button class="cb" type="button" aria-label="להוסיף לתוכנית"></button><button class="nm" type="button">'+esc(u.name)+(extra||subTxt(u)?'<small>'+esc(extra||subTxt(u))+'</small>':'')+'</button><span class="tm">'+(u.est?'כ־':'')+tmTxt(u.rem)+'</span>';
+    r.querySelector('.cb').onclick=()=>{ addToPlan([u.id]); renderView(); toast('נוסף לתוכנית: '+u.name); };
+    r.querySelector('.nm').onclick=()=>sheet(u.name,[['+ להוסיף לסוף התוכנית',()=>{ addToPlan([u.id]); renderView(); }],['⤒ להוסיף לראש התוכנית',()=>{ addToPlan([u.id],true); renderView(); }],['▶ לפתוח עכשיו רק את זה',()=>openOne(u)]]);
+    par.appendChild(r); return r; };
+  const grp=(key,title,n,mins)=>{ const d=document.createElement('details'); d.className='grp'; d.innerHTML='<summary>'+title+' <small>'+(n?n+(mins!=null?' · כ־'+fmtMin(mins):''):'')+'</small><span class="ch">‹</span></summary>'; keepOpen(key,d); box.appendChild(d); return d; };
+  const sumM=L=>mm(L.reduce((a,u)=>a+u.rem,0));
+  // prayer
+  if(H.prayPick!==0){ const pr=open.filter(u=>u.g===5||u.korb); if(pr.length){ const g=grp('pray','תפילה',pr.length); const ck=curKind();
+    const kinds=['shacharit','mincha','maariv','shema'].sort((a,b)=>(a===ck?-1:0)-(b===ck?-1:0));
+    kinds.forEach(k=>{ const L2=pr.filter(u=>u.korb?k==='mincha':u.tp===TFLNAME[k]); if(!L2.length) return;
+      const sd=document.createElement('details'); sd.className='sub'; sd.innerHTML='<summary>'+TFLNAME[k]+(k===ck?' <small>· עכשיו</small>':'')+' <small>('+L2.length+')</small></summary>'; keepOpen('pray:'+k,sd); if(k===ck&&!OPENG.has('pray:'+k+':x')) sd.open=sd.open||false; g.appendChild(sd);
+      L2.sort((a,b)=>(/^tfl:/.test(a.id)?-1:0)-(/^tfl:/.test(b.id)?-1:0)).forEach(u=>arow(sd,u)); }); } }
+  // today's
+  const td=open.filter(u=>u.g===0); if(td.length){ const g=grp('today','שיעורי היום',td.length,sumM(td)); td.forEach(u=>arow(g,u)); }
+  // make-up, by subject
+  const mk=open.filter(u=>u.g===1); if(mk.length){ const g=grp('mk','השלמות',mk.length,sumM(mk)); const G=new Map();
+    mk.forEach(u=>{ const k=mkKey(u); if(!G.has(k)) G.set(k,[]); G.get(k).push(u); });
+    G.forEach((Lk,k)=>{ Lk.sort(byDay); const wkL=Lk.filter(u=>u.cur); const nm=MKN[k]||DMNAME[k]||Lk[0].name;
+      const sd=document.createElement('details'); sd.className='sub'; sd.innerHTML='<summary>'+esc(nm)+' <small>· '+Lk.length+' · כ־'+fmtMin(sumM(Lk))+'</small></summary>'; keepOpen('mk:'+k,sd); g.appendChild(sd);
+      const hb=document.createElement('div'); hb.className='subh'; hb.innerHTML='<small>להוסיף לתוכנית:</small><span style="display:flex;gap:.3rem"></span>'; const sp=hb.querySelector('span');
+      if(wkL.length&&wkL.length<Lk.length){ const b=document.createElement('button'); b.className='b sm'; b.textContent='השבוע ('+wkL.length+')'; b.onclick=()=>{ addToPlan(wkL.map(u=>u.id)); renderView(); toast('נוספו '+wkL.length+' ימים של '+nm); }; sp.appendChild(b); }
+      const b=document.createElement('button'); b.className='b sm'; b.textContent=(wkL.length<Lk.length?'הכל':'כולם')+' ('+Lk.length+')'; b.onclick=()=>{ addToPlan(Lk.map(u=>u.id)); renderView(); toast('נוספו '+Lk.length+' ימים של '+nm); }; sp.appendChild(b);
+      sd.appendChild(hb); Lk.forEach(u=>arow(sd,u,label(u)+(u.f>0?' · המשך':''))); }); }
+  // more learning
+  const more=open.filter(u=>u.g===2||u.g===3); const extra=open.filter(u=>u.g===4);
+  if(more.length||extra.length){ const g=grp('more','לימוד נוסף',more.length+extra.length); more.forEach(u=>arow(g,u));
+    if(extra.length){ const sd=document.createElement('details'); sd.className='sub'; sd.innerHTML='<summary>עוד מהחוברת <small>('+extra.length+')</small></summary>'; keepOpen('more:x',sd); g.appendChild(sd); extra.forEach(u=>arow(sd,u)); } }
+  if(!(DMX&&DMX.day>=0)) box.insertAdjacentHTML('beforeend','<div class="note" style="margin:.4rem .2rem">רמב״ם נלקח מספריא. לשאר החוברת – <a href="dvar.html" style="color:var(--gold)">טען את חוברת השבוע</a>.</div>');
+  // done today (with undo)
+  const dn=L.all.filter(u=>(u.g===0||u.korb)&&u.f>=1); const kd=korbSaid()&&minchaTime();
+  if(dn.length||kd){ const g=grp('done','✓ נלמד היום',dn.length+(kd?1:0)); dn.forEach(u=>{ const r=arow(g,u,'נלמד ✓'); const c=r.querySelector('.cb'); c.outerHTML='<span class="cb" style="background:var(--ok);border-color:var(--ok);display:grid;place-items:center">'+CHK+'</span>'; const nm=r.querySelector('.nm'); nm.onclick=()=>sheet(u.name,[['▶ לפתוח שוב',()=>openOne(u)],['↺ לבטל את הסימון',()=>{ resetLesson(u.id); dirty(); renderView(); }]]); });
+    if(kd){ const r=arow(g,KORB(),'נאמרו ✓'); r.querySelector('.cb').remove(); r.querySelector('.nm').onclick=()=>sheet('קרבנות',[['↺ לבטל את הסימון',()=>{ setProgress('korbanot',isoDate(today),0); dirty(); renderView(); }]]); } } }
+function renderBottom(L){ const m=modeOf();
+  $('tseg').querySelectorAll('button').forEach(b=>{ b.classList.toggle('on',b.dataset.m===m); b.onclick=()=>setMode(b.dataset.m); });
+  const c=$('tctl'); c.innerHTML='';
+  if(m==='dur'){ const TM=[10,15,20,30,45,60,90]; TM.forEach(x=>{ const b=document.createElement('button'); b.type='button'; b.textContent=x<60?x+' דק׳':x===60?'שעה':'שעה וחצי'; if(P.min===x) b.className='on'; b.onclick=()=>{ GOTMP=null; P.min=x; savePlan(); renderView(); }; c.appendChild(b); });
+    const i=document.createElement('input'); i.type='number'; i.min=1; i.max=300; i.inputMode='numeric'; i.placeholder='אחר'; i.setAttribute('aria-label','מספר דקות אחר'); if(!TM.includes(P.min)) i.value=P.min; i.onchange=()=>{ const v=+i.value; if(v>0){ GOTMP=null; P.min=v; savePlan(); renderView(); } }; c.appendChild(i); }
+  if(m==='until'){ const l=document.createElement('span'); l.textContent='עד השעה:'; c.appendChild(l); const ti=document.createElement('input'); ti.type='time'; ti.id='untilIn'; ti.value=P.until||''; ti.setAttribute('aria-label','עד שעה');
+    const set=()=>{ if(ti.value&&ti.value!==P.until){ GOTMP=null; P.until=ti.value; P.pendU=false; savePlan(); renderView(); } }; ti.onchange=set; ti.onblur=set; c.appendChild(ti);
+    const l2=document.createElement('span'); l2.textContent=P.until?'· יש לך '+fmtMin(availMin()):'· בחר שעה'; c.appendChild(l2); }
+  const sel=L.rows.filter(r=>!r.below), tot=sel.reduce((a,r)=>a+r.w,0), all=L.rows.reduce((a,r)=>a+r.u.rem,0);
+  let t='';
+  if(!L.rows.length) t='סמן מה ללמוד';
+  else if(m==='open') t='בלי שעון – מתחילים, ועוברים מקטע לקטע כמה שיוצא. בסוף תראה כמה הספקת.';
+  else if(m==='free') t='הכל ייקח <b>'+fmtMin(mm(all))+'</b> · תסיים בערך ב־<b>'+clockIn(mm(all))+'</b>';
+  else if(m==='until'&&!P.until) t='בחר עד איזו שעה';
+  else t='נכנס: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(availMin())+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>'+(L.rows.length>sel.length?' · עוד '+(L.rows.length-sel.length)+' מתחת לקו':'');
+  if(L.rows.some(r=>r.u.est)&&m!=='open') t+=' <span style="opacity:.8">(הערכה)</span>';
+  $('sumL').innerHTML=t;
+  const g=$('go'), n=m==='open'||m==='free'?L.rows.length:sel.length; g.disabled=!n||(m==='until'&&!P.until);
+  g.innerHTML=(PR()?'⏱ התחל – עם מדידת זמן':'▶ התחל')+(n?' <small>· '+(n===1?'קטע אחד':n+' קטעים')+'</small>':'');
+  g.onclick=()=>start(L); }
+function setMode(v){ GOTMP=null; P.open=v==='open'; P.free=v==='free'; if(v!=='until'){ P.until=null; P.pendU=false; } else if(!P.until) P.pendU=true; savePlan(); renderView();
+  if(v==='until'&&!P.until){ const ti=$('untilIn'); if(ti){ try{ ti.showPicker(); }catch(e){ ti.focus(); } } } }
+function start(L){ const m=modeOf(); let sel=L.rows.filter(r=>!r.below); if(m==='open'||m==='free') sel=L.rows; if(!sel.length) return;
+  sel.forEach(r=>{ if(r.u.said) wkSet(r.u.id,0,true); });
+  if(m==='open'){ const ids=sel.map(r=>r.u.id); location.href=READER()+'?u='+ids.slice(0,3).join(',')+'&open=1&min=60'+(ids.length>3?'&more='+ids.slice(3,80).join(','):''); return; }
+  const tot=sel.reduce((a,r)=>a+(m==='free'?r.u.rem:r.w),0);
+  // what's under the line (then other open lessons) comes next if you turn out faster
+  let more=''; if(m!=='free'){ const inS=new Set(sel.map(r=>r.u.id)); const L2=L.rows.filter(r=>r.below).map(r=>r.u.id).concat(L.all.filter(u=>u.f<1&&u.g<=3&&u.g>=0&&!inS.has(u.id)).sort((a,b)=>(a.g<=1?0:a.g)-(b.g<=1?0:b.g)).map(u=>u.id)); const U=[...new Set(L2)].filter(id=>!inS.has(id)).slice(0,6); if(U.length) more='&more='+U.join(','); }
+  location.href=READER()+'?u='+sel.map(r=>{ const x=r.partial&&m!=='free'?(r.u.f+(1-r.u.f)*r.w/r.u.rem):1; return r.u.id+(r.u.chasEnd?'~e'+r.u.chasEnd(x).toFixed(4):r.partial&&m!=='free'?'~e'+x.toFixed(4):''); }).join(',')+'&min='+(m==='free'?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&m==='until'?'&until='+P.until:'')+more; }
+
+/* ===== LEARN: one card per subject ===== */
+const SUBJ={tehillim:'teh',chumash:'chu',tanya:'tan',chas:'chas'};
+const subjKey=k=>k==='rambam'?rmbSubj():SUBJ[k];
+function hrefOf(k){ const free='&min=30&free=1';
+  if(k==='tehillim') return READER()+'?u=teh:'+T.day+'&min=20&free=1';
+  if(k==='chumash') return READER()+'?u=chu:'+WD+free;
+  if(k==='tanya') return READER()+'?u=tan:'+WD+free;
+  if(k==='rambam') return READER()+'?u=dm:'+rmbSubj()+':'+WD+'&min=60&free=1';
+  if(k==='chas'){ const cd=chasDay(); return READER()+'?u=chas'+(H.chasMode!=='free'&&!cd.done?'~e'+cd.target.toFixed(4):'')+free; }
+  if(k==='korbanot') return READER()+'?u=korb&min=15&free=1';
+  if(k==='shnayim') return READER()+'?u=shm:0,shm:1,shm:2,shm:3,shm:4,shm:5,shm:6,shm:7&min=70';
+  if(k==='dvar') return 'dvar.html'; if(k==='hoshana') return 'hoshana.html'; return './'; }
+function info(k){
+  if(k==='tehillim'){ const f=unitFrac('teh:'+T.day); return {what:'יום '+gq(T.day)+' לחודש · מזמורים '+T.range+(personalKapitels().length?' · ופרקים אישיים':''), pct:f, pi:getProgressInfo('tehillim',T.key)}; }
+  if(k==='chumash'){ const c=chumashFor(today,!!H.diaspora); return {what:c?'פרשת '+c.he+' · '+c.aliyahName:'—', pct:unitFrac('chu:'+WD), pi:getProgressInfo('chumash',isoDate(today))}; }
+  if(k==='tanya') return {what:tanyaText, pct:unitFrac('tan:'+WD), pi:getProgressInfo('tanya',isoDate(today))};
+  if(k==='rambam'){ const id='dm:'+rmbSubj()+':'+WD, f=unitFrac(id), c=(lsGet('chap-v1',{})[id]); const ok=c&&c.d===isoDate(new Date()); return {what:(rmbSubj()==='rambam1'?'פרק אחד':'ג׳ פרקים')+' · '+rambamText, pct:f, pi:ok?{n:f>=1?c.t:c.n,t:c.t,u:'פרקים'}:null}; }
+  if(k==='chas'){ const P2=chasParsha(), cd=chasDay(); if(!P2) return {what:'—',pct:null};
+    if(H.chasMode==='free') return {what:P2.bookHe+' · פרשת '+P2.he+' · לימוד חופשי לאורך השבוע', pct:cd.f};
+    const rel=cd.target>cd.base?Math.min(1,(cd.f-cd.base)/(cd.target-cd.base)):1; return {what:P2.bookHe+' · פרשת '+P2.he+' · חלק היום · השבוע '+Math.round(cd.f*100)+'%', pct:rel}; }
+  if(k==='dvar'){ if(!DMI) return {what:DMSTATE||'טען את חוברת השבוע', pct:null}; return {what:'יום '+WEEKDAYS[DMI.day]+' · '+Object.keys(DMI.subjects).length+' שיעורים בחוברת', pct:null}; }
+  if(k==='shnayim'){ const R=shnayimRefs(0,today); let n=0; for(let i=0;i<8;i++) if(wkFrac('shm:'+i)>=1) n++; return {what:(R?'פרשת '+R.he+' · ':'')+'מליל שישי ועד שבת · כולל הפטרה', pct:n/8, pi:{n,t:8,u:'חלקים'}}; }
+  if(k==='korbanot') return {what:'פרשת התמיד, הקטורת ופיטום הקטורת – לפני אשרי', pct:korbSaid()?1:getProgress('korbanot',isoDate(today))};
+  if(k==='hoshana') return {what:'חומש דברים, תהילים וזהר – עם ספירה לחצות', pct:null};
+  return {what:'',pct:null}; }
+function progLine(i){ if(i.pct==null) return ''; const p=i.pct, pi=i.pi;
+  const t=p>=1?'הושלם ✓'+(pi&&pi.t?' · '+pi.t+' '+pi.u:''):p>0?progTxt(p,pi?pi.n:0,pi&&pi.t,pi&&pi.u):'טרם התחלת'+(pi&&pi.t?' · 0/'+pi.t+' '+pi.u:'');
+  return '<div class="pr"><div class="bar"><i class="'+(p>=1?'ok':'')+'" style="width:'+Math.round(Math.min(1,p)*100)+'%"></i></div><span>'+t+'</span></div>'; }
+function renderLearn(){ const box=$('v-learn'); box.innerHTML=''; const all=units(); const s=season();
+  if(s){ const a=document.createElement('a'); a.className='card season'; a.href='hoshana.html'; a.innerHTML='<h2>ליל הושענא רבה</h2><div class="what">חומש דברים, תהילים וזהר ‹</div>'; box.appendChild(a); }
+  const list=H.order.filter(k=>H.on[k]&&k!=='hoshana'&&k!=='korbanot'&&(k!=='shnayim'||shnayimTime()));
+  if(!list.length) box.innerHTML+='<div class="empty">לא נבחרו נושאים. אפשר לבחור בהגדרות (⚙).</div>';
+  list.forEach(k=>{ const i=info(k), d=document.createElement('div'); d.className='card'+(i.pct>=1?' done':'');
+    d.innerHTML='<h2></h2><div class="what"></div>'+progLine(i)+'<div class="btns"></div>'; d.querySelector('h2').textContent=MODS[k].name; d.querySelector('.what').textContent=i.what||'';
+    const bt=d.querySelector('.btns'); const B=(t,cls,fn,href)=>{ const b=document.createElement(href?'a':'button'); b.className='b'+(cls?' '+cls:''); b.textContent=t; if(href) b.href=href; else { b.type='button'; b.onclick=fn; } bt.appendChild(b); return b; };
+    if(k==='dvar') B(DMI?'פתח את החוברת':'טען את חוברת השבוע','main',null,'dvar.html');
+    else B(i.pct>=1?'לקרוא שוב':i.pct>0?'המשך ▶':'התחל ▶','main',null,hrefOf(k));
+    // make-up for this subject
+    const sk=subjKey(k); if(sk){ const Lk=all.filter(u=>u.g===1&&u.f<1&&mkKey(u)===sk).sort(byDay), wkL=Lk.filter(u=>u.cur);
+      const doMk=(L2,what)=>{ setSel(L2.map(u=>u.id)); toast('התוכנית: '+what+' – '+L2.length+' '+(L2.length===1?'יום':'ימים')+'. אפשר להוסיף עוד מלמטה'); go('today'); };
+      if(Lk.length){ const days=n=>n===1?'יום אחד':n+' ימים';
+        B('להשלים · חסרים '+days(Lk.length),'',()=>{ if(!(wkL.length&&wkL.length<Lk.length)) return doMk(Lk,'השלמת '+MODS[k].name);
+          sheet('השלמת '+MODS[k].name,[['רק מהשבוע ('+days(wkL.length)+', כ־'+fmtMin(mm(wkL.reduce((a,u)=>a+u.rem,0)))+')',()=>doMk(wkL,'השלמת '+MODS[k].name+' השבוע')],['הכל מתחילת החיסורים ('+days(Lk.length)+', כ־'+fmtMin(mm(Lk.reduce((a,u)=>a+u.rem,0)))+')',()=>doMk(Lk,'השלמת '+MODS[k].name)]]); }); } }
+    // reset today's
+    const rid=k==='tehillim'?'teh:'+T.day:k==='chumash'?'chu:'+WD:k==='tanya'?'tan:'+WD:k==='rambam'?'dm:'+rmbSubj()+':'+WD:null;
+    if(rid&&i.pct>0) B('↺ איפוס','sm ghost',()=>{ if(confirm('לאפס את ההתקדמות של היום ב'+MODS[k].name+'?')){ resetLesson(rid); dirty(); renderView(); } });
+    if(k==='tehillim') B('פרקים אישיים ‹','sm ghost',null,'tehillim.html');
+    if(k==='chumash') B('לפי ימים ‹','sm ghost',null,'study.html?m=chumash');
+    if(k==='tanya') B('לפי ימים ‹','sm ghost',null,'study.html?m=tanya');
+    box.appendChild(d); });
+  // the booklet's other daily lessons
+  const dm=all.filter(u=>u.g===2&&u.cur&&u.f<1); if(dm.length){ const d=document.createElement('div'); d.className='card'; d.innerHTML='<h2>עוד מחוברת השבוע</h2><div class="what">'+esc([...new Set(dm.map(u=>u.name))].join(' · '))+'</div><div class="btns"></div>';
+    const b=document.createElement('button'); b.className='b'; b.textContent='להוסיף לתוכנית ('+dm.length+')'; b.onclick=()=>{ addToPlan(dm.map(u=>u.id)); toast('נוסף לתוכנית'); go('today'); }; d.querySelector('.btns').appendChild(b); box.appendChild(d); } }
+
+/* ===== PRAY ===== */
+const KDESC={shacharit:'כולל ברכות השחר וקרבנות',mincha:'קרבנות, אשרי, שמונה עשרה',maariv:'קריאת שמע ושמונה עשרה',shema:'לפני השינה'};
+function renderPray(){ const box=$('v-pray'); box.innerHTML=''; const ck=curKind(); const s=season();
+  try{ const c=tflCtx(ck); const n=tflNotes(c); if(n.length) box.insertAdjacentHTML('beforeend','<div class="note" style="margin:.1rem .2rem .7rem">היום בתפילה: '+esc(n.join(' · '))+'</div>'); }catch(e){}
+  if(s){ const a=document.createElement('a'); a.className='card season'; a.href='hoshana.html'; a.innerHTML='<h2>סדר ליל הושענא רבה</h2><div class="what">חומש דברים, תהילים וזהר – עם ספירה לחצות ‹</div>'; box.appendChild(a); }
+  let pieces=[]; try{ pieces=tpToday(); }catch(e){}
+  ['shacharit','mincha','maariv','shema'].sort((a,b)=>(a===ck?-1:0)-(b===ck?-1:0)).forEach(k=>{ let wd=today.getDay(); try{ wd=tflDate(k).getDay(); }catch(e){}
+    const id='tfl:'+k+':'+wd; let f=0; try{ f=tflKindDone(k).f||wkFrac(id); }catch(e){}
+    const d=document.createElement('div'); d.className='card'+(k===ck?' now':'')+(f>=1?' done':'');
+    d.innerHTML='<h2>'+TFLNAME[k]+(k===ck?' <small style="font-family:var(--ui);font-size:.85rem;color:var(--gold)">· עכשיו</small>':'')+'</h2><div class="what">'+KDESC[k]+(f>=1?' · <span class="ok-t">✓ נאמרה</span>':f>0?' · '+Math.round(f*100)+'%':'')+'</div><div class="btns"></div>';
+    const bt=d.querySelector('.btns'); const a=document.createElement('a'); a.className='b main'; a.href=READER()+'?u='+id+'&min=30&free=1'; a.textContent=f>0&&f<1?'המשך ▶':'כולה ▶'; bt.appendChild(a);
+    if(k==='mincha'&&H.on.korbanot!==0){ const kb=document.createElement('a'); kb.className='b'; kb.href=READER()+'?u=korb&min=15&free=1'; kb.textContent=korbSaid()?'קרבנות ✓':'קרבנות ▶'; bt.appendChild(kb); }
+    const pk=pieces.filter(p=>tpKind(p[0])===k);
+    if(pk.length){ const ds=document.createElement('details'); ds.className='grp'; ds.style.margin='.7rem 0 0'; ds.innerHTML='<summary>קטעים <small>('+pk.length+') – לפתוח אחד, או להוסיף לתוכנית</small><span class="ch">‹</span></summary>'; keepOpen('pk:'+k,ds);
+      pk.forEach(p=>{ const pid='tp:'+p[0]+':'+wd; let pf=0; try{ pf=tpFrac(pid); }catch(e){} const r=document.createElement('div'); r.className='arow';
+        r.innerHTML='<span class="cb" style="'+(pf>=1?'background:var(--ok);border-color:var(--ok);display:grid;place-items:center':'')+'">'+(pf>=1?CHK:'')+'</span><a class="nm" style="text-decoration:none" href="'+READER()+'?u='+pid+'&min=10&free=1">'+esc(p[1])+(pf>0&&pf<1?'<small>'+Math.round(pf*100)+'%</small>':pf>=1?'<small>נאמר היום</small>':'')+'</a><button class="b sm" type="button">+ לתוכנית</button>';
+        r.querySelector('button').onclick=()=>{ if(pf>=1) wkSet(pid,0,true); dirty(); addToPlan([pid]); toast('נוסף לתוכנית: '+p[1]); };
+        ds.appendChild(r); }); d.appendChild(ds); }
+    box.appendChild(d); });
+  const cb=document.createElement('button'); cb.className='b'; cb.style.cssText='width:100%;min-height:3.2rem;border-style:dashed;margin-top:.3rem'; cb.textContent='להרכיב בעצמי – קטעי תפילה ולימוד יחד';
+  cb.onclick=()=>{ GOTMP=null; setSel([]); P.open=true; P.free=false; P.until=null; P.pendU=false; savePlan(); OPENG.add('pray'); OPENG.add('pray:'+ck); lsSet('home-open-v1',[...OPENG]); go('today'); toast('התוכנית ריקה – סמן קטעי תפילה ולימוד, וסדר אותם בגרירה'); };
+  box.appendChild(cb); }
+
+/* ===== PROGRESS: the week at a glance ===== */
+let PW=null;
+function renderProgress(){ const box=$('v-progress'); box.innerHTML=''; const all=units();
+  const weeks=[...new Set(pastWeeks().concat([CURWK]))].sort(); if(!PW||!weeks.includes(PW)) PW=CURWK; const wi=weeks.indexOf(PW), cur=PW===CURWK, sfx=cur?'':'@'+PW;
+  const sat=dateIn(PW,6), c=chumashFor(sat,!!H.diaspora);
+  const wk=document.createElement('div'); wk.className='wk'; wk.innerHTML='<button type="button" aria-label="שבוע קודם"'+(wi<=0?' disabled':'')+'>›</button><b>'+(c?'פרשת '+esc(c.he):hebOf(weekStart(PW)).label)+(cur?' · השבוע':'')+'</b><button type="button" aria-label="שבוע הבא"'+(wi>=weeks.length-1?' disabled':'')+'>‹</button>';
+  const [bp,bn]=wk.querySelectorAll('button'); bp.onclick=()=>{ PW=weeks[wi-1]; renderView(); }; bn.onclick=()=>{ PW=weeks[wi+1]; renderView(); }; box.appendChild(wk);
+  // grid: subject × day
+  const rows=[]; if(H.on.chumash) rows.push(['חומש',d=>'chu:'+d]); if(H.on.tehillim) rows.push(['תהילים',d=>'teh:'+tehFor(dateIn(PW,d)).day]); if(H.on.tanya) rows.push(['תניא',d=>'tan:'+d]);
+  if(H.on.rambam!==0&&H.dm.some(s=>RMB_TITLE[s])) rows.push([rmbSubj()==='rambam1'?'רמב״ם א׳':'רמב״ם',d=>'dm:'+rmbSubj()+':'+d]);
+  const g=document.createElement('div'); g.className='grid'; g.innerHTML='<span></span>'+'אבגדהוש'.split('').map((h,d)=>'<span class="h'+(cur&&d===WD?' td':'')+'">'+h+'</span>').join('');
+  const haveBook=!!(cur?(DMX&&DMX.day>=0):(DMX&&DMX.byWk&&DMX.byWk[PW]));
+  rows.forEach(([nm,idf])=>{ g.insertAdjacentHTML('beforeend','<span class="l">'+nm+'</span>');
+    for(let d=0;d<7;d++){ const id=idf(d)+sfx, dt=dateIn(PW,d), fu=cur&&d>WD; const isR=id.startsWith('dm:'); const na=isR&&!haveBook&&isoDate(dt)<rambamSince();
+      const f=na?0:unitFrac(id); const b=document.createElement('button'); b.type='button';
+      b.className='c'+(na?' na':fu?' fu':f>=1?' d':f>0?' p':cur&&d===WD?'':' m')+(cur&&d===WD?' td':''); if(f>0&&f<1) b.innerHTML='<i style="height:'+Math.round(f*100)+'%"></i>';
+      b.setAttribute('aria-label',nm+' יום '+WEEKDAYS[d]+': '+(na?'לא במעקב':fu?'עוד לא':f>=1?'נלמד':f>0?Math.round(f*100)+'%':'חסר'));
+      if(!fu&&!na) b.onclick=()=>{ const u=all.find(x=>x.id===id)||{id,name:nm,w:900,rem:900}; sheet(nm+' – יום '+WEEKDAYS[d]+' '+hebOf(dt).label,[['▶ לפתוח',()=>openOne(u)],f<1?['+ להוסיף לתוכנית',()=>{ addToPlan([id]); toast('נוסף לתוכנית'); }]:null,f<1?['✓ כבר למדתי – לסמן',()=>{ wkSet(id,1,true); dirty(); renderView(); }]:['↺ לבטל את הסימון',()=>{ resetLesson(id); dirty(); renderView(); }]]); };
+      g.appendChild(b); } });
+  box.appendChild(g);
+  box.insertAdjacentHTML('beforeend','<div class="legend"><span><i style="background:var(--ok)"></i>נלמד</span><span><i style="background:var(--gold)"></i>באמצע</span><span><i style="border:2px dashed var(--warn)"></i>חסר</span><span>לחיצה על משבצת – לפתוח או לסמן</span></div>');
+  // Chassidus on the parsha: the week as a whole
+  if(H.on.chas!==0&&chasParsha(PW)){ const P2=chasParsha(PW), f=wkFrac('chas'+sfx); box.insertAdjacentHTML('beforeend','<div class="card"><div style="display:flex;justify-content:space-between;gap:.5rem"><b>'+esc(P2.bookHe)+' – '+esc(P2.he)+'</b><span class="note">'+Math.round(f*100)+'%</span></div><div class="bar" style="margin-top:.5rem"><i class="'+(f>=1?'ok':'')+'" style="width:'+Math.round(f*100)+'%"></i></div></div>'); }
+  // the week in numbers
+  const core=all.filter(u=>u.wk===PW&&u.g<=1), dn=core.filter(u=>u.f>=1), op=core.filter(u=>u.f<1&&(!cur||u.g===1));
+  const sm=document.createElement('div'); sm.className='card';
+  sm.innerHTML='<div style="display:flex;justify-content:space-between"><b>'+(cur?'השבוע עד היום':'באותו שבוע')+'</b><b style="color:var(--gold)">'+(core.length?Math.round(dn.length/core.length*100):0)+'%</b></div><div class="bar" style="margin:.5rem 0"><i style="width:'+(core.length?dn.length/core.length*100:0)+'%"></i></div><div class="note">נלמדו '+dn.length+' מתוך '+core.length+' שיעורים'+(op.length?' · חסרים '+op.length+' (כ־'+fmtMin(mm(op.reduce((a,u)=>a+u.rem,0)))+')':'')+(cur&&weekTime()>6e4?' · זמן לימוד השבוע: <b>'+fmtMin(weekTime()/6e4)+'</b>':'')+'</div><div class="btns"></div>';
+  const bt=sm.querySelector('.btns');
+  if(op.length){ const b1=document.createElement('button'); b1.className='b main'; b1.textContent='להשלים את מה שחסר'; b1.onclick=()=>{ setSel(op.slice().sort(byDay).map(u=>u.id)); toast('התוכנית: השלמות – '+op.length+' שיעורים'); go('today'); }; bt.appendChild(b1);
+    const b2=document.createElement('button'); b2.className='b'; b2.textContent='כבר למדתי אותם'; b2.onclick=()=>{ if(confirm('לסמן את כל '+op.length+' השיעורים החסרים כנלמדו?')){ op.forEach(u=>wkSet(u.id,1,true)); dirty(); renderView(); } }; bt.appendChild(b2); }
+  box.appendChild(sm);
+  // pace
+  const UP=unitPace(), pt=Object.keys(UNITNAME).filter(k=>UP[k]).map(k=>UNITNAME[k]+' '+(UP[k]>=60?Math.floor(UP[k]/60)+':'+String(UP[k]%60).padStart(2,'0')+' דק׳':UP[k]+' שנ׳')).join(' · ');
+  box.insertAdjacentHTML('beforeend','<div class="card"><b>הקצב שלך</b><div class="note" style="margin-top:.3rem">'+getWpm()+' מילים לדקה במסך'+(pt?' · בחוברת: '+pt:'')+'<br>ההערכות בתוכנית מתעדכנות לפי הקצב הזה.</div></div>');
+  // learned this week – with undo
+  const dl=all.filter(u=>u.wk===PW&&u.f>=1&&u.g<=3);
+  if(dl.length){ const d=document.createElement('details'); d.className='grp'; d.innerHTML='<summary>נלמד '+(cur?'השבוע':'באותו שבוע')+' <small>('+dl.length+')</small><span class="ch">‹</span></summary>';
+    dl.forEach(u=>{ const r=document.createElement('div'); r.className='arow'; r.innerHTML='<span class="nm">'+esc(u.name)+'<small>'+esc(label(u))+'</small></span><button class="b sm ghost" type="button">בטל</button>'; r.querySelector('button').onclick=()=>{ resetLesson(u.id); dirty(); renderView(); }; d.appendChild(r); }); box.appendChild(d); } }
+
+/* ===== SETTINGS: all in one place ===== */
+let DP=null; const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
+  const G=(t,html)=>{ box.insertAdjacentHTML('beforeend','<div class="sec"><span>'+t+'</span></div>'); const g=document.createElement('div'); g.className='sg'; g.innerHTML=html||''; box.appendChild(g); return g; };
+  const segRow=(par,label,opts,cur,fn,sub)=>{ const r=document.createElement('div'); r.className='sr'; r.innerHTML='<span>'+label+(sub?'<small>'+sub+'</small>':'')+'</span><div class="seg"></div>'; const s=r.querySelector('.seg');
+    opts.forEach(([v,t])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; if(String(v)===String(cur)) b.className='on'; b.onclick=()=>{ fn(v); dirty(); renderView(); }; s.appendChild(b); }); par.appendChild(r); };
+  // 1. my program
+  const g1=G('מה בתוכנית שלי <small style="font-weight:400">(הסדר כאן הוא סדר הלימוד)</small>');
+  H.order.forEach((k,i)=>{ const m=MODS[k]; const r=document.createElement('label'); r.className='sr';
+    r.innerHTML='<input type="checkbox"'+(H.on[k]?' checked':'')+'><span>'+m.name+(m.opt?'<small>מופיע תמיד בערב הושענא רבה</small>':k==='shnayim'?'<small>מופיע מליל שישי ועד שבת</small>':k==='korbanot'?'<small>מוצע בזמן מנחה</small>':'')+'</span><span class="ord"><button type="button" aria-label="למעלה"'+(i===0?' disabled':'')+'>▲</button><button type="button" aria-label="למטה"'+(i===H.order.length-1?' disabled':'')+'>▼</button></span>';
+    r.querySelector('input').onchange=e=>{ H.on[k]=e.target.checked?1:0; save(); dirty(); renderView(); };
+    const [u,dn]=r.querySelectorAll('.ord button'); const mv=d=>{ const j=i+d; if(j<0||j>=H.order.length) return; [H.order[i],H.order[j]]=[H.order[j],H.order[i]]; save(); dirty(); renderView(); };
+    u.onclick=e=>{ e.preventDefault(); mv(-1); }; dn.onclick=e=>{ e.preventDefault(); mv(1); }; g1.appendChild(r); });
+  const g1d=document.createElement('details'); g1d.className='grp'; g1d.style.marginTop='.6rem'; g1d.innerHTML='<summary>שיעורים מתוך חוברת דבר מלכות <small>'+esc(H.dm.map(x=>(DMS.find(d=>d[0]===x)||[,''])[1]).filter(Boolean).join(' · '))+'</small><span class="ch">‹</span></summary>'; keepOpen('set:dm',g1d); box.appendChild(g1d);
+  const g1b=document.createElement('div'); g1d.appendChild(g1b);
+  DMS.forEach(([id,n])=>{ const r=document.createElement('label'); r.className='sr'; r.innerHTML='<input type="checkbox"'+(H.dm.includes(id)?' checked':'')+'><span>'+n+'</span>';
+    r.querySelector('input').onchange=e=>{ H.dm=H.dm.filter(x=>x!==id); if(e.target.checked) H.dm.push(id); save(); dirty(); renderView(); }; g1b.appendChild(r); });
+  // 2. text sources
+  const g2=G('מאיפה הטקסט'); const SG=srcGet(), SB=[['sefaria','ספריא'],['booklet','החוברת']];
+  segRow(g2,'חומש',SB,SG.chu,v=>srcSet('chu',v)); segRow(g2,'תניא',SB,SG.tan,v=>srcSet('tan',v)); segRow(g2,'רמב״ם',SB,SG.rmb,v=>srcSet('rmb',v));
+  segRow(g2,'רמב״ם מספריא',[['on','עם ביאור'],['off','בלי']],SG.stz,v=>srcSet('stz',v),'ביאור הרב שטיינזלץ');
+  segRow(g2,'חסידות על הפרשה',[['daily','חלק יומי'],['free','חופשי']],H.chasMode||'daily',v=>{ H.chasMode=v; save(); });
+  g2.insertAdjacentHTML('beforeend','<div class="sr"><span><small>„החוברת” – כשחוברת השבוע טעונה; אם לא, נטען מספריא. אפשר להחליף גם תוך כדי לימוד.</small></span></div>');
+  // 3. learning & prayer
+  const g3=G('לימוד ותפילה');
+  segRow(g3,'לומד מתוך',[['screen','המסך'],['print','החוברת המודפסת']],P.mode,v=>{ P.mode=v; savePlan(); },'בחוברת המודפסת – האפליקציה רק מודדת זמן');
+  segRow(g3,'קרבנות למנחה',[['start','לפני הלימוד'],['end','בסוף']],P.korbPos,v=>{ P.korbPos=v; savePlan(); });
+  segRow(g3,'מנהג המקום',[[0,'ארץ ישראל'],[1,'חוץ לארץ']],H.diaspora?1:0,v=>{ H.diaspora=+v; save(); });
+  { const r=document.createElement('label'); r.className='sr'; r.innerHTML='<span>להציג תפילות ב„להוסיף לתוכנית”<small>שחרית, מנחה, שמע וקטעיהם</small></span><input type="checkbox"'+(H.prayPick!==0?' checked':'')+'>'; r.querySelector('input').onchange=e=>{ H.prayPick=e.target.checked?1:0; save(); }; g3.appendChild(r); }
+  // 4. look
+  const g4=G('תצוגה'); segRow(g4,'צבעי מסך הקריאה',[['auto','לפי הטלפון'],['light','בהיר'],['dark','כהה']],MAIN.theme||'auto',v=>{ MAIN.theme=v; const A=lsGet('hoshana-raba-v2',{}); A.theme=v; lsSet('hoshana-raba-v2',A); if(v==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',v); });
+  // 5. booklet, Tehillim, Hoshana
+  G('חוברות ותהילים','<div class="sr"><span>חוברת דבר מלכות<small>'+esc(DMI?'נטענה – '+Object.keys(DMI.subjects).length+' שיעורים':DMSTATE||'לא נטענה')+'</small></span><a href="dvar.html">'+(DMI?'פתיחה':'טעינה')+' ‹</a></div><div class="sr"><span>תהילים – פרקים אישיים<small>ימי הולדת – הפרק לפי השנה</small></span><a href="tehillim.html">עריכה ‹</a></div><div class="sr"><span>סדר ליל הושענא רבה</span><a href="hoshana.html">פתיחה ‹</a></div>');
+  // 6. install
+  if(!standalone){ const g=G('התקנה'); g.className='sg inst'; g.innerHTML='<div class="sr"><span>📲 להתקין את „לימוד יומי” כאפליקציה בטלפון</span>'+(DP?'<button class="b main sm" id="instBtn" type="button">התקנה</button>':'')+'</div><div class="sr" style="display:block"><ol><li>בכרום: ⋮ למעלה ← <b>„התקנת אפליקציה”</b> או <b>„הוספה למסך הבית”</b>.</li><li>אם כתוב שכבר מותקנת אבל אין אייקון: הגדרות הטלפון ← אפליקציות ← „לימוד יומי” ← הסרה, ואז להתקין שוב.</li><li>אם עדיין לא עובד: בכרום ⋮ ← הגדרות ← הגדרות אתרים ← williash7.github.io ← „ניקוי ואיפוס”.</li></ol></div>';
+    const ib=$('instBtn'); if(ib) ib.onclick=async()=>{ if(!DP) return; DP.prompt(); await DP.userChoice.catch(()=>null); DP=null; renderView(); }; }
+  box.insertAdjacentHTML('beforeend','<div class="foot">הטקסטים של החומש, רש״י, התניא, הרמב״ם, שניים מקרא, התפילות והקרבנות נטענים מספריא (Sefaria) ודורשים חיבור לאינטרנט.</div>'); }
+
+/* ---------- start ---------- */
+showView();
+setInterval(()=>{ if(document.visibilityState==='visible'&&VIEW==='today'&&(P.until||P.free)){ dirty(); renderView(); } },30000);
+import('./dm.js?v=b468eb4f').then(async DM=>{ const m=await DM.loadStored(); if(!m){ DMSTATE='טען את חוברת השבוע'; dirty(); renderView(); return; }
+  const dd=m.wk===CURWK?today.getDay():-1; DMI=DM.todayInfo(m.index, hebOf(today).label, dd); if(!DMI) DMSTATE='החוברת הטעונה אינה של השבוע – טען חדשה'; DMX={DM,index:m.index,day:dd,byWk:{}}; try{ (await DM.loadAll()).forEach(b=>{ DMX.byWk[b.wk]=b.index; }); }catch(e){}
+  dirty(); cleanArchive(units()); renderView(); }).catch(()=>{}).finally(()=>{ if(GO){ go('today'); const b=$('go'); if(!b.disabled) b.click(); } });
+// count words of this week's Chumash / Tanya in the background for accurate estimates
 (async()=>{ for(let d=WD;d>=0;d--){ const dt=dateOf(d), iso=isoDate(dt); for(const k of ['chumash','tanya']){ const id=(k==='chumash'?'chu:':'tan:')+d;
   const wk=(k==='tanya'?'tanyaP':k)+':'+iso; if(!H.on[k] || wcGet(wk) || wkFrac(id)>=1) continue;
-  try{ const r=await (k==='chumash'?partChumash(dt,!!H.diaspora,true):partTanya(dt)); wcSet(wk, r.blocks.reduce((a,b)=>a+b.w,0)); renderFlow(); }catch(e){} } } })();
-if(H.on.chas!==0){ (async()=>{ for(const w of [CURWK, chasSince()]){ if(w>CURWK||wcGet('chas:'+w)) continue; try{ await partChas(w); renderFlow(); render(); }catch(e){} } })(); }
-if(H.on.tanya){ sefCalendar(today).then(cal=>{ const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(it){ tanyaText=tanyaHe(it); render(); } }).catch(()=>{}); }
-// install: offer the browser's install prompt, or explain how (hidden when already running as the app)
-{ const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone; let DP=null;
-  if(!standalone){ $('inst').hidden=false; }
-  addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); DP=e; $('inst').hidden=false; $('instBtn').hidden=false; });
-  $('instBtn').onclick=async()=>{ if(!DP) return; DP.prompt(); const r=await DP.userChoice.catch(()=>null); DP=null; $('instBtn').hidden=true; if(r&&r.outcome==='accepted') $('inst').hidden=true; };
-  addEventListener('appinstalled',()=>{ $('inst').hidden=true; }); }
-addEventListener('pageshow',e=>{ if(e.persisted) render(); });
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ render(); renderFlow(); } });
+  try{ const r=await (k==='chumash'?partChumash(dt,!!H.diaspora,true):partTanya(dt)); wcSet(wk, r.blocks.reduce((a,b)=>a+b.w,0)); dirty(); renderView(); }catch(e){} } } })();
+if(H.on.chas!==0){ (async()=>{ for(const w of [CURWK, chasSince()]){ if(w>CURWK||wcGet('chas:'+w)) continue; try{ await partChas(w); dirty(); renderView(); }catch(e){} } })(); }
+if(H.on.tanya){ sefCalendar(today).then(cal=>{ const it=(cal.calendar_items||[]).find(x=>x.title&&x.title.en==='Tanya Yomi'); if(it){ tanyaText=tanyaHe(it); if(VIEW==='learn') renderView(); } }).catch(()=>{}); }
+addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); DP=e; if(VIEW==='settings') renderView(); });
+addEventListener('pageshow',e=>{ if(e.persisted){ dirty(); renderView(); } });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ dirty(); renderView(); } });
 </script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
 </body>
