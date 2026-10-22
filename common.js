@@ -51,7 +51,9 @@ function chumashFor(date,diaspora){ if(!SCHED) return null;
 /* Sefaria */
 const SEF='https://www.sefaria.org';
 let LASTURL='';
-async function sefJSON(url){ const key='sef:'+url; LASTURL=url;
+const SEFMEM={};
+async function sefJSON(url){ if(!SEFMEM[url]) SEFMEM[url]=sefJSON0(url).catch(e=>{ delete SEFMEM[url]; throw e; }); return SEFMEM[url]; }
+async function sefJSON0(url){ const key='sef:'+url; LASTURL=url;
   try{ const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),20000);
     let r; try{ r=await fetch(url,{signal:ctl.signal}); } catch(e){ throw new Error((e.name==='AbortError'?'timeout':'network/CORS')+': '+e.message); } finally{ clearTimeout(tm); }
     if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json(); try{ sessionStorage.setItem(key,JSON.stringify(j)); }catch(e){} return j; }
@@ -475,10 +477,15 @@ function tpKind(key){ return TPK[key[0]]; }
 function tflWholeId(kind){ return 'tfl:'+kind+':'+tflDate(kind).getDay(); }
 function tflPieceIds(kind){ const pre=kind[0]==='s'&&kind==='shacharit'?'s_':kind==='mincha'?'m_':null; if(!pre) return []; return tpToday().filter(p=>p[0].startsWith(pre)).map(p=>'tp:'+p[0]+':'+tflDate(kind).getDay()); }
 function tflKindDone(kind){ const w=wkFrac(tflWholeId(kind)); const ids=tflPieceIds(kind); const pf=ids.length?ids.filter(id=>wkFrac(id)>=1).length/ids.length:0;
-  return {f:w, pieces:pf}; }
+  return {f:pf>=1?1:w, pieces:pf}; }
+// "the whole prayer" opens as its pieces – each with its own place and progress (Maariv / bedtime Shema are one piece)
+function tflOpenIds(kind,skipKorb){ const ids=tflPieceIds(kind).filter(id=>!(skipKorb&&/^tp:m_korb:/.test(id))); return ids.length?ids:[tflWholeId(kind)]; }
+// Shema / Vehaya / Vayomer said early with the morning blessings are said again in the prayer itself
+function tflPrepWhole(kind){ if(kind!=='shacharit') return; const wd=tflDate(kind).getDay(); if(wkFrac('tp:s_shemaB:'+wd)>=1) return;
+  ['s_shema','s_vehaya','s_vayomer'].forEach(k=>{ const id='tp:'+k+':'+wd; if(wkFrac(id)>=1) wkSet(id,0,true); }); }
 function tpFrac(id){ const [b]=splitWk(id), a=b.split(':'); if(a[0]==='tp'){ const kind=tpKind(a[1]); let f=wkFrac(id); if(wkFrac(tflWholeId(kind))>=1) f=1;
     if(a[1]==='m_korb'&&getProgress('korbanot',isoDate(new Date()))>=1) f=1; return f; }
-  if(a[0]==='tfl') return tflKindDone(a[1]).f; return wkFrac(id); }
+  if(a[0]==='tfl'){ const d=tflKindDone(a[1]); return Math.max(d.f,d.pieces); } return wkFrac(id); }
 function tpSynced(id,v){ const [b]=splitWk(id), a=b.split(':'); if(v<1) return;
   if(a[0]==='tp'&&a[1]==='m_korb') setProgress('korbanot',isoDate(new Date()),1);
   if(a[0]==='tfl'&&a[1]==='mincha') setProgress('korbanot',isoDate(new Date()),1); }
