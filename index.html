@@ -374,7 +374,7 @@ function showView(){ let v=(location.hash||'#today').slice(1).split('&')[0]; if(
   document.querySelectorAll('#tabs a').forEach(a=>a.classList.toggle('on',a.dataset.v===v));
   renderView(); }
 addEventListener('hashchange',()=>{ closeSheet(); showView(); scrollTo(0,0); });
-function renderView(){ $('dl').innerHTML='<b>'+(T.night?'ליל ':'')+esc(hs.label)+'</b> · יום '+WEEKDAYS[today.getDay()]+(()=>{ const c=chumashFor(today,!!H.diaspora); return c?' · פרשת '+esc(c.he):''; })();
+function renderView(){ if($('sheet')&&$('uH')) return; $('dl').innerHTML='<b>'+(T.night?'ליל ':'')+esc(hs.label)+'</b> · יום '+WEEKDAYS[today.getDay()]+(()=>{ const c=chumashFor(today,!!H.diaspora); return c?' · פרשת '+esc(c.he):''; })();
   try{ ({today:renderToday,learn:renderLearn,pray:renderPray,progress:renderProgress,settings:renderSettings})[VIEW](); }catch(e){ console.error(e); } }
 
 /* ===== TODAY: one list + one time line ===== */
@@ -466,9 +466,14 @@ function renderBottom(L){ const m=modeOf();
   const c=$('tctl'); c.innerHTML='';
   if(m==='dur'){ const TM=[10,15,20,30,45,60,90]; TM.forEach(x=>{ const b=document.createElement('button'); b.type='button'; b.textContent=x<60?x+' דק׳':x===60?'שעה':'שעה וחצי'; if(P.min===x) b.className='on'; b.onclick=()=>{ GOTMP=null; P.min=x; savePlan(); renderView(); }; c.appendChild(b); });
     const i=document.createElement('input'); i.type='number'; i.min=1; i.max=300; i.inputMode='numeric'; i.placeholder='אחר'; i.setAttribute('aria-label','מספר דקות אחר'); if(!TM.includes(P.min)) i.value=P.min; i.onchange=()=>{ const v=+i.value; if(v>0){ GOTMP=null; P.min=v; savePlan(); renderView(); } }; c.appendChild(i); }
-  if(m==='until'){ const l=document.createElement('span'); l.textContent='עד השעה:'; c.appendChild(l); const ti=document.createElement('input'); ti.type='time'; ti.id='untilIn'; ti.value=P.until||''; ti.setAttribute('aria-label','עד שעה');
-    const set=()=>{ if(ti.value&&ti.value!==P.until){ GOTMP=null; P.until=ti.value; P.pendU=false; savePlan(); renderView(); } }; ti.onchange=set; ti.onblur=set; c.appendChild(ti);
-    const l2=document.createElement('span'); l2.textContent=P.until?'· יש לך '+fmtMin(availMin()):'· בחר שעה'; c.appendChild(l2); }
+  if(m==='until'){ // ready-made times (every half hour from soon), or any time from two lists – no keyboard
+    const setU=v=>{ GOTMP=null; P.until=v; P.pendU=false; savePlan(); renderView(); };
+    const hm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    const t0=new Date(Date.now()+10*6e4); t0.setSeconds(0,0); t0.setMinutes(Math.ceil(t0.getMinutes()/30)*30);
+    const opts=[]; for(let k=0;k<6;k++){ const d=new Date(t0.getTime()+k*30*6e4); opts.push(hm(d)); }
+    if(P.until&&!opts.includes(P.until)){ const b=document.createElement('button'); b.type='button'; b.className='on'; b.textContent='עד '+P.until; b.onclick=()=>pickUntil(setU); c.appendChild(b); }
+    opts.forEach(v=>{ const b=document.createElement('button'); b.type='button'; b.textContent=v; if(P.until===v) b.className='on'; b.onclick=()=>setU(v); c.appendChild(b); });
+    const o=document.createElement('button'); o.type='button'; o.textContent='שעה אחרת…'; o.onclick=()=>pickUntil(setU); c.appendChild(o); }
   const sel=L.rows.filter(r=>!r.below), tot=sel.reduce((a,r)=>a+r.w,0), all=L.rows.reduce((a,r)=>a+r.u.rem,0);
   let t='';
   if(!L.rows.length) t='סמן מה ללמוד';
@@ -476,13 +481,22 @@ function renderBottom(L){ const m=modeOf();
   else if(m==='free') t='הכל ייקח <b>'+fmtMin(mm(all))+'</b> · תסיים בערך ב־<b>'+clockIn(mm(all))+'</b>';
   else if(m==='until'&&!P.until) t='בחר עד איזו שעה';
   else t='נכנס: <b>'+fmtMin(mm(tot))+'</b> מתוך '+fmtMin(availMin())+' · תסיים בערך ב־<b>'+clockIn(mm(tot))+'</b>'+(L.rows.length>sel.length?' · עוד '+(L.rows.length-sel.length)+' מתחת לקו':'');
-  if(L.rows.some(r=>r.u.est)&&m!=='open') t+=' <span style="opacity:.8">(הערכה)</span>';
+  if(L.rows.some(r=>r.u.est)&&m!=='open'&&!(m==='until'&&!P.until)) t+=' <span style="opacity:.8">(הערכה)</span>';
   $('sumL').innerHTML=t;
   const g=$('go'), n=m==='open'||m==='free'?L.rows.length:sel.length; g.disabled=!n||(m==='until'&&!P.until);
   g.innerHTML=(PR()?'⏱ התחל – עם מדידת זמן':'▶ התחל')+(n?' <small>· '+(n===1?'קטע אחד':n+' קטעים')+'</small>':'');
   g.onclick=()=>start(L); }
-function setMode(v){ GOTMP=null; P.open=v==='open'; P.free=v==='free'; if(v!=='until'){ P.until=null; P.pendU=false; } else if(!P.until) P.pendU=true; savePlan(); renderView();
-  if(v==='until'&&!P.until){ const ti=$('untilIn'); if(ti){ try{ ti.showPicker(); }catch(e){ ti.focus(); } } } }
+function setMode(v){ GOTMP=null; P.open=v==='open'; P.free=v==='free'; if(v!=='until'){ P.until=null; P.pendU=false; } else if(!P.until) P.pendU=true; savePlan(); renderView(); }
+// any clock time: hour and minutes from two lists
+function pickUntil(setU){ closeSheet(); const now=new Date(); const cur=(P.until||'').split(':'); let h=cur[0]!=null&&cur[0]!==''?+cur[0]:(now.getHours()+1)%24, mi=cur[1]!=null?Math.round(+cur[1]/5)*5%60:0;
+  const sh=document.createElement('div'); sh.className='shade'; sh.id='shade'; sh.onclick=closeSheet;
+  const d=document.createElement('div'); d.className='sheet'; d.id='sheet'; d.setAttribute('role','dialog');
+  d.innerHTML='<div class="grab"></div><h3>עד איזו שעה?</h3><div style="display:flex;gap:.6rem;align-items:center;justify-content:center;direction:ltr;margin:.6rem 0 1rem"><select id="uH" aria-label="שעה" style="font-size:1.6rem;padding:.4rem .6rem;border-radius:.6rem;background:var(--bg);color:var(--ink);border:1px solid var(--ln2)"></select><b style="font-size:1.6rem">:</b><select id="uM" aria-label="דקות" style="font-size:1.6rem;padding:.4rem .6rem;border-radius:.6rem;background:var(--bg);color:var(--ink);border:1px solid var(--ln2)"></select></div><div id="uLeft" class="note" style="text-align:center;margin-bottom:.6rem"></div><button class="go" type="button" id="uOk">אישור</button>';
+  document.body.appendChild(sh); document.body.appendChild(d);
+  const H2=$('uH'), M2=$('uM'); for(let x=0;x<24;x++) H2.add(new Option(String(x).padStart(2,'0'),x)); for(let x=0;x<60;x+=5) M2.add(new Option(String(x).padStart(2,'0'),x)); H2.value=h; M2.value=mi;
+  const val=()=>String(H2.value).padStart(2,'0')+':'+String(M2.value).padStart(2,'0');
+  const left=()=>{ const t=untilMs(val()); const m=Math.floor((t-Date.now())/6e4); $('uLeft').textContent=m>0?'יש לך '+fmtMin(m):'השעה הזו כבר עברה'; $('uOk').disabled=m<=0; };
+  H2.onchange=left; M2.onchange=left; left(); $('uOk').onclick=()=>{ const v=val(); closeSheet(); setU(v); }; }
 function start(L){ const m=modeOf(); let sel=L.rows.filter(r=>!r.below); if(m==='open'||m==='free') sel=L.rows; if(!sel.length) return;
   sel.forEach(r=>{ if(r.u.said) wkSet(r.u.id,0,true); });
   if(m==='open'){ const ids=expandIds(sel.map(r=>r.u.id)); location.href=READER()+'?u='+ids.slice(0,3).join(',')+'&open=1&min=60'+(ids.length>3?'&more='+ids.slice(3,80).join(','):''); return; }
