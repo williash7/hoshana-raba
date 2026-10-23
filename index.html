@@ -198,6 +198,7 @@ details.sub>summary small{font-weight:400;color:var(--mut)}
   <section id="v-settings" class="view" hidden></section>
 </main>
 <div class="act" id="act" hidden><div class="act-in">
+  <input type="time" id="uNative" tabindex="-1" aria-hidden="true" style="position:absolute;opacity:0;width:1px;height:1px;pointer-events:none;inset:auto auto 0 0">
   <div class="tseg" id="tseg"><button data-m="open">חופשי</button><button data-m="dur">משך</button><button data-m="until">עד שעה</button><button data-m="free">כמה שיקח</button></div>
   <div class="tctl" id="tctl"></div>
   <div class="sumL" id="sumL"></div>
@@ -471,9 +472,9 @@ function renderBottom(L){ const m=modeOf();
     const hm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     const t0=new Date(Date.now()+10*6e4); t0.setSeconds(0,0); t0.setMinutes(Math.ceil(t0.getMinutes()/30)*30);
     const opts=[]; for(let k=0;k<6;k++){ const d=new Date(t0.getTime()+k*30*6e4); opts.push(hm(d)); }
-    if(P.until&&!opts.includes(P.until)){ const b=document.createElement('button'); b.type='button'; b.className='on'; b.textContent='עד '+P.until; b.onclick=()=>pickUntil(setU); c.appendChild(b); }
+    if(P.until&&!opts.includes(P.until)){ const b=document.createElement('button'); b.type='button'; b.className='on'; b.textContent='עד '+P.until; b.onclick=()=>phoneClock(setU); c.appendChild(b); }
     opts.forEach(v=>{ const b=document.createElement('button'); b.type='button'; b.textContent=v; if(P.until===v) b.className='on'; b.onclick=()=>setU(v); c.appendChild(b); });
-    const o=document.createElement('button'); o.type='button'; o.textContent='שעה אחרת…'; o.onclick=()=>pickUntil(setU); c.appendChild(o); }
+    const o=document.createElement('button'); o.type='button'; o.textContent='🕐 שעה אחרת…'; o.onclick=()=>phoneClock(setU); c.appendChild(o); }
   const sel=L.rows.filter(r=>!r.below), tot=sel.reduce((a,r)=>a+r.w,0), all=L.rows.reduce((a,r)=>a+r.u.rem,0);
   let t='';
   if(!L.rows.length) t='סמן מה ללמוד';
@@ -487,6 +488,9 @@ function renderBottom(L){ const m=modeOf();
   g.innerHTML=(PR()?'⏱ התחל – עם מדידת זמן':'▶ התחל')+(n?' <small>· '+(n===1?'קטע אחד':n+' קטעים')+'</small>':'');
   g.onclick=()=>start(L); }
 function setMode(v){ GOTMP=null; P.open=v==='open'; P.free=v==='free'; if(v!=='until'){ P.until=null; P.pendU=false; } else if(!P.until) P.pendU=true; savePlan(); renderView(); }
+// any clock time: the phone's own clock picker (the input stays on the page, so a refresh can't close it); lists as a fallback
+function phoneClock(setU){ const ti=$('uNative'); ti.value=P.until||''; ti.onchange=()=>{ if(ti.value){ setU(ti.value); } };
+  try{ if(!ti.showPicker) throw 0; ti.showPicker(); }catch(e){ pickUntil(setU); } }
 // any clock time: hour and minutes from two lists
 function pickUntil(setU){ closeSheet(); const now=new Date(); const cur=(P.until||'').split(':'); let h=cur[0]!=null&&cur[0]!==''?+cur[0]:(now.getHours()+1)%24, mi=cur[1]!=null?Math.round(+cur[1]/5)*5%60:0;
   const sh=document.createElement('div'); sh.className='shade'; sh.id='shade'; sh.onclick=closeSheet;
