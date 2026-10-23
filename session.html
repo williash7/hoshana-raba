@@ -113,7 +113,10 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .timebox{text-align:left;min-width:0}
 .timebox b{display:block;font-family:var(--serif);font-size:calc(24px*var(--k));color:var(--gold);font-variant-numeric:tabular-nums;direction:ltr;text-align:left}
 .timebox span{font-size:calc(12px*var(--k));color:var(--muted);white-space:nowrap}
-.parts{display:flex;gap:calc(6px*var(--k));flex-wrap:wrap;margin-top:calc(4px*var(--k))}
+.parts{display:flex;gap:calc(6px*var(--k));flex-wrap:nowrap;overflow-x:auto;margin-top:calc(4px*var(--k));scrollbar-width:none;padding-bottom:calc(2px*var(--k));max-width:100%}
+.parts::-webkit-scrollbar{display:none}
+.parts i{flex:none;white-space:nowrap}
+.parts i small{opacity:.8;font-size:.92em}
 .parts i{font-style:normal;font-size:calc(12px*var(--k));padding:calc(2px*var(--k)) calc(8px*var(--k));border-radius:calc(10px*var(--k));background:var(--night2);color:var(--muted)}
 .parts i.now{background:var(--gold);color:#241c08}
 .parts i.done{color:var(--willow)}
@@ -440,6 +443,7 @@ const chN=(x,p)=>x&&x.chEnds?{n:x.chEnds.filter(e=>e<=p+0.5).length,t:x.chEnds.l
 const chTxt=(x,p)=>{ const c=chN(x,p); return c?c.n+'/'+c.t+' פרקים · ':''; };
 let chSaved={};
 function saveCh(x,p){ const c=chN(x,p); if(!c) return; const k=x.p, v=c.n+'/'+c.t; if(chSaved[k]===v) return; chSaved[k]=v; const S=lsGet('chap-v1',{}); S[k]={n:c.n,t:c.t,d:isoDate(new Date())}; lsSet('chap-v1',S); }
+const escH=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function miniTxt(p,need,curP){ srcButton(curP); const fin=TOTAL-p<3;
   if(OPEN){ $('mini').innerHTML='<span>'+(curP?NAMES[curP.p]+' · ':'')+'הספקת: '+didTxt(p)+'</span><b>'+(t0?mmss(Date.now()-t0):'0:00')+'</b>'; return; }
   const cur=curP?NAMES[curP.p]+(curP.chEnds?' פ׳ '+chN(curP,p).n+'/'+chN(curP,p).t:'')+(curP.ut?' · '+Math.min(curP.ut,curP.ends.filter(e=>e<=p+0.5).length)+'/'+curP.ut:''):'';
@@ -449,13 +453,18 @@ function miniTxt(p,need,curP){ srcButton(curP); const fin=TOTAL-p<3;
 function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; $('clockLbl').textContent=t0?'למדת '+mmss(Date.now()-t0):'שעת סיום משוערת'; } else { $('clock').textContent=mmss(lm); $('clockLbl').textContent=UNTIL?(lm>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):!t0?'השעון יתחיל בלחיצה על ▶':(lm>=0?'נותרו מתוך '+BUDGET+' דק׳':'עבר הזמן שהגדרת'); }
   if(!ready) return;
   const p=curPos; checkStops(p); $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
-  const box=$('parts'); box.innerHTML=''; const OV={}; let ovDone=0, ovN=0, ovD=0, ovT=0;
+  const box=$('parts'), keepX=box.scrollLeft; box.innerHTML=''; const OV={}; let nowEl=null; let ovDone=0, ovN=0, ovD=0, ovT=0;
   PB.forEach(x=>{ const i=document.createElement('i'); const px=posFor(x,p), q=Math.max(0,Math.min(x.z-x.a,px-x.a)), fr=q/Math.max(1,x.z-x.a); const uf=x.err?0:Math.min(1,q/x.W);
     const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; const cn=x.ends?Math.min(x.ut,x.ends.filter(e=>e<=px+0.5).length):0; if(!x.err&&x.p!=='mincha'){ ovN++; ovT+=x.z-x.a; ovD+=dn?x.z-x.a:Math.max(q,x.rsC-x.a); if(dn) ovDone++; if(x.ut){ const k=x.un||''; OV[k]=OV[k]||[0,0]; OV[k][0]+=dn?x.ut:Math.max(cn,x.us); OV[k][1]+=x.ut; } }
-    i.textContent=NAMES[x.p]+(dn?' ✓':x.ut?' '+Math.max(cn,x.us)+'/'+x.ut:''); i.className=dn?'done':(p>=x.a-1&&p<x.z?'now':''); if(!x.err&&!inPart(x,p)) i.onclick=()=>jumpTo(x.p); box.appendChild(i);
+    // the row on top: only what's still ahead – not what's done, not what dropped for lack of time – each with its time
+    const isNow=p>=x.a-1&&p<x.z, out=!isNow&&(dn||(!x.err&&x.p!=='mincha'&&x.p!=='korb'&&(/^tp:/.test(x.p)?tpFrac(x.p):wkFrac(x.p))>=1)||DROP.has(x.p)||(!FREE&&!OPEN&&x.a-1>=GOAL-1&&GOAL<TOTAL-2));
+    if(!out){ const rw=x.err?0:Math.max(0,x.z-Math.max(px,x.rsC)), mn=rw/wpm; i.innerHTML=escH(NAMES[x.p])+(isNow&&x.ut?' '+Math.max(cn,x.us)+'/'+x.ut:'')+(x.err?'':' <small>· '+(mn<1?'פחות מדקה':fmtMin(mn))+'</small>');
+      i.className=dn?'done':(isNow?'now':''); if(!x.err&&!inPart(x,p)) i.onclick=()=>jumpTo(x.p); box.appendChild(i); if(isNow) nowEl=i; }
     if(!x.err && x.p!=='mincha' && px>x.rsC+0.5){ saveCh(x,dn?x.z:px); if(x.p==='korb') setProgress('korbanot',isoDate(today),v); else { wkSet(x.p,v); tpSynced(x.p,v); }
       const [xb,xw]=splitWk(x.p), a=xw===CURWK?xb.split(':'):['']; if(a[0]==='chu'&&+a[1]===WD) setProgress('chumash',isoDate(today),v,v>=1?x.ut:cn,x.ut,x.un); if(a[0]==='tan'&&+a[1]===WD) setProgress('tanya',isoDate(today),v,v>=1?x.ut:cn,x.ut,x.un);
       if(a[0]==='teh'&&+a[1]===T.day) setProgress('tehillim',T.key,v,v>=1?x.ut:cn,x.ut,x.un); } });
+  box.scrollLeft=keepX; if(nowEl&&nowEl.textContent.split(' ')[0]!==update.lastNow){ update.lastNow=nowEl.textContent.split(' ')[0]; try{ nowEl.scrollIntoView({block:'nearest',inline:'start'}); }catch(e){} }
+  box.style.display=box.children.length?'':'none';
   const tgt=p<GOAL-1?GOAL:TOTAL, lw=remW(p), need=lw/wpm;
   // the whole session, not only the current piece
   $('overallRow').style.display=ovN<2?'none':''; if(ovN>=2) $('overall').innerHTML='בסך הכל: <b>'+Math.round(Math.min(1,ovD/Math.max(1,ovT))*100)+'%</b> · '+ovDone+'/'+ovN+' חלקים'+Object.entries(OV).map(([k,v])=>' · '+Math.min(v[0],v[1])+'/'+v[1]+(k?' '+k:'')).join('');
