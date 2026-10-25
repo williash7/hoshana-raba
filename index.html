@@ -273,7 +273,10 @@ const SKIPSEC=/מפתח|הנחת תפילין|לוח|זמני|מזמורי תה�
 // past weeks still open: those with an archived booklet or with tracked learning (within the last 8 weeks)
 function pastWeeks(){ const lim=isoDate(new Date(Date.now()-56*864e5)); const set=new Set(Object.keys(trk()).filter(w=>w<CURWK&&w>=lim));
   if(DMX&&DMX.byWk) Object.keys(DMX.byWk).forEach(w=>{ if(w<CURWK) set.add(w); });
-  if(H.on.chas!==0){ const cs=chasSince(); if(cs<CURWK&&cs>=lim) set.add(cs); } return [...set].sort(); }
+  if(H.on.chas!==0){ const cs=chasSince(); if(cs<CURWK&&cs>=lim) set.add(cs); }
+  if(H.on.shnayim!==0){ const pw=isoDate(new Date(weekStart(CURWK).getTime()-7*864e5)); if(shmOpen(pw)) set.add(pw); } return [...set].sort(); }
+// last week's Shnayim Mikra still not finished (any of the 8 parts, haftarah included)
+function shmOpen(wk){ for(let i=0;i<8;i++){ if(i===7&&!haftFor(dateIn(wk,6))) continue; if(wkFrac('shm:'+i+'@'+wk)<1) return true; } return false; }
 function weekUnits(wk,cur){ const out=[], sfx=cur?'':'@'+wk, ix=cur?(DMX&&DMX.day>=0?DMX.index:null):(DMX&&DMX.byWk&&DMX.byWk[wk])||null;
   const ok=!!ix, dmW=(s,d)=>DMX.DM.slices(ix,s,d).reduce((a,b)=>a+b.words,0), last=cur?WD:6;
   for(let d=0;d<=last;d++){ const g=cur&&d===WD?0:1, dt=cur?dateOf(d):dateIn(wk,d), iso=isoDate(dt), base={g,d,wk,cur,dt};
@@ -284,6 +287,7 @@ function weekUnits(wk,cur){ const out=[], sfx=cur?'':'@'+wk, ix=cur?(DMX&&DMX.da
     if(ok) H.dm.filter(s=>RAMBAM.includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push(Object.assign({id:'dm:'+s+':'+d+sfx,name:DMNAME[s],w},base)); });
     // no booklet for this week: Rambam (3 chapters / 1 chapter) comes from Sefaria, from the day you started
     else if(iso>=rambamSince()) H.dm.filter(s=>RMB_TITLE[s]).forEach(s=>{ const w=wcGet('rmb:'+s+':'+iso); out.push(Object.assign({id:'dm:'+s+':'+d+sfx,name:DMNAME[s],w:w||(s==='rambam3'?3800:1300),est:!w},base)); }); }
+  if(!cur&&H.on.shnayim!==0&&wk===isoDate(new Date(weekStart(CURWK).getTime()-7*864e5))){ const sat=dateIn(wk,6); if(shnayimRefs(0,sat)) for(let i=0;i<8;i++){ if(i===7&&!haftFor(sat)) continue; const w=wcGet('shm:'+wk+':'+i)||wcGet('shm:'+CURWK+':'+i); out.push({id:'shm:'+i+'@'+wk,g:1,wk,cur,dt:sat,name:'שניים מקרא – '+shmName(i),w:w||(i===7?450:700),est:!w,shm:1}); } }
   if(cur&&H.on.shnayim!==0&&shnayimTime()){ const R=shnayimRefs(0,today); if(R) for(let i=0;i<8;i++){ if(i===7&&!haftFor(today)) continue; const w=wcGet('shm:'+CURWK+':'+i); out.push({id:'shm:'+i,g:0,wk,cur,dt:today,name:'שניים מקרא – '+shmName(i),w:w||(i===7?450:700),est:!w,shm:1}); } }
   if(ok){ for(let d=0;d<=last;d++) H.dm.filter(s=>!RAMBAM.includes(s)&&!['chumash','tanya','hayomyom'].includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d+sfx,g:2,d,wk,cur,dt:cur?dateOf(d):dateIn(wk,d),name:DMNAME[s],w}); });
     if(H.dm.includes('hayomyom')){ const w=dmW('hayomyom',cur?DMX.day:0); if(w) out.push({id:'dm:hayomyom'+sfx,g:2,wk,cur,name:'היום יום',w}); }
@@ -317,7 +321,7 @@ function cleanArchive(all){ if(!DMX||!DMX.byWk) return; Object.keys(DMX.byWk).fo
 // Mincha time: from midday (chatzot) until a little after sunset – only then is Korbanos offered
 function minchaTime(){ try{ const n=new Date(); return n.getTime()>=noonMs(n) && n.getTime()<sunsetMs(n)+20*6e4; }catch(e){ return false; } }
 const korbSaid=()=>getProgress('korbanot',isoDate(today))>=1||(()=>{ try{ return tpFrac('tp:m_korb:'+today.getDay())>=1||tflKindDone('mincha').f>=1; }catch(e){ return false; } })();
-const MKN={chu:'חומש',tan:'תניא',teh:'תהילים',chas:'חסידות על הפרשה'};
+const MKN={chu:'חומש',tan:'תניא',teh:'תהילים',chas:'חסידות על הפרשה',shm:'שניים מקרא'};
 const mkKey=u=>{ const a=splitWk(u.id)[0].split(':'); return a[0]==='dm'?a[1]:a[0]; };
 
 /* ---------- units, default plan, my plan ---------- */
@@ -346,7 +350,7 @@ function layout(){ const all=units(), byId=new Map(all.map(u=>[u.id,u]));
     if(acc+u.rem<=budget*1.05){ rows.push({u,w:u.rem}); acc+=u.rem; return; }
     const left=budget-acc; if(left>=3*wpm&&!u.korb){ rows.push({u,w:left,partial:true}); acc=budget; cut=i+1; } else { rows.push({u,w:u.rem,below:true}); cut=i; } });
   return {all,byId,ids,rows,cut,acc}; }
-const label=u=>u.d!=null?(u.cur?(u.d===WD?'':'מיום '+WEEKDAYS[u.d]):'יום '+WEEKDAYS[u.d]+' '+hebOf(u.dt).label):!u.cur&&u.sec?'מחוברת '+hebOf(weekStart(u.wk)).label:u.sec?'מהחוברת':u.shm?'פרשת '+((shnayimRefs(0,today)||{}).he||''):u.korb?(P.korbPos==='start'?'לפני הלימוד':'בסוף, לפני אשרי'):'';
+const label=u=>u.d!=null?(u.cur?(u.d===WD?'':'מיום '+WEEKDAYS[u.d]):'יום '+WEEKDAYS[u.d]+' '+hebOf(u.dt).label):!u.cur&&u.sec?'מחוברת '+hebOf(weekStart(u.wk)).label:u.sec?'מהחוברת':u.shm?'פרשת '+((shnayimRefs(0,u.dt||today)||{}).he||'')+(u.cur?'':' · השלמה'):u.korb?(P.korbPos==='start'?'לפני הלימוד':'בסוף, לפני אשרי'):'';
 const subTxt=u=>[label(u), u.said?'✓ כבר נאמר היום':u.f>0?'המשך · '+Math.round(u.f*100)+'% נלמד':''].filter(Boolean).join(' · ');
 const tmTxt=w=>fmtMin(mm(w));
 const READER=()=>PR()?'track.html':'session.html';
@@ -510,7 +514,7 @@ function start(L){ const m=modeOf(); let sel=L.rows.filter(r=>!r.below); if(m===
   location.href=READER()+'?u='+expandIds(sel.map(r=>{ const x=r.partial&&m!=='free'?(r.u.f+(1-r.u.f)*r.w/r.u.rem):1; return r.u.id+(r.u.chasEnd?'~e'+r.u.chasEnd(x).toFixed(4):r.partial&&m!=='free'?'~e'+x.toFixed(4):''); })).join(',')+'&min='+(m==='free'?Math.max(1,Math.ceil(mm(tot)))+'&free=1':availMin())+(P.until&&m==='until'?'&until='+P.until:'')+more; }
 
 /* ===== LEARN: one card per subject ===== */
-const SUBJ={tehillim:'teh',chumash:'chu',tanya:'tan',chas:'chas'};
+const SUBJ={tehillim:'teh',chumash:'chu',tanya:'tan',chas:'chas',shnayim:'shm'};
 const subjKey=k=>k==='rambam'?rmbSubj():SUBJ[k];
 function hrefOf(k){ const free='&min=30&free=1';
   if(k==='tehillim') return READER()+'?u=teh:'+T.day+'&min=20&free=1';
@@ -519,7 +523,7 @@ function hrefOf(k){ const free='&min=30&free=1';
   if(k==='rambam') return READER()+'?u=dm:'+rmbSubj()+':'+WD+'&min=60&free=1';
   if(k==='chas'){ const cd=chasDay(); return READER()+'?u=chas'+(H.chasMode!=='free'&&!cd.done?'~e'+cd.target.toFixed(4):'')+free; }
   if(k==='korbanot') return READER()+'?u=korb&min=15&free=1';
-  if(k==='shnayim') return READER()+'?u=shm:0,shm:1,shm:2,shm:3,shm:4,shm:5,shm:6,shm:7&min=70';
+  if(k==='shnayim'){ if(!shnayimTime()){ const L=units().filter(u=>u.shm&&!u.cur&&u.f<1).map(u=>u.id); if(L.length) return READER()+'?u='+L.join(',')+'&min=70&free=1'; } return READER()+'?u=shm:0,shm:1,shm:2,shm:3,shm:4,shm:5,shm:6,shm:7&min=70'; }
   if(k==='dvar') return 'dvar.html'; if(k==='hoshana') return 'hoshana.html'; return './'; }
 function info(k){
   if(k==='tehillim'){ const f=unitFrac('teh:'+T.day); return {what:'יום '+gq(T.day)+' לחודש · מזמורים '+T.range+(personalKapitels().length?' · ופרקים אישיים':''), pct:f, pi:getProgressInfo('tehillim',T.key)}; }
@@ -530,6 +534,7 @@ function info(k){
     if(H.chasMode==='free') return {what:P2.bookHe+' · פרשת '+P2.he+' · לימוד חופשי לאורך השבוע', pct:cd.f};
     const rel=cd.target>cd.base?Math.min(1,(cd.f-cd.base)/(cd.target-cd.base)):1; return {what:P2.bookHe+' · פרשת '+P2.he+' · חלק היום · השבוע '+Math.round(cd.f*100)+'%', pct:rel}; }
   if(k==='dvar'){ if(!DMI) return {what:DMSTATE||'טען את חוברת השבוע', pct:null}; return {what:'יום '+WEEKDAYS[DMI.day]+' · '+Object.keys(DMI.subjects).length+' שיעורים בחוברת', pct:null}; }
+  if(k==='shnayim'&&!shnayimTime()){ const pw=isoDate(new Date(weekStart(CURWK).getTime()-7*864e5)), sat=dateIn(pw,6), R=shnayimRefs(0,sat); let n=0,t=0; for(let i=0;i<8;i++){ if(i===7&&!haftFor(sat)) continue; t++; if(wkFrac('shm:'+i+'@'+pw)>=1) n++; } return {what:(R?'פרשת '+R.he+' · ':'')+'מהשבוע שעבר – להשלים', pct:t?n/t:0, pi:{n,t,u:'חלקים'}}; }
   if(k==='shnayim'){ const R=shnayimRefs(0,today); let n=0; for(let i=0;i<8;i++) if(wkFrac('shm:'+i)>=1) n++; return {what:(R?'פרשת '+R.he+' · ':'')+'מליל שישי ועד שבת · כולל הפטרה', pct:n/8, pi:{n,t:8,u:'חלקים'}}; }
   if(k==='korbanot') return {what:'פרשת התמיד, הקטורת ופיטום הקטורת – לפני אשרי', pct:korbSaid()?1:getProgress('korbanot',isoDate(today))};
   if(k==='hoshana') return {what:'חומש דברים, תהילים וזהר – עם ספירה לחצות', pct:null};
@@ -539,7 +544,7 @@ function progLine(i){ if(i.pct==null) return ''; const p=i.pct, pi=i.pi;
   return '<div class="pr"><div class="bar"><i class="'+(p>=1?'ok':'')+'" style="width:'+Math.round(Math.min(1,p)*100)+'%"></i></div><span>'+t+'</span></div>'; }
 function renderLearn(){ const box=$('v-learn'); box.innerHTML=''; const all=units(); const s=season();
   if(s){ const a=document.createElement('a'); a.className='card season'; a.href='hoshana.html'; a.innerHTML='<h2>ליל הושענא רבה</h2><div class="what">חומש דברים, תהילים וזהר ‹</div>'; box.appendChild(a); }
-  const list=H.order.filter(k=>H.on[k]&&k!=='hoshana'&&k!=='korbanot'&&(k!=='shnayim'||shnayimTime()));
+  const list=H.order.filter(k=>H.on[k]&&k!=='hoshana'&&k!=='korbanot'&&(k!=='shnayim'||shnayimTime()||all.some(u=>u.shm&&!u.cur&&u.f<1)));
   if(!list.length) box.innerHTML+='<div class="empty">לא נבחרו נושאים. אפשר לבחור בהגדרות (⚙).</div>';
   list.forEach(k=>{ const i=info(k), d=document.createElement('div'); d.className='card'+(i.pct>=1?' done':'');
     d.innerHTML='<h2></h2><div class="what"></div>'+progLine(i)+'<div class="btns"></div>'; d.querySelector('h2').textContent=MODS[k].name; d.querySelector('.what').textContent=i.what||'';
@@ -549,7 +554,7 @@ function renderLearn(){ const box=$('v-learn'); box.innerHTML=''; const all=unit
     // make-up for this subject
     const sk=subjKey(k); if(sk){ const Lk=all.filter(u=>u.g===1&&u.f<1&&mkKey(u)===sk).sort(byDay), wkL=Lk.filter(u=>u.cur);
       const doMk=(L2,what)=>{ setSel(L2.map(u=>u.id)); toast('התוכנית: '+what+' – '+L2.length+' '+(L2.length===1?'יום':'ימים')+'. אפשר להוסיף עוד מלמטה'); go('today'); };
-      if(Lk.length){ const days=n=>n===1?'יום אחד':n+' ימים';
+      if(Lk.length){ const days=n=>sk==='shm'?(n===1?'חלק אחד':n+' חלקים'):n===1?'יום אחד':n+' ימים';
         B('להשלים · חסרים '+days(Lk.length),'',()=>{ if(!(wkL.length&&wkL.length<Lk.length)) return doMk(Lk,'השלמת '+MODS[k].name);
           sheet('השלמת '+MODS[k].name,[['רק מהשבוע ('+days(wkL.length)+', כ־'+fmtMin(mm(wkL.reduce((a,u)=>a+u.rem,0)))+')',()=>doMk(wkL,'השלמת '+MODS[k].name+' השבוע')],['הכל מתחילת החיסורים ('+days(Lk.length)+', כ־'+fmtMin(mm(Lk.reduce((a,u)=>a+u.rem,0)))+')',()=>doMk(Lk,'השלמת '+MODS[k].name)]]); }); } }
     // reset today's

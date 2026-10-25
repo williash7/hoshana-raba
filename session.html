@@ -282,7 +282,7 @@ function loadUnit(full){ const [id,wk]=splitWk(full); const a=id.split(':');
   if(a[0]==='tp') return partPiece(a[1]);
   if(a[0]==='chas') return partChas(wk);
   if(a[0]==='korb') return partKorbanot();
-  if(a[0]==='shm') return partShnayim(+a[1]);
+  if(a[0]==='shm') return partShnayim(+a[1], wk&&wk!==CURWK?dateIn(wk,6):undefined);
   if(a[0]==='mincha') return Promise.resolve({title:'תפילת מנחה',blocks:[{cls:'pause',html:'<b>🕍 עכשיו מתפללים מנחה</b>אשרי, שמונה עשרה, תחנון ועלינו.<br>הגלילה והשעון של הלימוד נעצרים כאן – לחץ ▶ כשתסיים, והלימוד ימשיך.',w:1,mark:'מנחה'}]});
   return Promise.reject(new Error('?')); }
 function dmW(){ return Math.min(innerWidth,900*K)*(DMV.zoom||1.6); }
