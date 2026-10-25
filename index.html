@@ -432,7 +432,7 @@ function renderAdd(box,L){ const inP=new Set(L.rows.map(r=>r.u.id)); const open=
   const arow=(par,u,extra)=>{ const r=document.createElement('div'); r.className='arow';
     r.innerHTML='<button class="cb" type="button" aria-label="להוסיף לתוכנית"></button><button class="nm" type="button">'+esc(u.name)+(extra||subTxt(u)?'<small>'+esc(extra||subTxt(u))+'</small>':'')+'</button><span class="tm">'+(u.est?'כ־':'')+tmTxt(u.rem)+'</span>';
     r.querySelector('.cb').onclick=()=>{ addToPlan([u.id]); renderView(); toast('נוסף לתוכנית: '+u.name); };
-    r.querySelector('.nm').onclick=()=>sheet(u.name,[['+ להוסיף לסוף התוכנית',()=>{ addToPlan([u.id]); renderView(); }],['⤒ להוסיף לראש התוכנית',()=>{ addToPlan([u.id],true); renderView(); }],['▶ לפתוח עכשיו רק את זה',()=>openOne(u)]]);
+    r.querySelector('.nm').onclick=()=>sheet(u.name,[['+ להוסיף לסוף התוכנית',()=>{ addToPlan([u.id]); renderView(); }],['⤒ להוסיף לראש התוכנית',()=>{ addToPlan([u.id],true); renderView(); }],['▶ לפתוח עכשיו רק את זה',()=>openOne(u)],[u.korb||u.g===5?'✓ כבר אמרתי – לסמן':'✓ כבר למדתי – לסמן',()=>markDone(u)]]);
     par.appendChild(r); return r; };
   const grp=(key,title,n,mins)=>{ const d=document.createElement('details'); d.className='grp'; d.innerHTML='<summary>'+title+' <small>'+(n?n+(mins!=null?' · כ־'+fmtMin(mins):''):'')+'</small><span class="ch">‹</span></summary>'; keepOpen(key,d); box.appendChild(d); return d; };
   const sumM=L=>mm(L.reduce((a,u)=>a+u.rem,0));
