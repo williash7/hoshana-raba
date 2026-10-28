@@ -270,11 +270,11 @@ function sederExport(){
   }catch(e){toast('לא ניתן להעביר את הנתונים: '+e.message);}
 }
 function sederImportPrayer(){
-  const k=QS.get('markPrayer');
-  if(!['shacharit','mincha','maariv','shema'].includes(k)) return;
+  const ks=(QS.get('markPrayers')||QS.get('markPrayer')||'').split(',');
   const d=QS.get('markDay');
   if(d!==isoDate(new Date())) return;
-  wkSet('tfl:'+k+':'+tflDate(k).getDay(),1,true);
+  for(const k of ks){if(['shacharit','mincha','maariv','shema'].includes(k))
+    wkSet('tfl:'+k+':'+tflDate(k).getDay(),1,true);}
 }
 sederImportPrayer();
 function sederButton(){
