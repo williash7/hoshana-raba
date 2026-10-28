@@ -219,6 +219,14 @@ SCHED={"il":{"2025-09-27":["Vayeilech"],"2025-10-04":["Ha'azinu"],"2025-10-11":n
 const $=id=>document.getElementById(id), root=document.documentElement;
 computeK(); applyTheme();
 const Q=new URLSearchParams(location.search);
+if(Q.get('fromSeder')==='1') {
+  try { sessionStorage.setItem('seder-learning-origin','1'); } catch(e){}
+  const dateKey=(()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');})();
+  if(Q.get('markDay')===dateKey) {
+    (Q.get('markPrayers')||'').split(',').filter(k=>['shacharit','mincha','maariv','shema'].includes(k))
+      .forEach(k=>wkSet('tfl:'+k+':'+tflDate(k).getDay(),1,true));
+  }
+}
 const BUDGET=Math.max(1,+(Q.get('min')||10));
 const UNTIL=Q.get('until'), UNTILMS=UNTIL?(()=>{ const [h,m]=UNTIL.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); })():null;
 const OPEN=Q.get('open')==='1' && !UNTIL;   // OPEN: no time at all – go from piece to piece as long as you like, and see how much you did
