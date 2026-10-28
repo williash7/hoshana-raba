@@ -255,6 +255,8 @@ let P=Object.assign({min:30,day:'',mode:'screen'},lsGet('plan-v1',{}));
 if(!P.korbPos) P.korbPos='start';
 // "continue learning" after a finished session: index.html?go=1&min=..&until=..
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
+if(GO) { try { sessionStorage.setItem('seder-learning-origin','1'); } catch(e){} }
+
 let GOTMP=GO?{min:P.min,until:P.until||null,free:!!P.free,open:!!P.open,pendU:!!P.pendU}:null;
 if(GO){ P.free=false; P.open=false; P.pendU=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
