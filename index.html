@@ -264,14 +264,20 @@ function availMin(){ if(P.free||P.open) return Infinity; if(P.until&&untilMs(P.u
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 
 sederImportPrayer();
-if(QS.get('syncSeder')==='1'||QS.get('fromSeder')==='1') window.addEventListener('load',()=>setTimeout(sederExport,1800),{once:true});
+if(QS.get('syncSeder')==='1'||QS.get('fromSeder')==='1') {
+  // Wait for asynchronous booklet data where possible; never send an empty/partial catalog too early.
+  window.addEventListener('load',()=>{
+    let attempts=0;
+    const wait=()=>{ if(DMI || DMSTATE || ++attempts>=12) sederExport(); else setTimeout(wait,500); };
+    setTimeout(wait,500);
+  },{once:true});
+}
 if(P.day!==isoDate(today)){ P.day=isoDate(today); P.sel=null; P.selDay=null; }
 // Seder Hayom bridge: an explicit action returns an up-to-date progress snapshot.
 // The web app cannot read the native app storage and does not publish private data to a server.
 function sederSnapshot(){
   const all=catalog().filter(u=>u.g!==5&&u.f<0.999).slice(0,60);
   const p=['shacharit','mincha','maariv','shema'].reduce((a,k)=>{a[k]=tpFrac('tfl:'+k+':'+tflDate(k).getDay())>=0.999;return a;},{});
-  const pace=paceTxt();
   return {v:1,date:isoDate(today),at:Date.now(),prayers:p,
     remaining:all.map(u=>({id:u.id,name:u.name,minutes:Math.max(1,Math.ceil(mm(u.rem))),pct:Math.round(u.f*100)}))};
 }
