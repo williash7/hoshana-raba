@@ -537,6 +537,24 @@ try {
     document.body.appendChild(syncBack);
   }
 }catch(e){}
+// Return automatically once the requested learning allocation was completed.
+// Only sessions explicitly opened by Seder Hayom may navigate back;
+// ordinary reading sessions are never redirected.
+let sederAutoReturnScheduled=false;
+function sederMaybeReturn(){
+  if(sederAutoReturnScheduled || !ready || document.visibilityState!=='visible') return;
+  let fromSeder=false;
+  try { fromSeder=sessionStorage.getItem('seder-learning-origin')==='1'; }catch(e){}
+  if(!fromSeder || OPEN || !t0) return;
+  const finished=FREE ? TOTAL-curPos<3 : curPos>=Math.min(GOAL,TOTAL)-2;
+  if(!finished) return;
+  sederAutoReturnScheduled=true;
+  setTimeout(()=>{
+    try { if(ready){curPos=posFromScroll();reach(curPos);update();} }catch(e){}
+    location.href='index.html?syncSeder=1';
+  },1800);
+}
+setInterval(sederMaybeReturn,1100);
 requestAnimationFrame(()=>load());
 </script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
