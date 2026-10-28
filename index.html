@@ -255,6 +255,15 @@ let P=Object.assign({min:30,day:'',mode:'screen'},lsGet('plan-v1',{}));
 if(!P.korbPos) P.korbPos='start';
 // "continue learning" after a finished session: index.html?go=1&min=..&until=..
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
+let GOTMP=GO?{min:P.min,until:P.until||null,free:!!P.free,open:!!P.open,pendU:!!P.pendU}:null;
+if(GO){ P.free=false; P.open=false; P.pendU=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); history.replaceState(null,'','./'); }
+const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
+function availMin(){ if(P.free||P.open) return Infinity; if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
+const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
+
+sederImportPrayer();
+if(QS.get('syncSeder')==='1'||QS.get('fromSeder')==='1') window.addEventListener('load',()=>setTimeout(sederExport,1800),{once:true});
+if(P.day!==isoDate(today)){ P.day=isoDate(today); P.sel=null; P.selDay=null; }
 // Seder Hayom bridge: an explicit action returns an up-to-date progress snapshot.
 // The web app cannot read the native app storage and does not publish private data to a server.
 function sederSnapshot(){
@@ -286,15 +295,7 @@ function sederButton(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sederButton);
 else sederButton();
 
-let GOTMP=GO?{min:P.min,until:P.until||null,free:!!P.free,open:!!P.open,pendU:!!P.pendU}:null;
-if(GO){ P.free=false; P.open=false; P.pendU=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); history.replaceState(null,'','./'); }
-const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
-function availMin(){ if(P.free||P.open) return Infinity; if(P.until&&untilMs(P.until)<=Date.now()){ P.until=null; savePlan(); } if(P.until){ return Math.max(0,Math.floor((untilMs(P.until)-Date.now())/6e4)); } return P.min; }
-const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 
-sederImportPrayer();
-if(QS.get('syncSeder')==='1'||QS.get('fromSeder')==='1') window.addEventListener('load',()=>setTimeout(sederExport,1800),{once:true});
-if(P.day!==isoDate(today)){ P.day=isoDate(today); P.sel=null; P.selDay=null; }
 const savePlan=()=>lsSet('plan-v1',GOTMP?Object.assign({},P,GOTMP):P);
 let DMX=null;   // {DM, index, day} = this week's booklet; DMX.byWk[<sunday>] = every archived booklet's index
 const WD=today.getDay(), CURWK=wkId();
