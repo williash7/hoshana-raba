@@ -287,7 +287,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else sederButton();
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
 sederImportPrayer();
-if(QS.get('syncSeder')==='1') window.addEventListener('load',()=>setTimeout(sederExport,1800),{once:true});
+if(QS.get('syncSeder')==='1'||QS.get('fromSeder')==='1') window.addEventListener('load',()=>setTimeout(sederExport,1800),{once:true});
 let GOTMP=GO?{min:P.min,until:P.until||null,free:!!P.free,open:!!P.open,pendU:!!P.pendU}:null;
 if(GO){ P.free=false; P.open=false; P.pendU=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
