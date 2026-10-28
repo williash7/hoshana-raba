@@ -186,6 +186,16 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .dock-tools .dock-sync{border-color:var(--gold);color:var(--gold)}
 .dock-tools .dock-home svg{flex:none}
 @media (max-width:360px){.dock{padding-left:7px;padding-right:7px}.dock-primary,.dock-tools{gap:5px}.dock-primary #fitBtn{width:61px;min-width:61px}.dock-tools .ctl{font-size:13px}}
+
+/* Reading focus mode: synchronize top and bottom compact displays. */
+.dock-toggle{align-self:center;background:transparent;color:var(--muted);border:1px solid #4a4f6b;border-radius:16px;padding:2px 12px;min-height:26px;display:flex;align-items:center;gap:6px;font-size:12px}
+.dock.compact{padding:4px 10px calc(env(safe-area-inset-bottom,0px) + 4px)}
+.dock.compact .session-dock{gap:0;flex-direction:row-reverse;justify-content:center;align-items:center;max-width:380px;gap:12px}
+.dock.compact .dock-primary{width:auto;flex:none;gap:0}
+.dock.compact .dock-primary .speed,.dock.compact .dock-primary #fitBtn,.dock.compact .dock-tools{display:none!important}
+.dock.compact .dock-primary .play{width:42px;height:42px}
+.dock.compact .dock-primary .play svg{width:20px;height:20px}
+.dock.compact .dock-toggle{align-self:center;min-height:38px;padding:5px 14px;border-color:var(--gold);color:var(--gold)}
 </style>
 </head>
 <body>
@@ -211,6 +221,7 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <div class="nav" id="nav" hidden><div class="navIn"><div class="navHd"><b>הקטעים בלימוד הזה</b><button id="navX" aria-label="סגור">✕</button></div><p class="navHint">לחץ על קטע כדי לעבור אליו. כל קטע זוכר איפה עצרת.</p><div id="navList"></div></div></div>
 <nav class="dock" id="dock">
   <div class="dock-in session-dock">
+    <button class="dock-toggle" id="dockToggle" type="button" aria-label="צמצום כלי הלימוד" aria-expanded="true"><span id="dockToggleIcon">⌄</span><span id="dockToggleText">הסתרת כלים</span></button>
     <div class="dock-primary">
       <button class="play" id="play" aria-label="הפעל גלילה"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
       <div class="speed">
@@ -504,7 +515,9 @@ function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; 
   $('spd').textContent=Math.round(wpm); }
 // the status bar can be made small: progress bar + one short line
 let HMIN=!!lsGet('hdr-min-v1',false);
-function setHdr(v){ HMIN=v; lsSet('hdr-min-v1',v); $('top').classList.toggle('min',v); $('hdrTgl').textContent=v?'⌄':'⌃'; if(ready){ const p=curPos; measure(); scrollToPos(p); update(); } }
+function setHdr(v){ HMIN=v; lsSet('hdr-min-v1',v); $('top').classList.toggle('min',v); $('hdrTgl').textContent=v?'⌄':'⌃'; setDockCompact(v); if(ready){ const p=curPos; measure(); scrollToPos(p); update(); } }
+function setDockCompact(v){ $('dock').classList.toggle('compact',v); $('dockToggle').setAttribute('aria-expanded',String(!v)); $('dockToggle').setAttribute('aria-label',v?'הצגת כלי הלימוד':'צמצום כלי הלימוד'); $('dockToggleIcon').textContent=v?'⌃':'⌄'; $('dockToggleText').textContent=v?'הצגת כלים':'הסתרת כלים'; if(ready){ const p=curPos; measure(); scrollToPos(p); update(); } }
+$('dockToggle').onclick=()=>setDockCompact(!$('dock').classList.contains('compact'));
 // letter size (saved): א cycles through four sizes
 // Rashi on the Chumash: show / hide (the place in the text is kept)
 let RASHI=lsGet('rashi-v1',true); root.classList.toggle('norashi',!RASHI);
