@@ -255,6 +255,38 @@ let P=Object.assign({min:30,day:'',mode:'screen'},lsGet('plan-v1',{}));
 if(!P.korbPos) P.korbPos='start';
 // "continue learning" after a finished session: index.html?go=1&min=..&until=..
 const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
+// Seder Hayom bridge: an explicit action returns an up-to-date progress snapshot.
+// The web app cannot read the native app storage and does not publish private data to a server.
+function sederSnapshot(){
+  const all=catalog().filter(u=>u.g!==5&&u.f<0.999).slice(0,60);
+  const p=['shacharit','mincha','maariv','shema'].reduce((a,k)=>{a[k]=tpFrac('tfl:'+k+':'+tflDate(k).getDay())>=0.999;return a;},{});
+  const pace=paceTxt();
+  return {v:1,date:isoDate(today),at:Date.now(),prayers:p,
+    remaining:all.map(u=>({id:u.id,name:u.name,minutes:Math.max(1,Math.ceil(mm(u.rem))),pct:Math.round(u.f*100)}))};
+}
+function sederExport(){
+  try { const payload=encodeURIComponent(JSON.stringify(sederSnapshot()));
+    location.href='sederhayom://learning?data='+payload;
+  }catch(e){toast('לא ניתן להעביר את הנתונים: '+e.message);}
+}
+function sederImportPrayer(){
+  const k=QS.get('markPrayer');
+  if(!['shacharit','mincha','maariv','shema'].includes(k)) return;
+  const d=QS.get('markDay');
+  if(d!==isoDate(new Date())) return;
+  wkSet('tfl:'+k+':'+tflDate(k).getDay(),1,true);
+}
+sederImportPrayer();
+function sederButton(){
+  if(document.getElementById('sederSyncBtn')) return;
+  const b=document.createElement('button');b.id='sederSyncBtn';b.type='button';
+  b.textContent='↩ עדכון סדר היום';
+  b.style.cssText='position:fixed;right:12px;bottom:80px;z-index:1000;background:#14213d;color:white;border:0;border-radius:24px;padding:11px 14px;box-shadow:0 3px 12px #0003;font-weight:bold';
+  b.onclick=sederExport;document.body.appendChild(b);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sederButton);
+else sederButton();
+const QS=new URLSearchParams(location.search), GO=QS.get('go')==='1';
 let GOTMP=GO?{min:P.min,until:P.until||null,free:!!P.free,open:!!P.open,pendU:!!P.pendU}:null;
 if(GO){ P.free=false; P.open=false; P.pendU=false; P.until=QS.get('until')||null; if(QS.get('min')) P.min=Math.max(1,+QS.get('min')); history.replaceState(null,'','./'); }
 const untilMs=t=>{ if(!t) return null; const [h,m]=t.split(':').map(Number); const d=new Date(); d.setHours(h,m,0,0); return d.getTime(); };
