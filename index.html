@@ -264,7 +264,7 @@ function availMin(){ if(P.free||P.open) return Infinity; if(P.until&&untilMs(P.u
 const PR=()=>P.mode==='print', pace=()=>PR()?printWpm():getWpm(), mm=w=>w/pace();
 
 sederImportPrayer();
-if(QS.get('syncSeder')==='1'||QS.get('fromSeder')==='1') {
+if(QS.get('syncSeder')==='1'||(QS.get('fromSeder')==='1'&&!GO)) {
   // Wait for asynchronous booklet data where possible; never send an empty/partial catalog too early.
   window.addEventListener('load',()=>{
     let attempts=0;
