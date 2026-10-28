@@ -495,6 +495,22 @@ setInterval(()=>{ update(); if(playing&&document.visibilityState==='visible') ad
 addEventListener('resize',()=>{ if(!ready) return; const p=curPos; computeK(); measure(); scrollToPos(p); });
 root.style.setProperty('--fs',(lsGet('study-chumash-v1',{}).fs||23)*K+'px'); root.style.setProperty('--pw',(600*K)+'px');
 $('fitBtn').classList.toggle('on',fit); $('spd').textContent=Math.round(wpm);
+// When a session was opened from Seder Hayom, provide an explicit, one-tap
+// completion path that saves progress, recomputes the learning backlog and
+// returns the snapshot to the native planner (without any cloud account).
+try {
+  if(sessionStorage.getItem('seder-learning-origin')==='1') {
+    const syncBack=document.createElement('button');
+    syncBack.type='button';
+    syncBack.textContent='✓ סיימתי — עדכן את סדר היום';
+    syncBack.style.cssText='position:fixed;bottom:78px;left:10px;z-index:1050;padding:12px 15px;border-radius:22px;background:#14213d;color:white;border:2px solid #c9a227;font-weight:700;box-shadow:0 3px 14px #0005';
+    syncBack.onclick=()=>{
+      try { if(ready){curPos=posFromScroll();reach(curPos);update();} }catch(e){}
+      location.href='index.html?syncSeder=1';
+    };
+    document.body.appendChild(syncBack);
+  }
+}catch(e){}
 requestAnimationFrame(()=>load());
 </script>
 <script>if('serviceWorker' in navigator) addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));</script>
