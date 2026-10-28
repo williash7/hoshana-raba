@@ -172,6 +172,20 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 .dock .ctl{min-width:calc(42px*var(--k));height:calc(46px*var(--k));padding:0 calc(4px*var(--k))}
 .speed .val{min-width:calc(46px*var(--k));flex:none}
 .speed button{width:calc(34px*var(--k))}
+/* Mobile session toolbar: two independent rows prevent button collisions at large font scales. */
+.session-dock{display:flex;flex-direction:column;align-items:stretch;gap:calc(7px*var(--k));width:100%;max-width:min(100%,calc(760px*var(--k)))}
+.dock-primary,.dock-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0;width:100%}
+.dock-primary .speed{min-width:0;flex:1}
+.dock-primary .play{width:52px;height:52px}
+.dock-primary #fitBtn{width:70px;min-width:70px;height:48px}
+.dock-tools .ctl{flex:1 1 0;min-width:0;height:44px;padding:3px 4px;border-radius:14px;font-size:15px;white-space:nowrap}
+.dock-tools .ctl[hidden]{display:none!important}
+.dock-tools .ctl.stack{font-size:11px;gap:1px}
+.dock-tools .ctl.stack b{font-size:16px}
+.dock-tools .srcBtn{font-size:11px!important}
+.dock-tools .dock-sync{border-color:var(--gold);color:var(--gold)}
+.dock-tools .dock-home svg{flex:none}
+@media (max-width:360px){.dock{padding-left:7px;padding-right:7px}.dock-primary,.dock-tools{gap:5px}.dock-primary #fitBtn{width:61px;min-width:61px}.dock-tools .ctl{font-size:13px}}
 </style>
 </head>
 <body>
@@ -196,19 +210,23 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
 <button class="backBtn" id="backBtn" hidden>↓ חזרה למקום שהגעת</button>
 <div class="nav" id="nav" hidden><div class="navIn"><div class="navHd"><b>הקטעים בלימוד הזה</b><button id="navX" aria-label="סגור">✕</button></div><p class="navHint">לחץ על קטע כדי לעבור אליו. כל קטע זוכר איפה עצרת.</p><div id="navList"></div></div></div>
 <nav class="dock" id="dock">
-  <div class="dock-in">
-    <button class="play" id="play" aria-label="הפעל גלילה"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
-    <div class="speed">
-      <button id="slower">לאט</button>
-      <div class="val"><b id="spd">85</b><span>מילים/דק׳</span></div>
-      <button id="faster">מהר</button>
+  <div class="dock-in session-dock">
+    <div class="dock-primary">
+      <button class="play" id="play" aria-label="הפעל גלילה"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 4.5v15l12.5-7.5z" fill="currentColor"/></svg></button>
+      <div class="speed">
+        <button id="slower">לאט</button>
+        <div class="val"><b id="spd">85</b><span>מילים/דק׳</span></div>
+        <button id="faster">מהר</button>
+      </div>
+      <button class="ctl stack" id="fitBtn"><b>⏱</b>לפי הזמן</button>
     </div>
-    <button class="ctl stack" id="fitBtn"><b>⏱</b>לפי הזמן</button>
-    <button class="ctl srcBtn" id="srcBtn" hidden></button>
-    <button class="ctl stack" id="rashiBtn" hidden><b>רש״י</b><span id="rashiLbl">מוצג</span></button>
-    <button class="ctl" id="font" aria-label="גודל אותיות">א</button>
-    <a class="ctl" href="index.html?syncSeder=1" aria-label="לשמור התקדמות ולחזור לסדר היום" title="לסנכרן סדר היום">↩</a>
-    <a class="ctl" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></a>
+    <div class="dock-tools">
+      <button class="ctl srcBtn" id="srcBtn" hidden></button>
+      <button class="ctl stack" id="rashiBtn" hidden><b>רש״י</b><span id="rashiLbl">מוצג</span></button>
+      <button class="ctl" id="font" aria-label="גודל אותיות">א</button>
+      <a class="ctl stack dock-sync" href="index.html?syncSeder=1" aria-label="סנכרון ההתקדמות עם סדר היום" title="סנכרון עם סדר היום"><b>↩</b><span>סנכרון</span></a>
+      <a class="ctl stack dock-home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>בית</span></a>
+    </div>
   </div>
 </nav>
 <div class="toast" id="toast"></div>
