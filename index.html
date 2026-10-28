@@ -276,7 +276,8 @@ if(P.day!==isoDate(today)){ P.day=isoDate(today); P.sel=null; P.selDay=null; }
 // Seder Hayom bridge: an explicit action returns an up-to-date progress snapshot.
 // The web app cannot read the native app storage and does not publish private data to a server.
 function sederSnapshot(){
-  const all=catalog().filter(u=>u.g<=2&&u.f<0.999).slice(0,60);
+  const available=units(), byId=new Map(available.map(u=>[u.id,u]));
+  const all=curSel(available).map(id=>byId.get(id)).filter(u=>u&&u.f<0.999).slice(0,60);
   const p=['shacharit','mincha','maariv','shema'].reduce((a,k)=>{a[k]=tpFrac('tfl:'+k+':'+tflDate(k).getDay())>=0.999;return a;},{});
   return {v:1,date:isoDate(today),at:Date.now(),prayers:p,
     remaining:all.map(u=>({id:u.id,name:u.name,minutes:Math.max(1,Math.ceil(mm(u.rem))),pct:Math.round(u.f*100)}))};
