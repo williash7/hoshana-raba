@@ -699,12 +699,12 @@ async function offlineDay(d){
     if(offlineSelection.chumash) work.push(partChumash(d,!!H.diaspora,true));
     if(offlineSelection.tanya) work.push(partTanya(d));
     if(offlineSelection.rambam){
-      for(const sub of H.dm.filter(x=>['rambam3','rambam1','sm'].includes(x))) work.push(partRambam(sub,d));
-      if(!work.some(Boolean) && !H.dm.some(x=>['rambam3','rambam1','sm'].includes(x))) work.push(partRambam('rambam3',d));
+      for(const sub of H.dm.filter(x=>['rambam3','rambam1'].includes(x))) work.push(partRambam(sub,d));
+      if(!work.some(Boolean) && !H.dm.some(x=>['rambam3','rambam1'].includes(x))) work.push(partRambam('rambam3',d));
     }
     if(offlineSelection.tehillim){
       work.push(sefCalendar(d));
-      const t=tehFor(d);if(t&&t.day){ const ref='Psalms '+t.day; work.push(sefText(ref,'hebrew')); }
+      const t=tehFor(d);if(t&&t.day){ const ranges=[t.day,...(t.short?[30]:[])]; for(const day of ranges){const start=TDIV[day-1][0],end=TDIV[day][0];for(let ch=start;ch<end;ch++)work.push(sefText('Psalms '+ch,'hebrew'));} }
     }
     const results=await Promise.allSettled(work);
     const failures=results.filter(x=>x.status==='rejected');
