@@ -52,7 +52,7 @@ function chumashFor(date,diaspora){ if(!SCHED) return null;
 const SEF='https://www.sefaria.org';
 let LASTURL='';
 const SEFMEM={};
-async function sefJSON(url){ if(!SEFMEM[url]) SEFMEM[url]=sefJSON0(url).catch(e=>{ delete SEFMEM[url]; throw e; }); return SEFMEM[url]; }
+async function sefJSON(url){ if(typeof window!=='undefined' && window.__limudOfflineDay) return sefJSON0(url); if(!SEFMEM[url]) SEFMEM[url]=sefJSON0(url).catch(e=>{ delete SEFMEM[url]; throw e; }); return SEFMEM[url]; }
 async function sefJSON0(url){ const key='sef:'+url; LASTURL=url;
   try{ const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),20000);
     let r; try{ r=await fetch(url,{signal:ctl.signal}); } catch(e){ throw new Error((e.name==='AbortError'?'timeout':'network/CORS')+': '+e.message); } finally{ clearTimeout(tm); }
@@ -63,7 +63,7 @@ async function sefJSON0(url){ const key='sef:'+url; LASTURL=url;
       catch(err){ console.warn('Offline cache write failed',err); throw new Error('לא ניתן לשמור את השיעור בזיכרון המכשיר'); }
     }
     const j=await r.json(); try{ sessionStorage.setItem(key,JSON.stringify(j)); }catch(e){} return j; }
-  catch(e){ const c=sessionStorage.getItem(key); if(c) return JSON.parse(c); throw e; } }
+  catch(e){ if(typeof window!=='undefined' && window.__limudOfflineDay) throw e; const c=sessionStorage.getItem(key); if(c) return JSON.parse(c); throw e; } }
 async function sefText(ref,version){ const v=version?'&version='+encodeURIComponent(version):'';
   let j=await sefJSON(SEF+'/api/v3/texts/'+encodeURIComponent(ref)+'?return_format=strip_only_footnotes'+v);
   if((!j.versions||!j.versions.length) && version && version!=='hebrew') j=await sefJSON(SEF+'/api/v3/texts/'+encodeURIComponent(ref)+'?return_format=strip_only_footnotes&version=hebrew');
