@@ -56,7 +56,13 @@ async function sefJSON(url){ if(!SEFMEM[url]) SEFMEM[url]=sefJSON0(url).catch(e=
 async function sefJSON0(url){ const key='sef:'+url; LASTURL=url;
   try{ const ctl=new AbortController(); const tm=setTimeout(()=>ctl.abort(),20000);
     let r; try{ r=await fetch(url,{signal:ctl.signal}); } catch(e){ throw new Error((e.name==='AbortError'?'timeout':'network/CORS')+': '+e.message); } finally{ clearTimeout(tm); }
-    if(!r.ok) throw new Error('HTTP '+r.status); const j=await r.json(); try{ sessionStorage.setItem(key,JSON.stringify(j)); }catch(e){} return j; }
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    // Explicit offline packages: store each response under its requested calendar date.
+    if(typeof window!=='undefined' && window.__limudOfflineDay && 'caches' in window){
+      try{ const pack=await caches.open('limud-offline-'+window.__limudOfflineDay); await pack.put(url,r.clone()); }
+      catch(err){ console.warn('Offline cache write failed',err); throw new Error('לא ניתן לשמור את השיעור בזיכרון המכשיר'); }
+    }
+    const j=await r.json(); try{ sessionStorage.setItem(key,JSON.stringify(j)); }catch(e){} return j; }
   catch(e){ const c=sessionStorage.getItem(key); if(c) return JSON.parse(c); throw e; } }
 async function sefText(ref,version){ const v=version?'&version='+encodeURIComponent(version):'';
   let j=await sefJSON(SEF+'/api/v3/texts/'+encodeURIComponent(ref)+'?return_format=strip_only_footnotes'+v);
