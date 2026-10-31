@@ -674,6 +674,91 @@ function renderProgress(){ const box=$('v-progress'); box.innerHTML=''; const al
   if(dl.length){ const d=document.createElement('details'); d.className='grp'; d.innerHTML='<summary>נלמד '+(cur?'השבוע':'באותו שבוע')+' <small>('+dl.length+')</small><span class="ch">‹</span></summary>';
     dl.forEach(u=>{ const r=document.createElement('div'); r.className='arow'; r.innerHTML='<span class="nm">'+esc(u.name)+'<small>'+esc(label(u))+'</small></span><button class="b sm ghost" type="button">בטל</button>'; r.querySelector('button').onclick=()=>{ resetLesson(u.id); dirty(); renderView(); }; d.appendChild(r); }); box.appendChild(d); } }
 
+/* ===== Offline packs: per-day data caches, separate from app shell ===== */
+const OFF_PREFIX='limud-offline-';
+let offlineBusy=false, offlinePeriod=7, offlineSelection={chumash:true,tehillim:true,tanya:true,rambam:true};
+const offlineIso=d=>{const x=new Date(d);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+const offlineMb=n=>n>=1048576?(n/1048576).toFixed(2)+' MB':(n/1024).toFixed(1)+' KB';
+async function offlineList(){
+  if(!('caches' in window)) return [];
+  const names=(await caches.keys()).filter(x=>x.startsWith(OFF_PREFIX)).sort().reverse();
+  return Promise.all(names.map(async name=>{
+    const cache=await caches.open(name), keys=await cache.keys();
+    let bytes=0;
+    for(const key of keys){const res=await cache.match(key);if(res) bytes+=(await res.clone().blob()).size;}
+    return {day:name.slice(OFF_PREFIX.length),count:keys.length,bytes};
+  }));
+}
+async function offlineDay(d){
+  const day=offlineIso(d), name=OFF_PREFIX+day;
+  // A failed download is never presented as a complete daily pack.
+  const old=await caches.open(name);
+  window.__limudOfflineDay=day;
+  try{
+    const work=[];
+    if(offlineSelection.chumash) work.push(partChumash(d,!!H.diaspora,true));
+    if(offlineSelection.tanya) work.push(partTanya(d));
+    if(offlineSelection.rambam){
+      for(const sub of H.dm.filter(x=>['rambam3','rambam1','sm'].includes(x))) work.push(partRambam(sub,d));
+      if(!work.some(Boolean) && !H.dm.some(x=>['rambam3','rambam1','sm'].includes(x))) work.push(partRambam('rambam3',d));
+    }
+    if(offlineSelection.tehillim){
+      work.push(sefCalendar(d));
+      const t=tehFor(d);if(t&&t.day){ const ref='Psalms '+t.day; work.push(sefText(ref,'hebrew')); }
+    }
+    const results=await Promise.allSettled(work);
+    const failures=results.filter(x=>x.status==='rejected');
+    if(failures.length) throw failures[0].reason;
+    const keys=await old.keys();
+    if(!keys.length) throw new Error('לא נשמרו נתוני שיעורים');
+    return keys.length;
+  }finally{window.__limudOfflineDay=null;}
+}
+async function offlineDownload(){
+  if(offlineBusy || !Object.values(offlineSelection).some(Boolean))return;
+  if(!navigator.onLine){ alert('נדרש אינטרנט כדי להוריד שיעורים.');return; }
+  offlineBusy=true;
+  const status=document.getElementById('offline-status');
+  const button=document.getElementById('offline-start');
+  if(button)button.disabled=true;
+  const start=new Date();start.setHours(12,0,0,0);
+  let complete=0,fail=[];
+  for(let n=0;n<offlinePeriod;n++){
+    const d=new Date(start);d.setDate(start.getDate()+n);
+    if(status)status.textContent='מוריד '+(n+1)+' מתוך '+offlinePeriod+' — '+offlineIso(d);
+    try{await offlineDay(d);complete++;}catch(err){fail.push(offlineIso(d)+': '+String(err.message||err));}
+  }
+  offlineBusy=false;
+  if(status)status.textContent='הורדו '+complete+' ימים'+(fail.length?' · '+fail.length+' נכשלו':'');
+  if(fail.length)alert('חלק מהשיעורים לא ירדו:\\n'+fail.join('\\n').slice(0,1000));
+  renderSettings();
+}
+function offlineSettings(box,G){
+ const g=G('הורדות ואופליין');
+ const intro=document.createElement('div');intro.className='sr';intro.innerHTML='<span>שמירת שיעורים בטלפון<small>אפשר לפתוח את השיעורים גם ללא אינטרנט. מומלץ להוריד בזמן שיש Wi-Fi.</small></span>';g.appendChild(intro);
+ const range=document.createElement('div');range.className='sr';range.innerHTML='<span>תקופת ההורדה</span><div class="seg"></div>';
+ [[1,'יום'],[7,'שבוע']].forEach(([n,label])=>{const b=document.createElement('button');b.textContent=label;b.className=offlinePeriod===n?'on':'';b.onclick=()=>{offlinePeriod=n;renderSettings()};range.querySelector('.seg').appendChild(b)});g.appendChild(range);
+ const opts=document.createElement('div');opts.className='sr';opts.style.flexWrap='wrap';opts.innerHTML='<span>נושאים להורדה</span>';const wrap=document.createElement('div');wrap.style.cssText='display:flex;flex-wrap:wrap;gap:.6rem';
+ [['chumash','חומש ורש״י'],['tehillim','תהילים'],['tanya','תניא'],['rambam','רמב״ם']].forEach(([key,label])=>{const el=document.createElement('label');el.style.cssText='display:flex;gap:.3rem;align-items:center';const cb=document.createElement('input');cb.type='checkbox';cb.checked=offlineSelection[key];cb.onchange=()=>{offlineSelection[key]=cb.checked};el.append(cb,document.createTextNode(label));wrap.appendChild(el)});opts.appendChild(wrap);g.appendChild(opts);
+ const r=document.createElement('div');r.className='sr';r.innerHTML='<button type="button" class="b main" id="offline-start">⬇ הורדת השיעורים</button><small id="offline-status" aria-live="polite"></small>';g.appendChild(r);
+ r.querySelector('button').disabled=offlineBusy||!('caches' in window);r.querySelector('button').onclick=offlineDownload;
+ const list=document.createElement('div');list.className='sr';list.style.cssText='display:block';list.innerHTML='<b>הורדות שמורות</b><div class="note" id="offline-list">בודק נפח אחסון…</div>';g.appendChild(list);
+ offlineList().then(items=>{
+   if(!list.isConnected)return;
+   const holder=list.querySelector('#offline-list');holder.innerHTML='';
+   if(!items.length){holder.textContent='עדיין לא הורדו שיעורים';return;}
+   const total=items.reduce((a,x)=>a+x.bytes,0);
+   const summary=document.createElement('div');summary.textContent='סה״כ '+offlineMb(total)+' · '+items.length+' ימים';holder.appendChild(summary);
+   items.forEach(item=>{
+      const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-top:.5rem';
+      const label=document.createElement('span');label.textContent=item.day+' · '+item.count+' קבצים · '+offlineMb(item.bytes);
+      const del=document.createElement('button');del.className='b sm';del.textContent='מחיקה';del.onclick=async()=>{if(!confirm('למחוק הורדות של '+item.day+'?'))return;await caches.delete(OFF_PREFIX+item.day);renderSettings()};
+      row.append(label,del);holder.appendChild(row);
+   });
+   const all=document.createElement('button');all.className='b sm';all.style.marginTop='.7rem';all.textContent='מחיקת כל ההורדות';all.onclick=async()=>{if(!confirm('למחוק את כל השיעורים שהורדו?'))return;await Promise.all(items.map(x=>caches.delete(OFF_PREFIX+x.day)));renderSettings()};holder.appendChild(all);
+ }).catch(err=>{const h=list.querySelector('#offline-list');if(h)h.textContent='לא ניתן לקרוא את נתוני האחסון: '+err.message;});
+}
+
 /* ===== SETTINGS: all in one place ===== */
 let DP=null; const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
@@ -707,10 +792,11 @@ function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
   const g4=G('תצוגה'); segRow(g4,'צבעי מסך הקריאה',[['auto','לפי הטלפון'],['light','בהיר'],['dark','כהה']],MAIN.theme||'auto',v=>{ MAIN.theme=v; const A=lsGet('hoshana-raba-v2',{}); A.theme=v; lsSet('hoshana-raba-v2',A); if(v==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',v); });
   // 5. booklet, Tehillim, Hoshana
   G('חוברות ותהילים','<div class="sr"><span>חוברת דבר מלכות<small>'+esc(DMI?'נטענה – '+Object.keys(DMI.subjects).length+' שיעורים':DMSTATE||'לא נטענה')+'</small></span><a href="dvar.html">'+(DMI?'פתיחה':'טעינה')+' ‹</a></div><div class="sr"><span>תהילים – פרקים אישיים<small>ימי הולדת – הפרק לפי השנה</small></span><a href="tehillim.html">עריכה ‹</a></div><div class="sr"><span>סדר ליל הושענא רבה</span><a href="hoshana.html">פתיחה ‹</a></div>');
+  offlineSettings(box,G);
   // 6. install
   if(!standalone){ const g=G('התקנה'); g.className='sg inst'; g.innerHTML='<div class="sr"><span>📲 להתקין את „לימוד יומי” כאפליקציה בטלפון</span>'+(DP?'<button class="b main sm" id="instBtn" type="button">התקנה</button>':'')+'</div><div class="sr" style="display:block"><ol><li>בכרום: ⋮ למעלה ← <b>„התקנת אפליקציה”</b> או <b>„הוספה למסך הבית”</b>.</li><li>אם כתוב שכבר מותקנת אבל אין אייקון: הגדרות הטלפון ← אפליקציות ← „לימוד יומי” ← הסרה, ואז להתקין שוב.</li><li>אם עדיין לא עובד: בכרום ⋮ ← הגדרות ← הגדרות אתרים ← williash7.github.io ← „ניקוי ואיפוס”.</li></ol></div>';
     const ib=$('instBtn'); if(ib) ib.onclick=async()=>{ if(!DP) return; DP.prompt(); await DP.userChoice.catch(()=>null); DP=null; renderView(); }; }
-  box.insertAdjacentHTML('beforeend','<div class="foot">הטקסטים של החומש, רש״י, התניא, הרמב״ם, שניים מקרא, התפילות והקרבנות נטענים מספריא (Sefaria) ודורשים חיבור לאינטרנט.</div>'); }
+  box.insertAdjacentHTML('beforeend','<div class="foot">הטקסטים של החומש, רש״י, התניא, הרמב״ם, שניים מקרא, התפילות והקרבנות נטענים מספריא (Sefaria) ודורשים חיבור לאינטרנט, אלא אם הורדו מראש דרך הגדרות ← הורדות ואופליין.</div>'); }
 
 /* ---------- start ---------- */
 showView();
