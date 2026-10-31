@@ -475,7 +475,7 @@ function openMore(p){ if(!OPEN||appending||!ready||!MORE.length||TOTAL-p>600) re
 // side button: switch the current Chumash / Tanya / Rambam between Sefaria and the booklet
 const srcKey=id=>{ const a=splitWk(id)[0].split(':'); return a[0]==='chu'?'chu':a[0]==='tan'?'tan':a[0]==='dm'&&RMB_TITLE[a[1]]&&a[2]!=null?'rmb':null; };
 function srcButton(curP){ const b=$('srcBtn'); const k=curP&&!curP.err?srcKey(curP.p):null; if(!k||!curP.src){ b.hidden=true; return; }
-  b.hidden=false; b.innerHTML='<b>⇄</b>'+(curP.src==='booklet'?'ספריא':'חוברת'); b.title=curP.src==='booklet'?'מעבר לספריא':'מעבר לחוברת';
+  b.hidden=false; b.innerHTML='<b>⇄</b>מקור'; b.title=curP.src==='booklet'?'מקור נוכחי: חוברת · לחיצה למעבר לספריא':'מקור נוכחי: ספריא · לחיצה למעבר לטקסט החוברת'; b.setAttribute('aria-label',b.title);
   b.onclick=async()=>{ const id=curP.p, to=curP.src==='booklet'?'sefaria':'booklet'; srcSet(k,to); b.hidden=true; await load(curPos); const x=PB.find(y=>y.p===id); if(x){ scrollToPos(x.rsC); maxPos=curPos; $('backBtn').hidden=true; update(); }
     const nx=PB.find(y=>y.p===id); toast(nx&&nx.src===to?(to==='booklet'?'עכשיו מתוך החוברת':'עכשיו מתוך ספריא'):'החוברת של השבוע לא טעונה – נשאר מספריא'); }; }
 const chN=(x,p)=>x&&x.chEnds?{n:x.chEnds.filter(e=>e<=p+0.5).length,t:x.chEnds.length}:null;
