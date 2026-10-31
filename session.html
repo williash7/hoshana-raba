@@ -236,7 +236,6 @@ button:focus-visible,a:focus-visible{outline:calc(2px*var(--k)) solid var(--gold
       <button class="ctl stack" id="rashiBtn" hidden><b>רש״י</b><span id="rashiLbl">מוצג</span></button>
       <button class="ctl" id="font" aria-label="גודל אותיות">א</button>
       <a class="ctl stack dock-sync" href="index.html?syncSeder=1" aria-label="סנכרון ההתקדמות עם סדר היום" title="סנכרון עם סדר היום"><b>↩</b><span>סנכרון</span></a>
-      <a class="ctl stack" href="dvar.html" aria-label="חזרה לחוברת דבר מלכות" title="חזרה לחוברת"><b>↩</b><span>חוברת</span></a>
       <a class="ctl stack dock-home" href="./" aria-label="מסך הבית"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg><span>בית</span></a>
     </div>
   </div>
@@ -340,7 +339,7 @@ async function load(keepPos){
   const res=await Promise.all(UNITS.map(u=>loadUnit(u.id).then(r=>({u,r})).catch(e=>({u,err:e}))));
   ready=false; $('doc').innerHTML=''; B=[]; PB=[]; RESUME0=null; let goalAt=null;
   res.forEach(({u,r,err},ui)=>{ const p=u.id, start=B.length; const more=ui<res.length-1; let cut=false;
-    if(err){ add('part',NAMES[p],1,NAMES[p],p); add('msg','לא הצלחתי לטעון את '+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div><p><a href="dvar.html" style="display:inline-block;margin-top:12px;padding:10px 18px;border:1px solid var(--gold);border-radius:16px;color:var(--gold);text-decoration:none">↩ חזרה לחוברת דבר מלכות</a></p>',1,NAMES[p],p); PB.push({p,start,end:B.length,err:true,S:0,W:1}); return; }
+    if(err){ add('part',NAMES[p],1,NAMES[p],p); add('msg','לא הצלחתי לטעון את '+NAMES[p]+'.<div class="dbg">'+String(err.message||err).replace(/[<>&]/g,'')+'</div><p>אפשר להחליף מקור בעזרת כפתור ״מקור״ בתחתית המסך.</p>',1,NAMES[p],p); PB.push({p,start,end:B.length,err:true,S:0,W:1}); return; }
     const W=r.blocks.reduce((a,b)=>a+Math.max(1,b.w),0); const [pb,pw]=splitWk(p), a=pb.split(':');
     if(a[0]==='chu') wcSet('chumash:'+isoDate(dateIn(pw,+a[1])),W); if(a[0]==='tan') wcSet('tanyaP:'+isoDate(dateIn(pw,+a[1])),W);
     // skip what was already learned this week
@@ -474,10 +473,35 @@ let appending=false;
 function openMore(p){ if(!OPEN||appending||!ready||!MORE.length||TOTAL-p>600) return; appending=true; const id=MORE.shift(); UNITS.push({id,end:null,plan:null}); NAMES[id]=uName(id); load(p).then(()=>{ appending=false; }).catch(()=>{ appending=false; }); }
 // side button: switch the current Chumash / Tanya / Rambam between Sefaria and the booklet
 const srcKey=id=>{ const a=splitWk(id)[0].split(':'); return a[0]==='chu'?'chu':a[0]==='tan'?'tan':a[0]==='dm'&&RMB_TITLE[a[1]]&&a[2]!=null?'rmb':null; };
-function srcButton(curP){ const b=$('srcBtn'); const k=curP&&!curP.err?srcKey(curP.p):null; if(!k||!curP.src){ b.hidden=true; return; }
-  b.hidden=false; b.innerHTML='<b>⇄</b>מקור'; b.title=curP.src==='booklet'?'מקור נוכחי: חוברת · לחיצה למעבר לספריא':'מקור נוכחי: ספריא · לחיצה למעבר לטקסט החוברת'; b.setAttribute('aria-label',b.title);
-  b.onclick=async()=>{ const id=curP.p, to=curP.src==='booklet'?'sefaria':'booklet'; srcSet(k,to); b.hidden=true; await load(curPos); const x=PB.find(y=>y.p===id); if(x){ scrollToPos(x.rsC); maxPos=curPos; $('backBtn').hidden=true; update(); }
-    const nx=PB.find(y=>y.p===id); toast(nx&&nx.src===to?(to==='booklet'?'עכשיו מתוך החוברת':'עכשיו מתוך ספריא'):'החוברת של השבוע לא טעונה – נשאר מספריא'); }; }
+function srcButton(curP){
+  const b=$('srcBtn'), k=curP?srcKey(curP.p):null;
+  if(!k){ b.hidden=true; return; }
+  // On a load error there is no curP.src. Still allow switching to the
+  // other source, especially Sefaria -> the stored booklet for Tanya.
+  const active=curP.err?(srcGet()[k]||'sefaria'):(curP.src||srcGet()[k]||'sefaria');
+  b.hidden=false;
+  b.innerHTML='<b>⇄</b>מקור';
+  b.title=active==='booklet'?'מקור: חוברת · מעבר לספריא':'מקור: ספריא · מעבר לחוברת';
+  b.setAttribute('aria-label',b.title);
+  b.onclick=async()=>{
+    const id=curP.p, to=active==='booklet'?'sefaria':'booklet';
+    srcSet(k,to);
+    b.disabled=true;
+    try {
+      await load(curPos);
+      const x=PB.find(y=>y.p===id);
+      if(x&&!x.err){
+        scrollToPos(x.rsC);
+        maxPos=curPos;
+        $('backBtn').hidden=true;
+        update();
+      }
+      const nx=PB.find(y=>y.p===id);
+      toast(nx&&!nx.err&&nx.src===to?(to==='booklet'?'עכשיו מתוך החוברת':'עכשיו מתוך ספריא'):
+        'המקור שבחרת לא זמין כרגע — ניתן לנסות את המקור השני');
+    } finally { b.disabled=false; }
+  };
+}
 const chN=(x,p)=>x&&x.chEnds?{n:x.chEnds.filter(e=>e<=p+0.5).length,t:x.chEnds.length}:null;
 const chTxt=(x,p)=>{ const c=chN(x,p); return c?c.n+'/'+c.t+' פרקים · ':''; };
 let chSaved={};
