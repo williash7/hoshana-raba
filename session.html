@@ -567,7 +567,7 @@ try {
     const syncBack=document.createElement('button');
     syncBack.type='button';
     syncBack.textContent='✓ סיימתי — עדכן את סדר היום';
-    syncBack.style.cssText='position:fixed;bottom:78px;left:10px;z-index:1050;padding:12px 15px;border-radius:22px;background:#14213d;color:white;border:2px solid #c9a227;font-weight:700;box-shadow:0 3px 14px #0005';
+    syncBack.style.cssText='position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--dockH, 155px) + 18px);z-index:1050;max-width:calc(100vw - 32px);padding:10px 14px;border-radius:22px;background:#14213d;color:white;border:2px solid #c9a227;font-weight:700;box-shadow:0 3px 14px #0005;white-space:normal;text-align:center';
     syncBack.onclick=()=>{
       try { if(ready){curPos=posFromScroll();reach(curPos);update();} }catch(e){}
       location.href='index.html?syncSeder=1';
