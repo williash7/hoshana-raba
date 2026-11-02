@@ -4,6 +4,33 @@ const DATA=window.KINUS_DATA||[];
 const QUIZZES=window.KINUS_QUIZZES||{};
 const FULLTEXT=window.KINUS_FULLTEXT||{};
 const pic=(u)=>window.KINUS_MEDIA?.[u]||u;
+
+/* Each media_pack file is approximately 1.4MB. Load only the one or two
+   packs needed for the photographed page instead of blocking all study screens. */
+const MEDIA_LAST=[
+ '69a_05_1','69b_03_full','70_04_2','87_01_full','87_04_1',
+ '87_06_2','87_08_2','87_11_2','88_03_full','88_06_full',
+ '88_09_full','92_01_2','92_03_full','92_06_1','92_08_2',
+ '92_10_2','92_12_full','92_14_full','92_17_full'
+];
+const mediaPackIndex=(url)=>MEDIA_LAST.findIndex(last=>url<=('media/'+last+'.webp'));
+const mediaStatus=Object.create(null);
+function loadSourceAssets(p){
+ const assets=[p.full,...p.fragments.map(f=>f.url)];
+ for(const url of assets){
+  if(window.KINUS_MEDIA?.[url])continue;
+  const index=mediaPackIndex(url);
+  if(index<0||mediaStatus[index])continue;
+  mediaStatus[index]='loading';
+  const script=document.createElement('script');
+  script.async=true;
+  script.src='media_pack_'+String(index).padStart(2,'0')+'.js?v=6';
+  script.onload=()=>{mediaStatus[index]='loaded';if(ui.page==='study'&&ui.tab==='source')render();};
+  script.onerror=()=>{mediaStatus[index]='error';if(ui.page==='study'&&ui.tab==='source')render();};
+  document.head.appendChild(script);
+ }
+}
+
 const HEB_DAY=['יום ראשון','יום שני','יום שלישי','יום רביעי','יום חמישי','יום שישי','שבת'];
 const ymd=(d)=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 const dispDay=(d)=>new Intl.DateTimeFormat('he-IL',{weekday:'long',day:'numeric',month:'numeric'}).format(d);
@@ -56,7 +83,14 @@ function study(){const c=getC(),l=getL(),k=key(c.id,l.key),dn=!!state.done[k],ov
 function summaryView(c,l,k,ov){return `<div class="reader"><p>${E(ov.summary??l.summary)}</p>${l.notes.length?`<h3>ביאורים מתוך הערות השוליים</h3>${l.notes.map(n=>`<div class="note-block"><h4>הערה ${E(n.num)} · ${E(n.title)}</h4><p>${E(n.text)}</p></div>`).join('')}`:''}${(state.extra[k]||[]).length?`<h3>הערות שהוספתי</h3>${(state.extra[k]||[]).map((n,i)=>`<div class="note-block"><div class="row between"><h4>${E(n.title)}</h4><button class="small link" data-do="deleteExtra" data-i="${i}">מחיקה</button></div><p>${E(n.text)}</p></div>`).join('')}`:''}<button class="btn light smallbtn" data-do="addExtra">+ הוספת ביאור / הערה</button>${ui.adding?extraEditor():''}${ui.editing?editPanel(l,k):''}</div>`}
 function editPanel(l,k){const ov=state.overrides[k]||{};return `<div class="editor"><strong>עריכה אישית לסיכום</strong><p class="tinyhelp">הטקסט המקורי נשמר במערכת. אפשר לשחזר בכל עת.</p><label class="form-label">כותרת האות</label><input class="field" id="editTitle" value="${E(ov.title??l.title)}"><label class="form-label">סיכום האות</label><textarea class="field area" id="editSummary" rows="8">${E(ov.summary??l.summary)}</textarea><div class="row wrap" style="margin-top:9px"><button class="btn smallbtn" data-do="saveEdit">שמור שינויים</button><button class="btn outline smallbtn" data-do="cancelEdit">ביטול</button><button class="btn outline smallbtn" data-do="revertEdit">שחזר נוסח קודם</button></div></div>`}
 function extraEditor(){return `<div class="editor"><label class="form-label">כותרת הערה</label><input id="newExtraTitle" class="field" placeholder="לדוגמה: מה מוסיפה הערה זו?"><label class="form-label">תוכן ההערה</label><textarea id="newExtraText" class="field area" placeholder="הסבר, דיוק או מראה מקום עם תוכנו"></textarea><div class="row" style="margin-top:8px"><button class="btn smallbtn" data-do="saveExtra">הוסף</button><button class="btn outline smallbtn" data-do="cancelExtra">ביטול</button></div></div>`}
-function sourceView(c){const p=c.sourcePages[ui.sourcePage],n=c.sourcePages.length;return `<section class="source-panel"><div class="page-guide"><strong>עמוד מקור ${ui.sourcePage+1} מתוך ${n}</strong><div class="tinyhelp">בתצוגת הטלפון, הטורים הופרדו כדי להגדיל את האותיות. לוחצים על צילום כדי להגדיל.</div></div><div class="row between wrap" style="margin-bottom:12px"><div class="row">${[['split','מקטעים'],['full','עמוד מלא']].map(([m,label])=>`<button class="btn smallbtn ${ui.mode===m?'gold':'outline'}" data-do="mode" data-v="${m}">${label}</button>`).join('')}</div>${c.sourceUrl?`<a class="link small" href="${E(c.sourceUrl)}" target="_blank" rel="noopener">מקור מקוון ↗</a>`:''}</div>${ui.mode==='full'?`<img class="source-img full" src="${pic(p.full)}" loading="lazy" data-zoom="${pic(p.full)}" alt="עמוד המקור המלא">`:p.fragments.map(x=>`<div class="source-piece"><strong>${E(x.label)}</strong><img class="source-img" src="${pic(x.url)}" loading="lazy" data-zoom="${pic(x.url)}" alt="${E(x.label)} מהמקור"></div>`).join('')}<div class="pagination"><button class="btn outline smallbtn" data-do="srcPrev" ${ui.sourcePage===0?'disabled':''}>› לעמוד הקודם</button><strong>${ui.sourcePage+1}/${n}</strong><button class="btn outline smallbtn" data-do="srcNext" ${ui.sourcePage===n-1?'disabled':''}>לעמוד הבא ‹</button></div></section>`}
+function sourceView(c){const p=c.sourcePages[ui.sourcePage],n=c.sourcePages.length;
+loadSourceAssets(p);
+const images=ui.mode==='full'?[p.full]:p.fragments.map(f=>f.url);
+const missing=images.filter(url=>!window.KINUS_MEDIA?.[url]);
+if(missing.length){
+ const broken=missing.some(url=>mediaStatus[mediaPackIndex(url)]==='error');
+ return `<section class="source-panel"><div class="card"><h2>${broken?'לא ניתן לטעון חלק מצילומי המקור':'טוען את צילום השיחה…'}</h2><p>${broken?'אירעה תקלה בהורדת התמונות. בדוק את החיבור לאינטרנט ופתח מחדש את הדף.':'העמוד נטען בנפרד כדי שהלימוד ייפתח במהירות גם בטלפון. אפשר להמשיך לקרוא בסיכום בינתיים.'}</p><button class="btn outline" data-do="tab" data-v="summary">חזרה לסיכום</button></div></section>`;
+}return `<section class="source-panel"><div class="page-guide"><strong>עמוד מקור ${ui.sourcePage+1} מתוך ${n}</strong><div class="tinyhelp">בתצוגת הטלפון, הטורים הופרדו כדי להגדיל את האותיות. לוחצים על צילום כדי להגדיל.</div></div><div class="row between wrap" style="margin-bottom:12px"><div class="row">${[['split','מקטעים'],['full','עמוד מלא']].map(([m,label])=>`<button class="btn smallbtn ${ui.mode===m?'gold':'outline'}" data-do="mode" data-v="${m}">${label}</button>`).join('')}</div>${c.sourceUrl?`<a class="link small" href="${E(c.sourceUrl)}" target="_blank" rel="noopener">מקור מקוון ↗</a>`:''}</div>${ui.mode==='full'?`<img class="source-img full" src="${pic(p.full)}" loading="lazy" data-zoom="${pic(p.full)}" alt="עמוד המקור המלא">`:p.fragments.map(x=>`<div class="source-piece"><strong>${E(x.label)}</strong><img class="source-img" src="${pic(x.url)}" loading="lazy" data-zoom="${pic(x.url)}" alt="${E(x.label)} מהמקור"></div>`).join('')}<div class="pagination"><button class="btn outline smallbtn" data-do="srcPrev" ${ui.sourcePage===0?'disabled':''}>› לעמוד הקודם</button><strong>${ui.sourcePage+1}/${n}</strong><button class="btn outline smallbtn" data-do="srcNext" ${ui.sourcePage===n-1?'disabled':''}>לעמוד הבא ‹</button></div></section>`}
 function sourceTextView(c,l){const verb=FULLTEXT[c.id]?.[l.key]||'';const ex=verb?verb.split(/\n\s*\n/g).filter(Boolean):(l.sourceExcerpts||[]);return `<section class="reader source-text"><h3>קטעים נבחרים מתוך המקור · אות ${E(l.key)}</h3>${ex.length?`<p class="tinyhelp">לנוחות הקריאה מובאים כאן קטעי מקור נבחרים, לא האות בשלמותה. ללימוד הנוסח המלא, כולל הערות ומראי מקומות, יש להשתמש בצילום המקור או לפתוח את המקור המקוון.</p>${ex.map(x=>`<p>${E(x)}</p>`).join('')}`:`<p>המקור של שיחה זו זמין בצילום העמודים. הצגת טקסט זורם עדיין לא הוכנה לשיחה הזאת.</p>`}${c.sourceUrl?`<a class="btn outline" href="${E(c.sourceUrl)}" target="_blank" rel="noopener">פתיחת המקור המלא באתר חב״ד</a>`:`<button class="btn outline" data-do="tab" data-v="source">מעבר לצילום המקור</button>`}</section>`}
 function notesView(c,l,k){let n=state.personal[k]||'';return `<section class="reader"><h3>המחברת שלי · אות ${E(l.key)}</h3><p class="tinyhelp">השאלות, הרעיונות וההחלטות כאן אישיים. המידע נשמר במכשיר הזה בלבד, עד לייצוא גיבוי.</p><textarea id="personalNote" class="field area" rows="10" placeholder="מה חידש לי הרבי בשיחה? מה קשה לי? איזו החלטה אקבל?">${E(n)}</textarea><div class="row" style="margin-top:11px"><button class="btn" data-do="savePersonal">שמור במחברת</button><button class="btn outline" data-do="addExtra">הוסף ביאור לסיכום</button></div>${ui.adding?extraEditor():''}<div class="voice-notes"><h3>הערות קוליות</h3><p class="tinyhelp">אפשר להקליט בקצרה בזמן הלימוד. נדרשת הרשאת מיקרופון בדפדפן; בדפדפנים מסוימים ההקלטה זמינה רק באתר HTTPS.</p><div class="row wrap"><button class="btn ${ui.voiceRecording?'gold':'outline'}" data-do="voiceToggle">${ui.voiceRecording?'■ סיים הקלטה':'🎙 הקלט הערה'}</button></div><div id="voiceItems" class="voice-items">טוען הקלטות...</div></div></section>`}
 function notebook(){let rows=[];for(const c of DATA)for(let i=0;i<c.letters.length;i++){const l=c.letters[i],k=key(c.id,l.key);if(state.personal[k]||state.overrides[k]||(state.extra[k]||[]).length)rows.push({c,l,i,k})}return `<main class="page"><p class="eyebrow">מחברת לימוד אישית</p><h1 class="bigtitle">רעיונות, קושיות והחלטות</h1><div class="card"><p>כאן מרוכזים הרישומים והשינויים שכתבת בתוך האותיות. אפשר לחזור לכל אחת מהן בלחיצה.</p><button class="btn light smallbtn" data-do="export">ייצוא גיבוי</button></div>${rows.length?`<div class="card">${rows.map(({c,l,i,k})=>`<div class="notebook-entry"><button data-do="goTo" data-id="${c.id}" data-i="${i}"><strong>${E(c.title)} · אות ${E(l.key)}</strong></button>${state.personal[k]?`<div class="note-preview">${E(state.personal[k].slice(0,200))}</div>`:''}${state.overrides[k]?badge('סיכום ערוך'):''}${(state.extra[k]||[]).length?badge((state.extra[k]||[]).length+' תוספות'):''}</div>`).join('')}</div>`:`<div class="empty">עדיין אין רישומים. פתח שיחה והתחל לכתוב במחברת של כל אות.</div>`}</main>`}
