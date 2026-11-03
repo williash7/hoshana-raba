@@ -920,6 +920,29 @@ function renderRecoverySettings(box,G){
   const torah=document.createElement('details');torah.className='grp';torah.style.marginTop='.75rem';
   torah.innerHTML='<summary>תורה אור – תיקון השלמות <small>לבחור פרשה שלא נלמדה</small><span class="ch">‹</span></summary>';
   keepOpen('set:torah-or',torah);
+  // Direct recovery buttons for the two early Bereshit parshas, even when the
+  // automatic "missed" calculation has never tracked their progress.
+  const shortcuts=document.createElement('div');shortcuts.className='btns';
+  shortcuts.style.margin='.6rem .4rem';
+  [['בראשית','בראשית'],['נח','נח']].forEach(([parshaName,display])=>{
+    const target=Array.from({length:12},(_,i)=>i+1).map(ago=>{
+      const date=new Date(weekStart(CURWK).getTime()-ago*7*864e5);
+      const wk=isoDate(date),parsha=chasParsha(wk);
+      return {wk,parsha};
+    }).find(x=>x.parsha&&x.parsha.bookHe==='תורה אור'&&x.parsha.he===parshaName);
+    if(!target)return;
+    const btn=document.createElement('button');btn.className='b main sm';btn.type='button';
+    btn.textContent='＋ הוסף תורה אור – '+display;
+    btn.onclick=()=>{
+      const previous=lsGet('chas-missed-weeks-v1',[]);
+      lsSet('chas-missed-weeks-v1',[...new Set([...(Array.isArray(previous)?previous:[]),target.wk])]);
+      resetLesson('chas@'+target.wk);
+      if(H.on.chas===0){H.on.chas=1;save();}
+      dirty();renderSettings();toast('תורה אור – פרשת '+display+' נוספה להשלמות');
+    };
+    shortcuts.appendChild(btn);
+  });
+  if(shortcuts.children.length)torah.appendChild(shortcuts);
   for(let ago=1;ago<=8;ago++){
     const date=new Date(weekStart(CURWK).getTime()-ago*7*864e5);
     const wk=isoDate(date),parsha=chasParsha(wk);
