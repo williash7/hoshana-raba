@@ -326,7 +326,14 @@ const SKIPSEC=/מפתח|הנחת תפילין|לוח|זמני|מזמורי תה�
 // past weeks still open: those with an archived booklet or with tracked learning (within the last 8 weeks)
 function pastWeeks(){ const lim=isoDate(new Date(Date.now()-56*864e5)); const set=new Set(Object.keys(trk()).filter(w=>w<CURWK&&w>=lim));
   if(DMX&&DMX.byWk) Object.keys(DMX.byWk).forEach(w=>{ if(w<CURWK) set.add(w); });
-  if(H.on.chas!==0){ const cs=chasSince(); if(cs<CURWK&&cs>=lim) set.add(cs); }
+  if(H.on.chas!==0){
+    const cs=chasSince(); if(cs<CURWK&&cs>=lim) set.add(cs);
+    // Respect the learner's starting week, and also previously restored Torah Or weeks.
+    const restored=lsGet('chas-missed-weeks-v1',[]);
+    (Array.isArray(restored)?restored:[]).forEach(w=>{
+      if(/^\d{4}-\d{2}-\d{2}$/.test(w)&&w<CURWK&&w>=lim&&chasParsha(w))set.add(w);
+    });
+  }
   if(H.on.shnayim!==0){
     const pw=isoDate(new Date(weekStart(CURWK).getTime()-7*864e5)); if(shmOpen(pw)) set.add(pw);
     // Older parshas appear only when the user explicitly restores them.
@@ -356,7 +363,7 @@ function weekUnits(wk,cur){ const out=[], sfx=cur?'':'@'+wk, ix=cur?(DMX&&DMX.da
   if(H.on.chas!==0&&chasParsha(wk)){ const W=wcGet('chas:'+wk)||9000, P=chasParsha(wk);
     if(cur){ const cd=chasDay(); if(H.chasMode!=='free'&&!cd.done) out.push({id:'chas',g:0,wk,cur,dt:today,name:P.bookHe+' – חלק היום',w:W*(cd.target-cd.f),est:!wcGet('chas:'+wk),chasEnd:x=>cd.f+(cd.target-cd.f)*x});
       else if(cd.f<1) out.push({id:'chas',g:H.chasMode==='free'?2:3,wk,cur,dt:today,name:P.bookHe+(H.chasMode==='free'?'':' – המשך השבוע'),w:W,est:!wcGet('chas:'+wk)}); }
-    else if(wk>=chasSince()&&wkFrac('chas@'+wk)<1) out.push({id:'chas@'+wk,g:1,wk,cur,name:P.bookHe+' – פרשת '+P.he+' (השלמה)',w:W,est:!wcGet('chas:'+wk)}); }
+    else if((wk>=chasSince()||(lsGet('chas-missed-weeks-v1',[])||[]).includes(wk))&&wkFrac('chas@'+wk)<1) out.push({id:'chas@'+wk,g:1,wk,cur,name:P.bookHe+' – פרשת '+P.he+' (השלמה)',w:W,est:!wcGet('chas:'+wk)}); }
   if(cur){ try{ for(const k of ['shacharit','mincha','maariv','shema']){ const id='tfl:'+k+':'+tflDate(k).getDay(); out.push({id,g:5,tp:TFLNAME[k],wk,cur,dt:today,name:TFLNAME[k]+' – כולה',w:wcGet('tfl:'+k)||(k==='shacharit'?4500:k==='mincha'?1500:k==='maariv'?1200:900),est:!wcGet('tfl:'+k)}); }
       tpToday().forEach(p=>{ const k=tpKind(p[0]); out.push({id:'tp:'+p[0]+':'+tflDate(k).getDay(),g:5,tp:TFLNAME[k],piece:1,wk,cur,dt:today,name:p[1],w:wcGet('tp:'+p[0])||300,est:!wcGet('tp:'+p[0])}); }); }catch(e){} }
   out.forEach(u=>{ u.f=u.chasEnd?0:u.g===5?tpFrac(u.id):unitFrac(u.id); if(u.piece&&u.f>=1){ u.said=1; u.f=0; } u.rem=Math.max(1,u.w*(1-u.f));
@@ -446,8 +453,8 @@ function renderView(){ if($('sheet')&&$('uH')) return; $('dl').innerHTML='<b>'+(
 /* Separate make-up study queue. This never changes the user's daily selection. */
 const MAKEUP_KEY='makeup-tracks-v1';
 const makeupItems=()=>units().filter(u=>u.g===1&&u.f<0.999&&!u.korb);
-const makeupTrack=u=>mkKey(u);
-const makeupTrackLabel=k=>({chu:'חומש',tan:'תניא',teh:'תהילים',shm:'שניים מקרא ואחד תרגום',chas:'חסידות על הפרשה',rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד',sm:'ספר המצוות'})[k]||DMNAME[k]||MKN[k]||k;
+const makeupTrack=u=>{ if(mkKey(u)==='chas'){ const p=chasParsha(u.wk); return p&&p.bookHe==='תורה אור'?'torah-or':'chas-other'; } return mkKey(u); };
+const makeupTrackLabel=k=>({chu:'חומש',tan:'תניא',teh:'תהילים',shm:'שניים מקרא ואחד תרגום',chas:'חסידות על הפרשה', 'torah-or':'תורה אור', 'chas-other':'לקוטי תורה / חסידות על הפרשה',rambam3:'רמב״ם – ג׳ פרקים',rambam1:'רמב״ם – פרק אחד',sm:'ספר המצוות'})[k]||DMNAME[k]||MKN[k]||k;
 function makeupState(items){
   const previous=lsGet(MAKEUP_KEY,{});
   const keys=[...new Set(items.map(makeupTrack))];
@@ -908,6 +915,33 @@ function renderRecoverySettings(box,G){
     });
     d.appendChild(details);
   }
+  // Torah Or make-ups can be restored by parsha even if they were previously marked done
+  // or predate the learner's original Chassidus start week.
+  const torah=document.createElement('details');torah.className='grp';torah.style.marginTop='.75rem';
+  torah.innerHTML='<summary>תורה אור – תיקון השלמות <small>לבחור פרשה שלא נלמדה</small><span class="ch">‹</span></summary>';
+  keepOpen('set:torah-or',torah);
+  for(let ago=1;ago<=8;ago++){
+    const date=new Date(weekStart(CURWK).getTime()-ago*7*864e5);
+    const wk=isoDate(date),parsha=chasParsha(wk);
+    if(!parsha||parsha.bookHe!=='תורה אור')continue;
+    const row=document.createElement('div');row.className='sr';
+    const label=document.createElement('span');label.textContent='פרשת '+parsha.he;
+    const small=document.createElement('small');const f=wkFrac('chas@'+wk);
+    small.textContent=f>=.999?'סומנה כנלמדה':f>0?Math.round(f*100)+'% נלמד':'לא הושלמה';
+    label.appendChild(small);
+    const restore=document.createElement('button');restore.className='b sm';restore.type='button';
+    restore.textContent='להחזיר להשלמות';
+    restore.onclick=()=>{
+      if(!confirm('להחזיר את תורה אור – פרשת '+parsha.he+' להשלמות?'))return;
+      const previous=lsGet('chas-missed-weeks-v1',[]);
+      lsSet('chas-missed-weeks-v1',[...new Set([...(Array.isArray(previous)?previous:[]),wk])]);
+      resetLesson('chas@'+wk);
+      if(H.on.chas===0){H.on.chas=1;save();}
+      dirty();renderSettings();
+    };
+    row.append(label,restore);torah.appendChild(row);
+  }
+  d.appendChild(torah);
   const marked=units().filter(u=>u.f>.001&&u.g<=2&&!u.shm).slice(0,60);
   if(marked.length){
     const other=document.createElement('details');other.className='grp';other.style.marginTop='.75rem';
