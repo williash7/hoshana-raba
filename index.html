@@ -191,10 +191,14 @@ details.sub>summary small{font-weight:400;color:var(--mut)}
 .makeup-row .b{min-width:2.2rem;padding:0 .5rem}
 .makeup-row .b:disabled{opacity:.25}
 /* Organized settings tabs and detailed make-up groups */
-.settings-tabs{display:flex;gap:.4rem;overflow-x:auto;scrollbar-width:thin;padding:.35rem .15rem .8rem;margin-bottom:.3rem;position:sticky;top:calc(env(safe-area-inset-top,0px) + 3.3rem);z-index:8;background:var(--bg);-webkit-overflow-scrolling:touch}
-.settings-tabs button{flex:0 0 auto;white-space:nowrap;background:var(--sf);border:1px solid var(--ln2);border-radius:18px;padding:.55rem .8rem;font-size:.88rem;color:var(--mut)}
+.settings-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem;padding:.3rem 0 .8rem;margin-bottom:.3rem;position:static;width:100%}
+.settings-tabs button{min-width:0;white-space:normal;min-height:48px;background:var(--sf);border:1px solid var(--ln2);border-radius:14px;padding:.6rem .4rem;font-size:.92rem;color:var(--mut)}
 .settings-tabs button.on{border-color:var(--gold);color:var(--gold);background:var(--gold2);font-weight:700}
 .settings-pane{min-width:0}
+.recovery-subject{margin:.45rem 0}
+.recovery-lesson span{min-width:0;flex:1}
+.recovery-lesson small{display:block;color:var(--mut);font-size:.81rem}
+.recovery-more{margin:.65rem}
 .makeup-parts{margin-top:.65rem}
 .makeup-parts>summary{padding:.5rem .25rem;color:var(--gold);cursor:pointer}
 .makeup-lesson{gap:.7rem;align-items:center}
@@ -990,18 +994,49 @@ function renderRecoverySettings(box,G){
     row.append(label,restore);torah.appendChild(row);
   }
   d.appendChild(torah);
-  const marked=units().filter(u=>u.f>.001&&u.g<=2&&!u.shm).slice(0,60);
+  // Keep advanced corrections closed and grouped by subject rather than exposing dozens of identical buttons.
+  const marked=units().filter(u=>u.f>.001&&u.g<=2&&!u.shm);
   if(marked.length){
     const other=document.createElement('details');other.className='grp';other.style.marginTop='.75rem';
-    other.innerHTML='<summary>תיקון סימון בלימודים אחרים <small>'+marked.length+' חלקים עם התקדמות</small><span class="ch">‹</span></summary>';
+    other.innerHTML='<summary>לימודים אחרים שסומנו כנלמדו <small>בחר נושא לתיקון</small><span class="ch">‹</span></summary>';
+    // Deliberately don't restore an old expanded state for this potentially very long list.
+    const groups=new Map();
     marked.forEach(u=>{
-      const row=document.createElement('div');row.className='sr';
-      const title=document.createElement('span');title.textContent=u.name;
-      const subtitle=document.createElement('small');subtitle.textContent=(u.dt?hebOf(u.dt).label+' · ':'')+Math.round(u.f*100)+'% סומן כנלמד';
-      title.appendChild(subtitle);
-      const btn=document.createElement('button');btn.className='b sm';btn.type='button';btn.textContent='לא נלמד';
-      btn.onclick=()=>{if(confirm('לאפס את סימון הלימוד של '+u.name+'?')){resetLesson(u.id);dirty();renderSettings();}};
-      row.append(title,btn);other.appendChild(row);
+      const key=makeupTrack(u);
+      if(!groups.has(key))groups.set(key,[]);
+      groups.get(key).push(u);
+    });
+    [...groups.entries()].sort((a,b)=>makeupTrackLabel(a[0]).localeCompare(makeupTrackLabel(b[0]),'he')).forEach(([key,items])=>{
+      const group=document.createElement('details');group.className='grp recovery-subject';
+      const summary=document.createElement('summary');
+      const title=document.createElement('span');title.textContent=makeupTrackLabel(key);
+      const count=document.createElement('small');count.textContent=' · '+items.length+' חלקים';
+      summary.append(title,count);group.appendChild(summary);
+      const sorted=items.slice().sort((a,b)=>String(b.wk||'').localeCompare(String(a.wk||''))||(b.d??0)-(a.d??0));
+      const pagesize=8;
+      let shown=0;
+      const showMore=()=>{
+        sorted.slice(shown,shown+pagesize).forEach(u=>{
+          const row=document.createElement('div');row.className='sr recovery-lesson';
+          const name=document.createElement('span');name.textContent=u.name;
+          const note=document.createElement('small');
+          note.textContent=(u.dt?hebOf(u.dt).label+' · ':'')+Math.round(u.f*100)+'% סומן כנלמד';
+          name.appendChild(note);
+          const button=document.createElement('button');button.className='b sm';button.type='button';button.textContent='לא נלמד';
+          button.onclick=()=>{
+            if(confirm('להחזיר את '+u.name+' לרשימת הלימודים שלא נלמדו?')){
+              resetLesson(u.id);dirty();renderSettings();
+            }
+          };
+          row.append(name,button);group.appendChild(row);
+        });
+        shown=Math.min(sorted.length,shown+pagesize);
+        more.remove();
+        if(shown<sorted.length){more.textContent='הצג עוד ('+(sorted.length-shown)+')';group.appendChild(more);}
+      };
+      const more=document.createElement('button');more.type='button';more.className='b sm recovery-more';more.onclick=showMore;
+      group.addEventListener('toggle',()=>{if(group.open&&shown===0)showMore();});
+      other.appendChild(group);
     });
     d.appendChild(other);
   }
