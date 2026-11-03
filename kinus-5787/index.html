@@ -14,5 +14,6 @@
 <script src="quiz.js?v=6"></script>
 <script src="fulltext.js?v=6"></script>
 <script src="app.js?v=6"></script>
+<script>if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js",{scope:"./"}).catch(()=>{}));</script>
 </body>
 </html>
