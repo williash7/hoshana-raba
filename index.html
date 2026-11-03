@@ -327,7 +327,12 @@ const SKIPSEC=/מפתח|הנחת תפילין|לוח|זמני|מזמורי תה�
 function pastWeeks(){ const lim=isoDate(new Date(Date.now()-56*864e5)); const set=new Set(Object.keys(trk()).filter(w=>w<CURWK&&w>=lim));
   if(DMX&&DMX.byWk) Object.keys(DMX.byWk).forEach(w=>{ if(w<CURWK) set.add(w); });
   if(H.on.chas!==0){ const cs=chasSince(); if(cs<CURWK&&cs>=lim) set.add(cs); }
-  if(H.on.shnayim!==0){ const pw=isoDate(new Date(weekStart(CURWK).getTime()-7*864e5)); if(shmOpen(pw)) set.add(pw); } return [...set].sort(); }
+  if(H.on.shnayim!==0){
+    const pw=isoDate(new Date(weekStart(CURWK).getTime()-7*864e5)); if(shmOpen(pw)) set.add(pw);
+    // Older parshas appear only when the user explicitly restores them.
+    const forced=lsGet('shnayim-missed-weeks-v1',[]);
+    (Array.isArray(forced)?forced:[]).forEach(w=>{ if(/^\d{4}-\d{2}-\d{2}$/.test(w)&&w<CURWK&&w>=lim&&shmOpen(w))set.add(w); });
+  } return [...set].sort(); }
 // last week's Shnayim Mikra still not finished (any of the 8 parts, haftarah included)
 function shmOpen(wk){ for(let i=0;i<8;i++){ if(i===7&&!haftFor(dateIn(wk,6))) continue; if(wkFrac('shm:'+i+'@'+wk)<1) return true; } return false; }
 function weekUnits(wk,cur){ const out=[], sfx=cur?'':'@'+wk, ix=cur?(DMX&&DMX.day>=0?DMX.index:null):(DMX&&DMX.byWk&&DMX.byWk[wk])||null;
@@ -340,7 +345,7 @@ function weekUnits(wk,cur){ const out=[], sfx=cur?'':'@'+wk, ix=cur?(DMX&&DMX.da
     if(ok) H.dm.filter(s=>RAMBAM.includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push(Object.assign({id:'dm:'+s+':'+d+sfx,name:DMNAME[s],w},base)); });
     // no booklet for this week: Rambam (3 chapters / 1 chapter) comes from Sefaria, from the day you started
     else if(iso>=rambamSince()) H.dm.filter(s=>RMB_TITLE[s]).forEach(s=>{ const w=wcGet('rmb:'+s+':'+iso); out.push(Object.assign({id:'dm:'+s+':'+d+sfx,name:DMNAME[s],w:w||(s==='rambam3'?3800:1300),est:!w},base)); }); }
-  if(!cur&&H.on.shnayim!==0&&wk===isoDate(new Date(weekStart(CURWK).getTime()-7*864e5))){ const sat=dateIn(wk,6); if(shnayimRefs(0,sat)) for(let i=0;i<8;i++){ if(i===7&&!haftFor(sat)) continue; const w=wcGet('shm:'+wk+':'+i)||wcGet('shm:'+CURWK+':'+i); out.push({id:'shm:'+i+'@'+wk,g:1,wk,cur,dt:sat,name:'שניים מקרא – '+shmName(i),w:w||(i===7?450:700),est:!w,shm:1}); } }
+  if(!cur&&H.on.shnayim!==0&&(wk===isoDate(new Date(weekStart(CURWK).getTime()-7*864e5))||(lsGet('shnayim-missed-weeks-v1',[])||[]).includes(wk))){ const sat=dateIn(wk,6); if(shnayimRefs(0,sat)) for(let i=0;i<8;i++){ if(i===7&&!haftFor(sat)) continue; const w=wcGet('shm:'+wk+':'+i)||wcGet('shm:'+CURWK+':'+i); out.push({id:'shm:'+i+'@'+wk,g:1,wk,cur,dt:sat,name:'שניים מקרא – '+shmName(i),w:w||(i===7?450:700),est:!w,shm:1}); } }
   if(cur&&H.on.shnayim!==0&&shnayimTime()){ const R=shnayimRefs(0,today); if(R) for(let i=0;i<8;i++){ if(i===7&&!haftFor(today)) continue; const w=wcGet('shm:'+CURWK+':'+i); out.push({id:'shm:'+i,g:0,wk,cur,dt:today,name:'שניים מקרא – '+shmName(i),w:w||(i===7?450:700),est:!w,shm:1}); } }
   if(ok){ for(let d=0;d<=last;d++) H.dm.filter(s=>!RAMBAM.includes(s)&&!['chumash','tanya','hayomyom'].includes(s)).forEach(s=>{ const w=dmW(s,d); if(w) out.push({id:'dm:'+s+':'+d+sfx,g:2,d,wk,cur,dt:cur?dateOf(d):dateIn(wk,d),name:DMNAME[s],w}); });
     if(H.dm.includes('hayomyom')){ const w=dmW('hayomyom',cur?DMX.day:0); if(w) out.push({id:'dm:hayomyom'+sfx,g:2,wk,cur,name:'היום יום',w}); }
@@ -855,6 +860,70 @@ function offlineSettings(box,G){
 
 /* ===== SETTINGS: all in one place ===== */
 let DP=null; const standalone=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+/* Recover lessons accidentally recorded as completed without erasing other progress. */
+function restoreShnayimMissed(wk,indices){
+  const history=lsGet('shnayim-missed-weeks-v1',[]);
+  lsSet('shnayim-missed-weeks-v1',[...new Set([...(Array.isArray(history)?history:[]),wk])]);
+  indices.forEach(i=>resetLesson('shm:'+i+'@'+wk));
+  if(H.on.shnayim===0){ H.on.shnayim=1;save(); }
+  dirty();
+}
+function renderRecoverySettings(box,G){
+  const g=G('תיקון לימוד והשלמות');
+  const d=document.createElement('details');d.className='grp';
+  d.innerHTML='<summary>סימון לימוד שלא נלמד <small>כולל פרשות קודמות בשניים מקרא</small><span class="ch">‹</span></summary>';
+  keepOpen('set:recover',d);g.appendChild(d);
+  const intro=document.createElement('div');intro.className='note';
+  intro.style.margin='.7rem .5rem';
+  intro.textContent='בחר פרשה או חלק שסומן בטעות כנלמד. ההתקדמות של שאר הלימודים לא תשתנה.';
+  d.appendChild(intro);
+  const heading=document.createElement('div');heading.className='sec';
+  heading.textContent='שניים מקרא ואחד תרגום · שמונה שבועות אחרונים';
+  d.appendChild(heading);
+  for(let ago=1;ago<=8;ago++){
+    const date=new Date(weekStart(CURWK).getTime()-ago*7*864e5);
+    const wk=isoDate(date),sat=dateIn(wk,6);
+    const refs=shnayimRefs(0,sat);if(!refs)continue;
+    const title=refs.he||hebOf(sat).label;
+    const details=document.createElement('details');details.className='grp';
+    details.style.margin='.4rem 0';
+    const summary=document.createElement('summary');
+    const complete=Array.from({length:8},(_,i)=>i).filter(i=>i!==7||haftFor(sat));
+    const done=complete.filter(i=>wkFrac('shm:'+i+'@'+wk)>=.999).length;
+    summary.textContent='פרשת '+title+' · '+done+' מתוך '+complete.length+' חלקים מסומנים כנלמדו';
+    details.appendChild(summary);
+    const actions=document.createElement('div');actions.className='btns';actions.style.margin='.6rem .4rem';
+    const whole=document.createElement('button');whole.type='button';whole.className='b main sm';
+    whole.textContent='לא למדתי את הפרשה – החזר להשלמות';
+    whole.onclick=()=>{if(confirm('להחזיר את כל פרשת '+title+' לרשימת ההשלמות?')){restoreShnayimMissed(wk,complete);renderSettings();}};
+    actions.appendChild(whole);details.appendChild(actions);
+    complete.forEach(i=>{
+      const row=document.createElement('div');row.className='sr';
+      const name=document.createElement('span');name.textContent=shmName(i);
+      const sub=document.createElement('small');sub.textContent=wkFrac('shm:'+i+'@'+wk)>=.999?'מסומן כנלמד':'טרם הושלם';name.appendChild(sub);
+      const reset=document.createElement('button');reset.type='button';reset.className='b sm';
+      reset.textContent='סמן שלא נלמד';
+      reset.onclick=()=>{restoreShnayimMissed(wk,[i]);renderSettings();};
+      row.append(name,reset);details.appendChild(row);
+    });
+    d.appendChild(details);
+  }
+  const marked=units().filter(u=>u.f>.001&&u.g<=2&&!u.shm).slice(0,60);
+  if(marked.length){
+    const other=document.createElement('details');other.className='grp';other.style.marginTop='.75rem';
+    other.innerHTML='<summary>תיקון סימון בלימודים אחרים <small>'+marked.length+' חלקים עם התקדמות</small><span class="ch">‹</span></summary>';
+    marked.forEach(u=>{
+      const row=document.createElement('div');row.className='sr';
+      const title=document.createElement('span');title.textContent=u.name;
+      const subtitle=document.createElement('small');subtitle.textContent=(u.dt?hebOf(u.dt).label+' · ':'')+Math.round(u.f*100)+'% סומן כנלמד';
+      title.appendChild(subtitle);
+      const btn=document.createElement('button');btn.className='b sm';btn.type='button';btn.textContent='לא נלמד';
+      btn.onclick=()=>{if(confirm('לאפס את סימון הלימוד של '+u.name+'?')){resetLesson(u.id);dirty();renderSettings();}};
+      row.append(title,btn);other.appendChild(row);
+    });
+    d.appendChild(other);
+  }
+}
 function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
   const G=(t,html)=>{ box.insertAdjacentHTML('beforeend','<div class="sec"><span>'+t+'</span></div>'); const g=document.createElement('div'); g.className='sg'; g.innerHTML=html||''; box.appendChild(g); return g; };
   const segRow=(par,label,opts,cur,fn,sub)=>{ const r=document.createElement('div'); r.className='sr'; r.innerHTML='<span>'+label+(sub?'<small>'+sub+'</small>':'')+'</span><div class="seg"></div>'; const s=r.querySelector('.seg');
@@ -870,6 +939,7 @@ function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
   const g1b=document.createElement('div'); g1d.appendChild(g1b);
   DMS.forEach(([id,n])=>{ const r=document.createElement('label'); r.className='sr'; r.innerHTML='<input type="checkbox"'+(H.dm.includes(id)?' checked':'')+'><span>'+n+'</span>';
     r.querySelector('input').onchange=e=>{ H.dm=H.dm.filter(x=>x!==id); if(e.target.checked) H.dm.push(id); save(); dirty(); renderView(); }; g1b.appendChild(r); });
+  renderRecoverySettings(box,G);
   // 2. text sources
   const g2=G('מאיפה הטקסט'); const SG=srcGet(), SB=[['sefaria','ספריא'],['booklet','החוברת']];
   segRow(g2,'חומש',SB,SG.chu,v=>srcSet('chu',v)); segRow(g2,'תניא',SB,SG.tan,v=>srcSet('tan',v)); segRow(g2,'רמב״ם',SB,SG.rmb,v=>srcSet('rmb',v));
