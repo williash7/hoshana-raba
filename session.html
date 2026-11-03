@@ -560,16 +560,40 @@ const chTxt=(x,p)=>{ const c=chN(x,p); return c?c.n+'/'+c.t+' פרקים · ':''
 let chSaved={};
 function saveCh(x,p){ const c=chN(x,p); if(!c) return; const k=x.p, v=c.n+'/'+c.t; if(chSaved[k]===v) return; chSaved[k]=v; const S=lsGet('chap-v1',{}); S[k]={n:c.n,t:c.t,d:isoDate(new Date())}; lsSet('chap-v1',S); }
 const escH=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function projectedCount(ends,goal){
+  if(!ends||!ends.length)return 0;
+  const done=ends.filter(e=>e<=goal+0.5).length;
+  return Math.min(ends.length,done+(done<ends.length?1:0));
+}
+function goalProgress(p){
+  const end=FREE||OPEN?TOTAL:Math.max(1,Math.min(TOTAL,GOAL));
+  const fraction=Math.min(1,Math.max(0,p/end));
+  let complete=0,total=0,unitDone=0,unitTotal=0;
+  PB.forEach(x=>{
+    if(x.err||x.p==='mincha'||x.a>=end)return;
+    total++;
+    if(p>=Math.min(end,x.z)-0.5)complete++;
+    if(x.ends&&x.ends.length){
+      const eligible=projectedCount(x.ends,Math.min(end,x.z));
+      unitTotal+=eligible;
+      unitDone+=Math.min(eligible,x.ends.filter(e=>e<=p+0.5).length);
+    }
+  });
+  return {end,fraction,complete,total,unitDone,unitTotal};
+}
 function miniTxt(p,need,curP){ srcButton(curP); const fin=TOTAL-p<3;
   if(OPEN){ $('mini').innerHTML='<span>'+(curP?NAMES[curP.p]+' · ':'')+'הספקת: '+didTxt(p)+'</span><b>'+(t0?mmss(Date.now()-t0):'0:00')+'</b>'; return; }
-  const cur=curP?NAMES[curP.p]+(curP.chEnds?' פ׳ '+chN(curP,p).n+'/'+chN(curP,p).t:'')+(curP.ut?' · '+Math.min(curP.ut,curP.ends.filter(e=>e<=p+0.5).length)+'/'+curP.ut:''):'';
-  const ov=$('overall').textContent.replace(/^בסך הכל:\s*/,'').split(' · ')[0];
+  const limit=FREE||OPEN?TOTAL:GOAL;
+  const cur=curP?NAMES[curP.p]+(curP.chEnds?' פ׳ '+chN(curP,p).n+'/'+projectedCount(curP.chEnds,limit):'')+(curP.ut?' · '+Math.min(projectedCount(curP.ends,limit),curP.ends.filter(e=>e<=p+0.5).length)+'/'+projectedCount(curP.ends,limit):''):'';
+  const ov=$('overall').textContent.replace(/^(בסך הכל|לפי הזמן):\s*/,'').split(' · ')[0];
   const clk=FREE?(fin?'✓':'סיום '+clockIn(need+(MINCHA&&!minchaDone?MINCHA:0))):mmss(leftMs());
   $('mini').innerHTML='<span>'+(fin?'✓ סיימת':cur+(PB.filter(x=>!x.err&&x.p!=='mincha').length>1&&ov?' · סה״כ '+ov:''))+'</span><span>נשאר כ־'+fmtMin(need)+'</span><b>'+clk+'</b>'; }
 function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; $('clockLbl').textContent=t0?'למדת '+mmss(Date.now()-t0):'שעת סיום משוערת'; } else { $('clock').textContent=mmss(lm); $('clockLbl').textContent=UNTIL?(lm>=0?'נותרו עד '+UNTIL:'עברה השעה '+UNTIL):!t0?'השעון יתחיל בלחיצה על ▶':(lm>=0?'נותרו מתוך '+BUDGET+' דק׳':'עבר הזמן שהגדרת'); }
   if(!ready) return;
   updateLiveGoal();
-  const p=curPos; checkStops(p); $('fill').style.width=(Math.min(1,p/TOTAL)*100)+'%';
+  const p=curPos; checkStops(p);
+  const projected=goalProgress(p);
+  $('fill').style.width=(projected.fraction*100)+'%';
   const box=$('parts'), keepX=box.scrollLeft; box.innerHTML=''; const OV={}; let nowEl=null; let ovDone=0, ovN=0, ovD=0, ovT=0;
   PB.forEach(x=>{ const i=document.createElement('i'); const px=posFor(x,p), q=Math.max(0,Math.min(x.z-x.a,px-x.a)), fr=q/Math.max(1,x.z-x.a); const uf=x.err?0:Math.min(1,q/x.W);
     const whole=x.G==null||x.S+x.G>=x.W-2, v=fr>=0.98&&whole?1:uf; const dn=!x.err&&v>=0.98; const cn=x.ends?Math.min(x.ut,x.ends.filter(e=>e<=px+0.5).length):0; if(!x.err&&x.p!=='mincha'){ ovN++; ovT+=x.z-x.a; ovD+=dn?x.z-x.a:Math.max(q,x.rsC-x.a); if(dn) ovDone++; if(x.ut){ const k=x.un||''; OV[k]=OV[k]||[0,0]; OV[k][0]+=dn?x.ut:Math.max(cn,x.us); OV[k][1]+=x.ut; } }
@@ -583,9 +607,16 @@ function update(){ const lm=leftMs(); if(FREE){ $('clock').textContent='--:--'; 
   box.scrollLeft=keepX; if(nowEl&&nowEl.textContent.split(' ')[0]!==update.lastNow){ update.lastNow=nowEl.textContent.split(' ')[0]; try{ nowEl.scrollIntoView({block:'nearest',inline:'start'}); }catch(e){} }
   box.style.display=box.children.length?'':'none';
   const tgt=p<GOAL-1?GOAL:TOTAL, lw=remW(p), need=lw/wpm;
-  // the whole session, not only the current piece
-  $('overallRow').style.display=ovN<2?'none':''; if(ovN>=2) $('overall').innerHTML='בסך הכל: <b>'+Math.round(Math.min(1,ovD/Math.max(1,ovT))*100)+'%</b> · '+ovDone+'/'+ovN+' חלקים'+Object.entries(OV).map(([k,v])=>' · '+Math.min(v[0],v[1])+'/'+v[1]+(k?' '+k:'')).join('');
-  const curP=PB.find(x=>p>=x.a-1&&p<x.z), curTxt=curP&&curP.ut?' · '+NAMES[curP.p]+': '+chTxt(curP,p)+progTxt(Math.min(1,(curP.ends.filter(e=>e<=p+0.5).length)/curP.ut),curP.ends.filter(e=>e<=p+0.5).length,curP.ut,curP.un):'';
+  // Show progress against the live time-based target, not every loaded lesson.
+  $('overallRow').style.display=projected.total?'':'none';
+  if(projected.total){
+    $('overall').innerHTML=(FREE||OPEN?'בסך הכל: ':'לפי הזמן: ')+'<b>'+Math.round(projected.fraction*100)+'%</b> · '+projected.complete+'/'+projected.total+' חלקים'+(projected.unitTotal?' · '+projected.unitDone+'/'+projected.unitTotal+' יחידות':'');
+  }
+  const curP=PB.find(x=>p>=x.a-1&&p<x.z);
+  const curGoal=curP?projectedCount(curP.ends,FREE||OPEN?TOTAL:GOAL):0;
+  const curDone=curP&&curP.ends?Math.min(curGoal,curP.ends.filter(e=>e<=p+0.5).length):0;
+  const chapterText=curP&&curP.chEnds?' · פרקים '+chN(curP,p).n+'/'+projectedCount(curP.chEnds,FREE||OPEN?TOTAL:GOAL):'';
+  const curTxt=curP&&curP.ut?' · '+NAMES[curP.p]+': '+curDone+'/'+curGoal+' '+(curP.un||'')+chapterText:'';
   $('left').innerHTML=TOTAL-p<3?'<b>✓ סיימת</b>':(tgt===GOAL&&GOAL<TOTAL-2?'עד היעד ':'נשאר ')+'כ־<b>'+fmtMin(need)+'</b> בקצב הזה'+curTxt;
   miniTxt(p,need,curP);
   if(OPEN){ openMore(p); const fin=TOTAL-p<3&&!MORE.length; $('clock').textContent=t0?mmss(Date.now()-t0):'0:00'; $('clockLbl').textContent=fin?'✓ סיימת את כל מה שפתוח':'זמן לימוד · בלי הגבלה'; $('left').innerHTML='הספקת עכשיו: <b>'+didTxt(p)+'</b>'+(MORE.length?' · עוד '+MORE.length+' בתור':''); $('pace').innerHTML=''; $('spd').textContent=Math.round(wpm); return; }
