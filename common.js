@@ -281,11 +281,24 @@ function stzMap(j){ const out={}; const t=j&&j.versions&&j.versions[0]&&j.versio
   const deep=Array.isArray(t)&&t.some(x=>Array.isArray(x)&&x.some(Array.isArray));
   if(deep) t.forEach((chap,ci)=>(chap||[]).forEach((cm,hi)=>{ out[(c0+ci)+':'+((ci===0?h0:1)+hi)]=flat(cm); }));
   else (t||[]).forEach((cm,hi)=>{ out[c0+':'+(h0+hi)]=flat(cm); }); return out; }
+// The short halakhot opening belongs before chapter 1, not to the chapter count.
+// Sefaria's calendar references begin at the chapter and omit this opening.
+const RMB_HALACHA_OPENINGS={
+  'זכייה ומתנה':'עניין אלו ההלכות לידע דין זוכה מן ההפקר: היאך יקנה ובמה יקנה; ודין נותן מתנה ומקבל; ואיזו מתנה חוזרת, ואיזו אינה חוזרת. וביאור כל הדינין האלו בפרקים אלו.'
+};
 async function partRambam(subj,date){ const R=await rambamRef(subj,date); const withStz=srcGet().stz!=='off';
   const data=await Promise.all(R.refs.map(r=>sefText(r,'hebrew'))), stz=withStz?await Promise.all(R.refs.map(r=>sefText('Steinsaltz on '+r,'hebrew').then(stzMap).catch(()=>({})))):[];
   const blocks=[{cls:'head',html:'<h3>'+RMB_NAME[subj]+'</h3><small>'+R.he+'</small>',w:2,mark:RMB_NAME[subj]}];
-  data.forEach((j,ri)=>{ const book=String(j.heRef||'').replace(/^משנה תורה,?\s*/,'').replace(/\s+[א-ת׳״"']+(?:[-–][א-ת׳״"']+)?$/,''); let lastCh=null;
-    rmbHalachot(j).forEach(x=>{ let h=''; if(x.ch!==lastCh){ h+='<span class="ch">'+(book?book+' – ':'')+'פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
+  data.forEach((j,ri)=>{ const book=String(j.heRef||'').replace(/^משנה תורה,?\s*/,'').replace(/\s+[א-ת׳״"']+(?:[-–][א-ת׳״"']+)?$/,''); let lastCh=null,openingShown=false;
+    rmbHalachot(j).forEach(x=>{
+      if(!openingShown&&x.ch===1&&x.v===1){
+        const opening=Object.entries(RMB_HALACHA_OPENINGS).find(([name])=>book.includes(name));
+        if(opening){
+          const intro=opening[1];openingShown=true;
+          blocks.push({cls:'par',chap:ri+':intro',html:'<h3>פתיחה להלכות '+opening[0]+'</h3><p>'+intro+'</p>',w:wordsOf(intro),mark:'פתיחה להלכות '+opening[0]});
+        }
+      }
+      let h=''; if(x.ch!==lastCh){ h+='<span class="ch">'+(book?book+' – ':'')+'פרק '+gem(x.ch)+'</span>'; lastCh=x.ch; }
       const v=clean(flat(x.val).join(' ')); h+='<p><span class="v">'+gem(x.v)+'</span> '+v+'</p>';
       const cm=((stz[ri]||{})[x.ch+':'+x.v]||[]).map(clean).filter(Boolean); if(cm.length) h+='<div class="stz">'+cm.map(s=>'<div>'+s+'</div>').join('')+'</div>';
       blocks.push({cls:'par',chap:ri+':'+x.ch,html:h,w:wordsOf(v)+wordsOf(cm.join(' ')),mark:(book?book+' ':'')+'פרק '+gem(x.ch)+' הלכה '+gem(x.v)}); }); });
