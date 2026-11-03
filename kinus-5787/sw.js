@@ -1,1 +1,35 @@
-const CACHE="kinus-5787-v5";const FILES=["./","./index.html","./app.css","./app.js","./data.js","./quiz.js","./fulltext.js","./manifest.webmanifest","./icon.svg","./media_pack_00.js","./media_pack_01.js","./media_pack_02.js","./media_pack_03.js","./media_pack_04.js","./media_pack_05.js","./media_pack_06.js","./media_pack_07.js","./media_pack_08.js","./media_pack_09.js","./media_pack_10.js","./media_pack_11.js","./media_pack_12.js","./media_pack_13.js","./media_pack_14.js","./media_pack_15.js","./media_pack_16.js","./media_pack_17.js","./media_pack_18.js"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(a=>Promise.all(a.filter(x=>x.startsWith("kinus-5787-")&&x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(response=>{if(response.ok&&new URL(e.request.url).origin===location.origin){let copy=response.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return response})))})
+/* Separate Kinus PWA: cache the study UI first, and photos only after they are opened. */
+const CACHE='kinus-study-v1';
+const CORE=[
+ './','./index.html','./app.css?v=6','./data.js?v=6',
+ './quiz.js?v=6','./fulltext.js?v=6','./app.js?v=6',
+ './kinus-manifest.webmanifest?v=7','./icon-192.png','./icon-512.png'
+];
+self.addEventListener('install',e=>{
+ e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()));
+});
+self.addEventListener('activate',e=>{
+ e.waitUntil(caches.keys().then(keys=>Promise.all(
+  keys.filter(k=>(k.startsWith('kinus-study-')||k.startsWith('kinus-5787-'))&&k!==CACHE).map(k=>caches.delete(k))
+ )).then(()=>self.clients.claim()));
+});
+self.addEventListener('fetch',e=>{
+ const req=e.request;
+ if(req.method!=='GET'||new URL(req.url).origin!==self.location.origin)return;
+ e.respondWith((async()=>{
+  const cache=await caches.open(CACHE);
+  try{
+   const response=await fetch(req);
+   if(response.ok)await cache.put(req,response.clone());
+   return response;
+  }catch(err){
+   const cached=await cache.match(req,{ignoreSearch:true});
+   if(cached)return cached;
+   if(req.mode==='navigate'){
+    const home=await cache.match('./index.html');
+    if(home)return home;
+   }
+   throw err;
+  }
+ })());
+});
