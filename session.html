@@ -349,8 +349,19 @@ async function load(keepPos){
     if(k>0){ r.blocks.slice(0,k).forEach(b=>{ add(b.cls+' learned',b.html,b.w,b.mark,p); B[B.length-1].chap=b.chap; addSl(b); }); add('resume','↑ נלמד כבר · ממשיכים מכאן ↓',0,NAMES[p],p,true); }
     const rs=B.length; if(RESUME0==null) RESUME0=rs;
     let got=0; if(u.end!=null) u.plan=Math.max(1,u.end*W-S);
-    r.blocks.slice(k).forEach(b=>{ if(cut) return; add(b.cls,b.html,b.w,b.mark,p); B[B.length-1].chap=b.chap; got+=Math.max(1,b.w); addSl(b);
-      if(u.plan && goalAt==null && got>=u.plan){ if(more){ cut=true; add('goal','<b>עד כאן לעכשיו</b>בפעם הבאה תמשיך מכאן. ממשיכים ל'+NAMES[res[ui+1].u.id]+'.',1,'יעד',p); } else { goalAt=B.length; add('goal','<b>כאן מסתיים הזמן שתכננת</b>אפשר לעצור כאן – בפעם הבאה תמשיך מכאן. או להמשיך הלאה.',1,'יעד',p); } } });
+    const remainingBlocks=r.blocks.slice(k);
+    remainingBlocks.forEach((b,bi)=>{ if(cut) return; add(b.cls,b.html,b.w,b.mark,p); B[B.length-1].chap=b.chap; got+=Math.max(1,b.w); addSl(b);
+      if(u.plan && goalAt==null && got>=u.plan){
+        // Rambam: never suggest stopping halfway through a chapter.
+        // Continue through its final halacha before displaying the time goal
+        // or moving to the next study unit. This keeps chapter counts intact.
+        const next=remainingBlocks[bi+1];
+        const withinRambamChapter=a[0]==='dm' && b.chap!=null && next && next.chap===b.chap;
+        if(withinRambamChapter) return;
+        if(more){ cut=true; add('goal','<b>סיום הפרק – אפשר להמשיך</b>הגענו לנקודת מעבר טבעית. ממשיכים ל'+NAMES[res[ui+1].u.id]+'.',1,'יעד',p); }
+        else { goalAt=B.length; add('goal','<b>סיימת את הפרק</b>זוהי נקודת עצירה אפשרית. אם נשאר זמן, אפשר להמשיך לפרק הבא.',1,'יעד',p); }
+      }
+    });
     // counted units of this part (verses / psalms / paragraphs / pages) – including what was already learned before
     const UC=['ps','par','dmsl'], allU=r.blocks.filter(b=>UC.includes(b.cls)), isPg=allU.some(b=>b.sl), shown=[];
     for(let i=start;i<B.length;i++) if(UC.some(c=>B[i].el.classList.contains(c))) shown.push(i);
