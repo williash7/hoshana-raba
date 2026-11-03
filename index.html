@@ -624,8 +624,8 @@ function renderAdd(box,L){ const inP=new Set(L.rows.map(r=>r.u.id)); const open=
   const td=open.filter(u=>u.g===0); if(td.length){ const g=grp('today','שיעורי היום',td.length,sumM(td)); td.forEach(u=>arow(g,u)); }
   // make-up, by subject
   const mk=open.filter(u=>u.g===1); if(mk.length){ const g=grp('mk','השלמות',mk.length,sumM(mk)); const G=new Map();
-    mk.forEach(u=>{ const k=mkKey(u); if(!G.has(k)) G.set(k,[]); G.get(k).push(u); });
-    G.forEach((Lk,k)=>{ Lk.sort(byDay); const wkL=Lk.filter(u=>u.cur); const nm=MKN[k]||DMNAME[k]||Lk[0].name;
+    mk.forEach(u=>{ const k=makeupTrack(u); if(!G.has(k)) G.set(k,[]); G.get(k).push(u); });
+    G.forEach((Lk,k)=>{ Lk.sort(byDay); const wkL=Lk.filter(u=>u.cur); const nm=makeupTrackLabel(k);
       const sd=document.createElement('details'); sd.className='sub'; sd.innerHTML='<summary>'+esc(nm)+' <small>· '+Lk.length+' · כ־'+fmtMin(sumM(Lk))+'</small></summary>'; keepOpen('mk:'+k,sd); g.appendChild(sd);
       const hb=document.createElement('div'); hb.className='subh'; hb.innerHTML='<small>להוסיף לתוכנית:</small><span style="display:flex;gap:.3rem"></span>'; const sp=hb.querySelector('span');
       if(wkL.length&&wkL.length<Lk.length){ const b=document.createElement('button'); b.className='b sm'; b.textContent='השבוע ('+wkL.length+')'; b.onclick=()=>{ addToPlan(wkL.map(u=>u.id)); renderView(); toast('נוספו '+wkL.length+' ימים של '+nm); }; sp.appendChild(b); }
