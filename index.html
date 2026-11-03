@@ -190,6 +190,16 @@ details.sub>summary small{font-weight:400;color:var(--mut)}
 .makeup-details small{display:block;color:var(--mut);font-size:.82rem}
 .makeup-row .b{min-width:2.2rem;padding:0 .5rem}
 .makeup-row .b:disabled{opacity:.25}
+/* Organized settings tabs and detailed make-up groups */
+.settings-tabs{display:flex;gap:.4rem;overflow-x:auto;scrollbar-width:thin;padding:.35rem .15rem .8rem;margin-bottom:.3rem;position:sticky;top:calc(env(safe-area-inset-top,0px) + 3.3rem);z-index:8;background:var(--bg);-webkit-overflow-scrolling:touch}
+.settings-tabs button{flex:0 0 auto;white-space:nowrap;background:var(--sf);border:1px solid var(--ln2);border-radius:18px;padding:.55rem .8rem;font-size:.88rem;color:var(--mut)}
+.settings-tabs button.on{border-color:var(--gold);color:var(--gold);background:var(--gold2);font-weight:700}
+.settings-pane{min-width:0}
+.makeup-parts{margin-top:.65rem}
+.makeup-parts>summary{padding:.5rem .25rem;color:var(--gold);cursor:pointer}
+.makeup-lesson{gap:.7rem;align-items:center}
+.makeup-lesson span{flex:1;min-width:0}
+.makeup-lesson small{display:block;color:var(--mut);font-size:.82rem}
 </style>
 </head>
 <body>
@@ -499,10 +509,25 @@ function renderMakeup(){
     const move=delta=>{const j=i+delta;[state.order[i],state.order[j]]=[state.order[j],state.order[i]];save();renderMakeup();};
     up.onclick=()=>move(-1);down.onclick=()=>move(1);
     r.append(check,detail,up,down);card.appendChild(r);
-    const preview=document.createElement('div');preview.className='note';
-    preview.style.marginTop='.45rem';
-    preview.textContent=list.slice(0,3).map(u=>u.shm?label(u)+' – '+u.name:(label(u)?label(u)+' · ':'')+u.name).join(' | ')+(list.length>3?' ועוד '+(list.length-3):'');
-    card.appendChild(preview);box.appendChild(card);
+    const parts=document.createElement('details');parts.className='grp makeup-parts';
+    parts.open=!!lsGet('makeup-open-v1',{})[key];
+    const title=document.createElement('summary');
+    title.textContent='הצג את כל '+list.length+' חלקי '+makeupTrackLabel(key);
+    parts.appendChild(title);
+    parts.addEventListener('toggle',()=>{const open=lsGet('makeup-open-v1',{});open[key]=parts.open;lsSet('makeup-open-v1',open);});
+    // Each subject is one self-contained section, with its past lessons in date order.
+    list.forEach(u=>{
+      const line=document.createElement('div');line.className='sr makeup-lesson';
+      const description=document.createElement('span');
+      description.textContent=(u.shm?label(u)+' · ':'')+u.name;
+      const sub=document.createElement('small');
+      sub.textContent=(!u.shm&&label(u)?label(u)+' · ':'')+(u.f>0?Math.round(u.f*100)+'% נלמד · ':'')+tmTxt(u.rem)+' נותרו';
+      description.appendChild(sub);
+      const open=document.createElement('button');open.className='b sm';open.type='button';open.textContent='▶ פתח';
+      open.onclick=()=>openOne(u);
+      line.append(description,open);parts.appendChild(line);
+    });
+    card.appendChild(parts);box.appendChild(card);
   });
   const actions=document.createElement('div');actions.className='card';
   const start=document.createElement('button');start.className='b main';start.type='button';
@@ -981,8 +1006,21 @@ function renderRecoverySettings(box,G){
     d.appendChild(other);
   }
 }
+const SETTINGS_TABS=[['plan','📖 תוכנית'],['makeups','📚 השלמות'],['reading','🕯️ לימוד ותפילה'],['sources','📜 מקורות'],['offline','⬇️ הורדות'],['general','⚙️ כללי']];
+let activeSettingsTab=lsGet('settings-active-tab-v1','plan');
 function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
-  const G=(t,html)=>{ box.insertAdjacentHTML('beforeend','<div class="sec"><span>'+t+'</span></div>'); const g=document.createElement('div'); g.className='sg'; g.innerHTML=html||''; box.appendChild(g); return g; };
+  const tabs=document.createElement('div');tabs.className='settings-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-label','קטגוריות הגדרות');box.appendChild(tabs);
+  const panes={};
+  SETTINGS_TABS.forEach(([id,name])=>{
+    const tab=document.createElement('button');tab.type='button';tab.textContent=name;tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(activeSettingsTab===id));
+    tab.className=activeSettingsTab===id?'on':'';
+    tab.onclick=()=>{activeSettingsTab=id;lsSet('settings-active-tab-v1',id);renderSettings();};
+    tabs.appendChild(tab);
+    const pane=document.createElement('div');pane.className='settings-pane';pane.dataset.tab=id;pane.hidden=id!==activeSettingsTab;panes[id]=pane;box.appendChild(pane);
+  });
+  let currentPane=panes.plan;
+  const switchPane=id=>{currentPane=panes[id];};
+  const G=(t,html)=>{ currentPane.insertAdjacentHTML('beforeend','<div class="sec"><span>'+t+'</span></div>'); const g=document.createElement('div'); g.className='sg'; g.innerHTML=html||''; currentPane.appendChild(g); return g; };
   const segRow=(par,label,opts,cur,fn,sub)=>{ const r=document.createElement('div'); r.className='sr'; r.innerHTML='<span>'+label+(sub?'<small>'+sub+'</small>':'')+'</span><div class="seg"></div>'; const s=r.querySelector('.seg');
     opts.forEach(([v,t])=>{ const b=document.createElement('button'); b.type='button'; b.textContent=t; if(String(v)===String(cur)) b.className='on'; b.onclick=()=>{ fn(v); dirty(); renderView(); }; s.appendChild(b); }); par.appendChild(r); };
   // 1. my program
@@ -992,32 +1030,37 @@ function renderSettings(){ const box=$('v-settings'); box.innerHTML='';
     r.querySelector('input').onchange=e=>{ H.on[k]=e.target.checked?1:0; save(); dirty(); renderView(); };
     const [u,dn]=r.querySelectorAll('.ord button'); const mv=d=>{ const j=i+d; if(j<0||j>=H.order.length) return; [H.order[i],H.order[j]]=[H.order[j],H.order[i]]; save(); dirty(); renderView(); };
     u.onclick=e=>{ e.preventDefault(); mv(-1); }; dn.onclick=e=>{ e.preventDefault(); mv(1); }; g1.appendChild(r); });
-  const g1d=document.createElement('details'); g1d.className='grp'; g1d.style.marginTop='.6rem'; g1d.innerHTML='<summary>שיעורים מתוך חוברת דבר מלכות <small>'+esc(H.dm.map(x=>(DMS.find(d=>d[0]===x)||[,''])[1]).filter(Boolean).join(' · '))+'</small><span class="ch">‹</span></summary>'; keepOpen('set:dm',g1d); box.appendChild(g1d);
+  const g1d=document.createElement('details'); g1d.className='grp'; g1d.style.marginTop='.6rem'; g1d.innerHTML='<summary>שיעורים מתוך חוברת דבר מלכות <small>'+esc(H.dm.map(x=>(DMS.find(d=>d[0]===x)||[,''])[1]).filter(Boolean).join(' · '))+'</small><span class="ch">‹</span></summary>'; keepOpen('set:dm',g1d); currentPane.appendChild(g1d);
   const g1b=document.createElement('div'); g1d.appendChild(g1b);
   DMS.forEach(([id,n])=>{ const r=document.createElement('label'); r.className='sr'; r.innerHTML='<input type="checkbox"'+(H.dm.includes(id)?' checked':'')+'><span>'+n+'</span>';
     r.querySelector('input').onchange=e=>{ H.dm=H.dm.filter(x=>x!==id); if(e.target.checked) H.dm.push(id); save(); dirty(); renderView(); }; g1b.appendChild(r); });
-  renderRecoverySettings(box,G);
+  switchPane('makeups');renderRecoverySettings(currentPane,G);
   // 2. text sources
+  switchPane('sources');
   const g2=G('מאיפה הטקסט'); const SG=srcGet(), SB=[['sefaria','ספריא'],['booklet','החוברת']];
   segRow(g2,'חומש',SB,SG.chu,v=>srcSet('chu',v)); segRow(g2,'תניא',SB,SG.tan,v=>srcSet('tan',v)); segRow(g2,'רמב״ם',SB,SG.rmb,v=>srcSet('rmb',v));
   segRow(g2,'רמב״ם מספריא',[['on','עם ביאור'],['off','בלי']],SG.stz,v=>srcSet('stz',v),'ביאור הרב שטיינזלץ');
   segRow(g2,'חסידות על הפרשה',[['daily','חלק יומי'],['free','חופשי']],H.chasMode||'daily',v=>{ H.chasMode=v; save(); });
   g2.insertAdjacentHTML('beforeend','<div class="sr"><span><small>„החוברת” – כשחוברת השבוע טעונה; אם לא, נטען מספריא. אפשר להחליף גם תוך כדי לימוד.</small></span></div>');
   // 3. learning & prayer
+  switchPane('reading');
   const g3=G('לימוד ותפילה');
   segRow(g3,'לומד מתוך',[['screen','המסך'],['print','החוברת המודפסת']],P.mode,v=>{ P.mode=v; savePlan(); },'בחוברת המודפסת – האפליקציה רק מודדת זמן');
   segRow(g3,'קרבנות למנחה',[['start','לפני הלימוד'],['end','בסוף']],P.korbPos,v=>{ P.korbPos=v; savePlan(); });
   segRow(g3,'מנהג המקום',[[0,'ארץ ישראל'],[1,'חוץ לארץ']],H.diaspora?1:0,v=>{ H.diaspora=+v; save(); });
   { const r=document.createElement('label'); r.className='sr'; r.innerHTML='<span>להציג תפילות ב„להוסיף לתוכנית”<small>שחרית, מנחה, שמע וקטעיהם</small></span><input type="checkbox"'+(H.prayPick!==0?' checked':'')+'>'; r.querySelector('input').onchange=e=>{ H.prayPick=e.target.checked?1:0; save(); }; g3.appendChild(r); }
   // 4. look
+  switchPane('general');
   const g4=G('תצוגה'); segRow(g4,'צבעי מסך הקריאה',[['auto','לפי הטלפון'],['light','בהיר'],['dark','כהה']],MAIN.theme||'auto',v=>{ MAIN.theme=v; const A=lsGet('hoshana-raba-v2',{}); A.theme=v; lsSet('hoshana-raba-v2',A); if(v==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme',v); });
   // 5. booklet, Tehillim, Hoshana
   G('חוברות ותהילים','<div class="sr"><span>חוברת דבר מלכות<small>'+esc(DMI?'נטענה – '+Object.keys(DMI.subjects).length+' שיעורים':DMSTATE||'לא נטענה')+'</small></span><a href="dvar.html">'+(DMI?'פתיחה':'טעינה')+' ‹</a></div><div class="sr"><span>תהילים – פרקים אישיים<small>ימי הולדת – הפרק לפי השנה</small></span><a href="tehillim.html">עריכה ‹</a></div><div class="sr"><span>סדר ליל הושענא רבה</span><a href="hoshana.html">פתיחה ‹</a></div>');
-  offlineSettings(box,G);
+  switchPane('offline');
+  offlineSettings(currentPane,G);
+  switchPane('general');
   // 6. install
   if(!standalone){ const g=G('התקנה'); g.className='sg inst'; g.innerHTML='<div class="sr"><span>📲 להתקין את „לימוד יומי” כאפליקציה בטלפון</span>'+(DP?'<button class="b main sm" id="instBtn" type="button">התקנה</button>':'')+'</div><div class="sr" style="display:block"><ol><li>בכרום: ⋮ למעלה ← <b>„התקנת אפליקציה”</b> או <b>„הוספה למסך הבית”</b>.</li><li>אם כתוב שכבר מותקנת אבל אין אייקון: הגדרות הטלפון ← אפליקציות ← „לימוד יומי” ← הסרה, ואז להתקין שוב.</li><li>אם עדיין לא עובד: בכרום ⋮ ← הגדרות ← הגדרות אתרים ← williash7.github.io ← „ניקוי ואיפוס”.</li></ol></div>';
     const ib=$('instBtn'); if(ib) ib.onclick=async()=>{ if(!DP) return; DP.prompt(); await DP.userChoice.catch(()=>null); DP=null; renderView(); }; }
-  box.insertAdjacentHTML('beforeend','<div class="foot">הטקסטים של החומש, רש״י, התניא, הרמב״ם, שניים מקרא, התפילות והקרבנות נטענים מספריא (Sefaria) ודורשים חיבור לאינטרנט, אלא אם הורדו מראש דרך הגדרות ← הורדות ואופליין.</div>'); }
+  currentPane.insertAdjacentHTML('beforeend','<div class="foot">הטקסטים של החומש, רש״י, התניא, הרמב״ם, שניים מקרא, התפילות והקרבנות נטענים מספריא (Sefaria) ודורשים חיבור לאינטרנט, אלא אם הורדו מראש דרך הגדרות ← הורדות ואופליין.</div>'); }
 
 /* ---------- start ---------- */
 showView();
