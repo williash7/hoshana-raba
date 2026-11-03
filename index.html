@@ -377,6 +377,9 @@ const dirty=()=>{ UCACHE=null; };
 const byDay=(a,b)=>((a.wk||'')+(a.d!=null?a.d:9))<((b.wk||'')+(b.d!=null?b.d:9))?-1:1;
 function defaultSel(all){ const ids=[]; const k=all.find(u=>u.korb);
   if(k&&P.korbPos!=='end') ids.push(k.id);
+  // Unfinished Shnayim Mikra from last week's parsha is a required make-up,
+  // separate from the current parsha. Keep the older portion before this week's.
+  all.filter(u=>u.shm&&!u.cur&&u.f<1).sort(byDay).forEach(u=>ids.push(u.id));
   all.filter(u=>u.g===0&&u.f<1).forEach(u=>ids.push(u.id));
   all.filter(u=>u.g===1&&u.cur&&u.f<1).sort(byDay).forEach(u=>ids.push(u.id));
   if(k&&P.korbPos==='end') ids.push(k.id); return ids; }
@@ -455,6 +458,16 @@ function renderToday(){ const box=$('v-today'); const L=layout(); const {all,row
     dragHandle(d.querySelector('.hd'),d,list);
     list.appendChild(d); });
   if(lim&&rows.length&&cut<0) list.appendChild(cutLine(L));
+  // Make unfinished previous-parsha Shnayim Mikra visible even with a custom plan.
+  const missingShm=all.filter(u=>u.shm&&!u.cur&&u.f<1&&!L.ids.includes(u.id));
+  if(missingShm.length){
+    const weeks=[...new Set(missingShm.map(u=>u.wk))];
+    const reminder=document.createElement('div'); reminder.className='card';
+    const parshas=weeks.map(w=>{const u=missingShm.find(x=>x.wk===w);return (shnayimRefs(0,u.dt)||{}).he||hebOf(u.dt).label;}).join(' ו');
+    reminder.innerHTML='<h2>שניים מקרא – השלמה</h2><div class="what">נותרו '+missingShm.length+' חלקים מפרשת '+esc(parshas)+' שלא נכללו בתוכנית האישית.</div><div class="btns"><button class="b main" type="button">+ הוסף לתוכנית</button></div>';
+    reminder.querySelector('button').onclick=()=>{addToPlan(missingShm.map(u=>u.id),true);dirty();renderView();};
+    box.appendChild(reminder);
+  }
   // past weeks still open
   const pastL=all.filter(u=>!u.cur&&u.g<=1&&u.f<1);
   if(pastL.length){ const n=document.createElement('div'); n.className='note'; n.style.margin='.5rem .2rem'; n.innerHTML='יש <b>'+pastL.length+'</b> שיעורים משבועות קודמים להשלים – ב„השלמות” למטה, או בלשונית „לימוד”.'; box.appendChild(n); }
